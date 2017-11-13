@@ -3758,6 +3758,7 @@ put_psy:
 		unregister_cpu_notifier(&mdwc->dwc3_cpu_notifier);
 put_dwc3:
 	platform_device_put(mdwc->dwc3);
+	platform_device_put(mdwc->dwc3);
 	if (mdwc->bus_perf_client)
 		msm_bus_scale_unregister_client(mdwc->bus_perf_client);
 
@@ -3766,11 +3767,25 @@ uninit_iommu:
 		arm_iommu_detach_device(mdwc->dev);
 		arm_iommu_release_mapping(mdwc->iommu_map);
 	}
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20171113 Fix ADB disconnect */
+err:
+#else
 	of_platform_depopulate(&pdev->dev);
 err:
 	destroy_workqueue(mdwc->dwc3_wq);
+#endif
 	return ret;
 }
+
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20171113 Fix ADB disconnect */
+static int dwc3_msm_remove_children(struct device *dev, void *data)
+{
+	device_unregister(dev);
+	return 0;
+}
+#endif
 
 static int dwc3_msm_remove(struct platform_device *pdev)
 {
@@ -3811,8 +3826,13 @@ static int dwc3_msm_remove(struct platform_device *pdev)
 
 	if (mdwc->hs_phy)
 		mdwc->hs_phy->flags &= ~PHY_HOST_MODE;
-	platform_device_put(mdwc->dwc3);
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20171113 Fix ADB disconnect */
+	device_for_each_child(&pdev->dev,
+		NULL, dwc3_msm_remove_children);
+#else
 	of_platform_depopulate(&pdev->dev);
+#endif
 
 	pm_runtime_disable(mdwc->dev);
 	pm_runtime_barrier(mdwc->dev);
