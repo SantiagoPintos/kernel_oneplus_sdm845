@@ -963,6 +963,13 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 
 	switch (cfg->pon_type) {
 	case PON_KPDPWR:
+		//#ifdef VENDOR_EDIT
+		if ((pon_rt_sts & pon_rt_bit) == 0)
+			pr_info("Power-Key UP\n");
+		else
+			pr_info("Power-Key DOWN\n");
+		//#endif /* VENDOR_EDIT */
+
 		pon_rt_bit = QPNP_PON_KPDPWR_N_SET;
 		break;
 	case PON_RESIN:
