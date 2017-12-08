@@ -927,6 +927,11 @@ static int geni_i2c_probe(struct platform_device *pdev)
 	gi2c->adap.dev.of_node = pdev->dev.of_node;
 
 	strlcpy(gi2c->adap.name, "Geni-I2C", sizeof(gi2c->adap.name));
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20171208 Add I2C speed log */
+	dev_info(&pdev->dev, "%s speed=%d\n", gi2c->adap.name,
+		gi2c->i2c_rsc.clk_freq_out);
+#endif
 
 	pm_runtime_set_suspended(gi2c->dev);
 	if (!gi2c->autosuspend_disable) {
