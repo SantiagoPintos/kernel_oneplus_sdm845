@@ -3807,6 +3807,11 @@ static struct usb_function_instance *fsg_alloc_inst(void)
 
 	memset(&config, 0, sizeof(config));
 	config.removable = true;
+#ifdef VENDOR_EDIT
+/*enable cdrom config to read usb_driver.iso in PC;CD-ROM and VID customized*/
+	config.cdrom = true;
+	config.ro = true;
+#endif
 	rc = fsg_common_create_lun(opts->common, &config, 0, "lun.0",
 			(const char **)&opts->func_inst.group.cg_item.ci_name);
 	if (rc)
