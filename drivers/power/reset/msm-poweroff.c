@@ -107,6 +107,14 @@ struct reset_attribute {
 module_param_call(download_mode, dload_set, param_get_int,
 			&download_mode, 0644);
 
+#ifdef VENDOR_EDIT
+int oem_get_download_mode(void)
+{
+	return download_mode;
+}
+#endif
+
+
 static int panic_prep_restart(struct notifier_block *this,
 			      unsigned long event, void *ptr)
 {
