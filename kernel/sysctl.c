@@ -921,7 +921,11 @@ static struct ctl_table kern_table[] = {
 		.data		= &console_loglevel,
 		.maxlen		= 4*sizeof(int),
 		.mode		= 0644,
+        #ifndef VENDOR_EDIT
 		.proc_handler	= proc_dointvec,
+        #else
+		.proc_handler	= proc_dointvec_oem,
+        #endif
 	},
 	{
 		.procname	= "printk_ratelimit",
@@ -2498,6 +2502,19 @@ int proc_dointvec(struct ctl_table *table, int write,
 {
 	return do_proc_dointvec(table, write, buffer, lenp, ppos, NULL, NULL);
 }
+#ifdef VENDOR_EDIT
+static unsigned int oem_en_chg_prk_lv = 1;
+module_param(oem_en_chg_prk_lv, uint, 0644);
+
+int proc_dointvec_oem(struct ctl_table *table, int write,
+		     void __user *buffer, size_t *lenp, loff_t *ppos)
+{
+    if(oem_en_chg_prk_lv || !write )
+		return do_proc_dointvec(table, write, buffer, lenp, ppos, NULL, NULL);
+    else
+		return -ENOSYS;
+}
+#endif
 
 /**
  * proc_douintvec - read a vector of unsigned integers
