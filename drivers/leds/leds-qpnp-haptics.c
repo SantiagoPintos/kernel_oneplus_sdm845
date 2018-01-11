@@ -1979,6 +1979,9 @@ static int qpnp_haptics_config(struct hap_chip *chip)
 			return rc;
 		}
 
+#ifdef VENDOR_EDIT
+		chip->play_irq_en = true;
+#endif
 		/* use play_irq only for buffer mode */
 		if (chip->play_mode != HAP_BUFFER) {
 			disable_irq(chip->play_irq);
