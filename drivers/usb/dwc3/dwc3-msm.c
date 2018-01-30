@@ -4295,6 +4295,10 @@ static int get_psy_type(struct dwc3_msm *mdwc)
 
 	if (mdwc->charging_disabled)
 		return -EINVAL;
+#ifndef VENDOR_EDIT
+		if (mdwc->max_power == mA)
+			return 0;
+#endif
 
 	if (!mdwc->usb_psy) {
 		mdwc->usb_psy = power_supply_get_by_name("usb");
