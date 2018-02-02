@@ -92,6 +92,8 @@ static char* ufs_get_capacity_size(u64 capacity)
                return "128G";
        } else if (capacity == 0xEE64000){ //128G V4
                return "128G";
+       } else if (capacity == 0x1DCBC000) {
+               return "256G";
        } else {
                return "0G";
        }
