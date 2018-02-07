@@ -747,3 +747,4 @@ CONFIG_INPUT_KEYCHORD=y
 # yangfb,2018/1/26, add for aging test get log and limmit current
 CONFIG_OP_DEBUG_CHG=y
 #endif
+CONFIG_NET_CLS_CGROUP=y
