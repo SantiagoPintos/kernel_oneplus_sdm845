@@ -1777,9 +1777,8 @@ struct task_struct {
 #endif
 	unsigned int inode_index_disabled;
 
-#ifdef VENDOR_EDIT //xiaoxiaohuan add for fd leak debug
+	//Display, add for fd leak debug
 	bool dump_fd_leak;
-#endif
 
 #ifdef CONFIG_SMP
 	struct llist_node wake_entry;
