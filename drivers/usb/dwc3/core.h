@@ -1141,6 +1141,10 @@ struct dwc3 {
 	unsigned		usb3_u1u2_disable:1;
 	unsigned		usb2_l1_disable:1;
 
+#ifdef VENDOR_EDIT
+	/*yangfb@bsp,20180228,enable usb3.1*/
+	unsigned		enable_supper_speed:1;
+#endif
 	atomic_t		in_lpm;
 	int			tx_fifo_size;
 	bool			b_suspend;

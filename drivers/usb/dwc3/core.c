@@ -1284,6 +1284,11 @@ static int dwc3_probe(struct platform_device *pdev)
 					"snps,usb3-u1u2-disable");
 	dwc->usb2_l1_disable = device_property_read_bool(dev,
 					"snps,usb2-l1-disable");
+#ifdef VENDOR_EDIT
+/*yangfb@bsp,20180228,enable usb3.1*/
+	dwc->enable_supper_speed = device_property_read_bool(dev,
+					"op,enable_supper_speed");
+#endif
 	if (dwc->enable_bus_suspend) {
 		pm_runtime_set_autosuspend_delay(dev, 500);
 		pm_runtime_use_autosuspend(dev);
@@ -1291,9 +1296,11 @@ static int dwc3_probe(struct platform_device *pdev)
 
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171113 USB patches porting */
-	pr_info("Force USB running as High speed");
-	dwc->max_hw_supp_speed = USB_SPEED_HIGH;
-	dwc->maximum_speed = USB_SPEED_HIGH;
+	if (!dwc->enable_supper_speed) {
+		pr_info("Force USB running as High speed");
+		dwc->max_hw_supp_speed = USB_SPEED_HIGH;
+		dwc->maximum_speed = USB_SPEED_HIGH;
+	}
 #endif
 	dwc->lpm_nyet_threshold = lpm_nyet_threshold;
 	dwc->tx_de_emphasis = tx_de_emphasis;
