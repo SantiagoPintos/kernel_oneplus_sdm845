@@ -113,7 +113,9 @@ struct dsi_backlight_config {
 	u32 pwm_pmic_bank;
 	u32 pwm_period_usecs;
 	int pwm_gpio;
-
+//#ifdef VENDOR_EDIT
+    bool bl_high2bit;
+//#endif
 	/* WLED params */
 	struct led_trigger *wled;
 	struct backlight_device *bd;
@@ -131,6 +133,10 @@ struct dsi_panel_reset_config {
 	int reset_gpio;
 	int disp_en_gpio;
 	int lcd_mode_sel_gpio;
+	//VENDOR_EDIT
+    int vci_gpio;
+	int poc_gpio;
+    //VENDOR_EDIT
 	u32 mode_sel_state;
 };
 
