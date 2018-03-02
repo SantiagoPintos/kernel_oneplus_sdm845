@@ -289,7 +289,11 @@ struct smb_charger {
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	struct mutex		sw_dash_lock;
 #endif
-
+#ifdef VENDOR_EDIT
+/*yangfb@bsp, 20180302,enable stm6620 sheepmode */
+	struct pinctrl_state *pinctrl_state_default;
+	struct pinctrl *pinctrl;
+#endif
 	/* power supplies */
 	struct power_supply		*batt_psy;
 	struct power_supply		*usb_psy;
@@ -457,6 +461,10 @@ struct smb_charger {
 	int			OTG_LOW_BAT;
 	int			OTG_LOW_BAT_ICL;
 	int			OTG_NORMAL_BAT_ICL;
+#endif
+#ifdef VENDOR_EDIT
+	/*yangfb@bsp, 20180302,enable stm6620 sheepmode */
+	int			shipmode_en;
 #endif
 	int			otg_attempts;
 	int			vconn_attempts;
