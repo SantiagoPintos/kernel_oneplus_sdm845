@@ -128,6 +128,10 @@ struct test_header {
 #define SWIPE_DETECT    0x07
 #define DTAP_DETECT     0x03
 
+#ifdef VENDOR_EDIT /*add for detect finger up and down*/
+#define FINGER_DOWN     0x0f
+#define FINGER_UP       0x1f
+#endif
 
 #define UnkownGestrue       0
 #define DouTap              1   // double tap
@@ -535,6 +539,12 @@ struct synaptics_ts_data {
 #ifdef SUPPORT_VIRTUAL_KEY
 	struct kobject *properties_kobj;
 #endif
+	#ifdef VENDOR_EDIT /*liuyan 20171020 1:down 0:up*/
+	uint8_t fp_up_down;
+	unsigned int en_up_down;
+	unsigned int fp_aod_cnt;
+	int project_version;
+	#endif /*liuyan add end*/
 };
 
 static struct device_attribute attrs_oem[] = {
@@ -544,6 +554,18 @@ static struct device_attribute attrs_oem[] = {
 
 static struct synaptics_rmi4_data *rmi4_data_s3706;
 
+#ifdef VENDOR_EDIT /*liuyan 20171020 add to detect finger*/
+static ssize_t fp_irq_get(struct device *device,
+			     struct device_attribute *attribute,
+			     char *buf)
+{
+	struct synaptics_ts_data *ts = ts_g;
+
+	return scnprintf(buf, PAGE_SIZE, "%i\n", ts->fp_up_down);
+}
+static DEVICE_ATTR(fp_irq, 0400, fp_irq_get, NULL);
+
+#endif /*liuyan add end*/
 
 static void touch_enable (struct synaptics_ts_data *ts)
 {
@@ -1187,6 +1209,41 @@ static void synaptics_get_coordinate_point(struct synaptics_ts_data *ts)
 		(coordinate_buf[24] & 0x20) ? 0 : 2; // 1--clockwise, 0--anticlockwise, not circle, report 2
 }
 
+#ifdef VENDOR_EDIT /*20180524 add for finger detect*/
+static void fp_detect(struct synaptics_ts_data *ts)
+{
+	int ret = 0, gesture_sign;
+	uint8_t gesture_buffer[10];
+
+	ret = i2c_smbus_write_byte_data(
+		ts->client, 0xff, 0x00);
+	ret = i2c_smbus_read_i2c_block_data(
+		ts->client,
+		0x000A, 5,
+		&(gesture_buffer[0]));
+
+	gesture_sign = gesture_buffer[0];
+	switch (gesture_sign) {
+	case FINGER_DOWN:
+		ts->fp_up_down = 1;
+		sysfs_notify(&ts->dev->kobj, NULL,
+			dev_attr_fp_irq.attr.name);
+		TPD_DEBUG("%s:FINGER_DOWN %d\n", __func__,
+			ts->fp_up_down);
+			break;
+	case FINGER_UP:
+		ts->fp_up_down = 0;
+		sysfs_notify(&ts->dev->kobj, NULL,
+			dev_attr_fp_irq.attr.name);
+		TPD_DEBUG("%s:FINGER_UP %d\n", __func__,
+			ts->fp_up_down);
+		break;
+	}
+	ret = i2c_smbus_write_byte_data(
+		ts->client, 0xff, 0x00);
+}
+#endif
+
 static void gesture_judge(struct synaptics_ts_data *ts)
 {
 	unsigned int keyCode = KEY_F4;
@@ -1283,6 +1340,28 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 				(gesture_buffer[2] == 0x08) ? LeftVee  :
 				UnkownGestrue;
 			break;
+		#ifdef VENDOR_EDIT /*20180524 add for finger detect*/
+		case FINGER_DOWN:
+			if (ts->project_version == 0x03) {
+				ts->fp_up_down = 1;
+				ts->fp_aod_cnt = 1;
+				sysfs_notify(&ts->dev->kobj, NULL,
+					dev_attr_fp_irq.attr.name);
+				TPD_DEBUG("%s:FINGER_DOWN %d\n", __func__,
+					ts->fp_up_down);
+			}
+			break;
+		case FINGER_UP:
+			if (ts->project_version == 0x03) {
+				ts->fp_up_down = 0;
+				ts->fp_aod_cnt = 0;
+				sysfs_notify(&ts->dev->kobj, NULL,
+					dev_attr_fp_irq.attr.name);
+				TPD_DEBUG("%s:FINGER_UP %d\n", __func__,
+					ts->fp_up_down);
+			}
+			break;
+		#endif
 		case UNICODE_DETECT:
 			gesture = (gesture_buffer[2] == 0x77) ? Wgestrue :
 				(gesture_buffer[2] == 0x6d) ? Mgestrue :
@@ -1557,6 +1636,7 @@ void int_touch(void)
 
 		}
 	}
+
 	finger_info <<= (ts->max_num - count_data);
 
 	for ( i = 0; i < ts->max_num; i++ )
@@ -1594,7 +1674,13 @@ void int_touch(void)
 		gesture_judge(ts);
 	}
 #endif
-    INT_TOUCH_END:
+	#ifdef VENDOR_EDIT /*20180524 add for finger detect*/
+	if (ts->project_version == 0x03) {
+		if (ts->en_up_down)
+			fp_detect(ts);
+	}
+	#endif
+INT_TOUCH_END:
 	mutex_unlock(&ts->mutexreport);
 }
 static char log_count = 0;
@@ -3681,6 +3767,74 @@ static ssize_t tp_doze_time_store(struct device *dev,
 {
 	return size;
 }
+
+#ifdef VENDOR_EDIT /*20180523 add for finger detect*/
+static ssize_t tp_gesture_touch_hold_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int ret = 0;
+	int touch_hold_enable = 0;
+	struct synaptics_ts_data *ts = dev_get_drvdata(dev);
+	/* SYNA_F51_CUSTOM_CTRL20_00 0x0428*/
+	ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x04);
+	if (ret < 0)
+		return snprintf(buf, 16, "switch page err\n");
+	touch_hold_enable = i2c_smbus_read_byte_data(ts->client, 0x28);
+	ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x00);
+	if (ret < 0)
+		TPD_ERR("%s: set page 00 fail!\n", __func__);
+	return snprintf(buf, 6, "0x%x\n", touch_hold_enable);
+}
+
+static ssize_t tp_gesture_touch_hold_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	int tmp = 0;
+	int touch_hold_enable = 0;
+	int ret = 0;
+	struct synaptics_ts_data *ts = dev_get_drvdata(dev);
+
+	ret = kstrtoint(buf, 10, &tmp);
+	if (ret < 0) {
+		TPDTM_DMESG("invalid content: '%s', length = %zd\n", buf, size);
+		return size;
+	}
+	if (tmp == 2 && ts->fp_aod_cnt > 0) {
+		ts->fp_up_down = 0;
+		sysfs_notify(&ts->dev->kobj, NULL,
+			dev_attr_fp_irq.attr.name);
+		return size;
+	}
+
+	/* SYNA_F51_CUSTOM_CTRL20_00 0x0428*/
+	ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x04);
+	if (ret < 0)
+		TPD_ERR("%s: set page 0x04 fail!\n", __func__);
+	touch_hold_enable = i2c_smbus_read_byte_data(ts->client, 0x28);
+
+	if (tmp == 1) {
+		touch_hold_enable = touch_hold_enable | 0x01;
+		ts->en_up_down = 1;
+		TPD_ERR("%s: set 1\n", __func__);
+	} else if (tmp == 0) {
+		touch_hold_enable = touch_hold_enable & 0xfe;
+		ts->en_up_down = 0;
+		TPD_ERR("%s: set 0!\n", __func__);
+	}
+
+	ret = synaptics_rmi4_i2c_write_byte(ts->client,
+		0x28, touch_hold_enable);
+	if (ret < 0)
+		TPD_ERR("%s: set reg fail!\n", __func__);
+
+	ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x00);
+	if (ret < 0)
+		TPD_ERR("%s: set page 00 fail!\n", __func__);
+	return size;
+}
+#endif
+
 //static DRIVER_ATTR(tp_baseline_image_with_cbc, 0664, tp_baseline_show_with_cbc, tp_test_store);
 static DEVICE_ATTR(test_limit, 0664, synaptics_test_limit_show, synaptics_test_limit_store);
 static DRIVER_ATTR(tp_baseline_image, 0664, tp_baseline_show, tp_delta_store);
@@ -3689,6 +3843,10 @@ static DRIVER_ATTR(tp_delta_image, 0664, tp_rawdata_show, NULL);
 static DRIVER_ATTR(tp_debug_log, 0664, tp_show, store_tp);
 static DEVICE_ATTR(tp_fw_update, 0664, synaptics_update_fw_show, synaptics_update_fw_store);
 static DEVICE_ATTR(tp_doze_time, 0664, tp_doze_time_show, tp_doze_time_store);
+#ifdef VENDOR_EDIT /*20180523 add for finger detect*/
+static DEVICE_ATTR(tp_gesture_touch_hold, 0664,
+	tp_gesture_touch_hold_show, tp_gesture_touch_hold_store);
+#endif
 static int synaptics_dsx_pinctrl_init(struct synaptics_ts_data *ts);
 
 static ssize_t tp_reset_write_func (struct file *file, const char *buffer, size_t count, loff_t *ppos)
@@ -3898,6 +4056,10 @@ static int tp_baseline_get(struct synaptics_ts_data *ts, bool flag)
 	int x, y;
 	uint8_t *value;
 	int k = 0;
+	#ifdef VENDOR_EDIT /*liuyan 2018/01/27 add for fp detect*/
+	int touch_hold_enable = 0;
+	int touch_hold_retry = 0;
+	#endif
 
 	if(!ts)
 		return -1;
@@ -3944,6 +4106,42 @@ static int tp_baseline_get(struct synaptics_ts_data *ts, bool flag)
 #ifdef ENABLE_TPEDGE_LIMIT
 	synaptics_tpedge_limitfunc();
 #endif
+	#ifdef VENDOR_EDIT /*liuyan 2018/01/27 add for fp detect*/
+	if (ts->project_version == 0x03) {
+		ts->fp_up_down = 0;
+		TPD_DEBUG("%s:fp_down_up %d gesture %d, en_down_up %d\n",
+			__func__, ts->fp_up_down,
+			ts->in_gesture_mode, ts->en_up_down);
+		while (ts->en_up_down) {
+			touch_hold_enable = 0;
+			touch_hold_retry++;
+			ret = synaptics_rmi4_i2c_write_byte(ts->client,
+				0xff, 0x04);
+			if (ret < 0)
+				TPD_ERR("set page first fail!\n");
+			touch_hold_enable =
+				i2c_smbus_read_byte_data(ts->client, 0x28);
+			TPDTM_DMESG("%s:read reg 0x%x\n",
+				__func__, touch_hold_enable);
+			touch_hold_enable = touch_hold_enable | 0x01;
+			ret = synaptics_rmi4_i2c_write_byte(ts->client,
+				0x28, touch_hold_enable);
+			if (ret < 0)
+				TPD_ERR("set first fail!\n");
+			ret = i2c_smbus_read_byte_data(ts->client, 0x28);
+			TPDTM_DMESG("%s:read reg again 0x%x,0x%x\n", __func__,
+				touch_hold_enable, ret);
+			ret = synaptics_rmi4_i2c_write_byte(ts->client,
+				0xff, 0x00);
+			if (ret < 0)
+				TPD_ERR("set page 00 fail!\n");
+			if (touch_hold_enable == ret)
+				break;
+			if (touch_hold_retry == 3)
+				break;
+		}
+	}
+	#endif
 	TPD_DEBUG("%s end! \n",__func__);
 	kfree(value);
 	return 0;
@@ -5189,7 +5387,11 @@ static int synaptics_ts_probe(struct i2c_client *client, const struct i2c_device
 	get_tp_base = 0;
 
 	synaptics_parse_dts(&client->dev, ts);
-
+	#ifdef VENDOR_EDIT //liuyan dd for distinguish project
+	ts->project_version = 0x00;
+	if (of_property_read_bool(ts->dev->of_node, "oem,fajta"))
+		ts->project_version = 0x03;
+	#endif
 	/***power_init*****/
 	ret = tpd_power(ts, 1);
 	if( ret < 0 )
@@ -5418,6 +5620,23 @@ static int synaptics_ts_probe(struct i2c_client *client, const struct i2c_device
 		TPDTM_DMESG("driver_create_file failt\n");
 		goto exit_init_failed;
 	}
+	#ifdef VENDOR_EDIT	/*liuyan 20171020 add to detect finger*/
+	if (ts->project_version == 0x03) {
+		if (device_create_file(&client->dev,
+			&dev_attr_tp_gesture_touch_hold)) {
+			TPDTM_DMESG("tp_gesture_touch_hold failt\n");
+			goto exit_init_failed;
+		}
+		if (device_create_file(&client->dev, &dev_attr_fp_irq)) {
+			TPDTM_DMESG("driver_create_file fail fp_irq\n");
+			goto exit_init_failed;
+		}
+		ts->fp_up_down = 0;
+		ts->en_up_down = 0;
+		ts->fp_aod_cnt = 0;
+	}
+	#endif /*liuyan add end*/
+
 #ifdef SUPPORT_VIRTUAL_KEY
 	synaptics_ts_init_virtual_key(ts);
 #endif
