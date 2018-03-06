@@ -32,6 +32,11 @@
 #include "dsi_pwr.h"
 #include "sde_dbg.h"
 
+#ifdef VENDOR_EDIT
+#include <linux/msm_drm_notify.h>
+#include <linux/notifier.h>
+#endif
+
 #define to_dsi_display(x) container_of(x, struct dsi_display, host)
 #define INT_BASE_10 10
 #define NO_OVERRIDE -1
@@ -976,6 +981,10 @@ int dsi_display_set_power(struct drm_connector *connector,
 {
 	struct dsi_display *display = disp;
 	int rc = 0;
+	#ifdef VENDOR_EDIT
+	struct msm_drm_notifier notifier_data;
+	int blank;
+	#endif
 
 	if (!display || !display->panel) {
 		pr_err("invalid display/panel\n");
@@ -993,6 +1002,21 @@ int dsi_display_set_power(struct drm_connector *connector,
 		rc = dsi_panel_set_nolp(display->panel);
 		break;
 	}
+	#ifdef VENDOR_EDIT
+	if (power_mode == SDE_MODE_DPMS_ON) {
+		blank = MSM_DRM_BLANK_UNBLANK_CUST;
+		notifier_data.data = &blank;
+		notifier_data.id = connector_state_crtc_index;
+		msm_drm_notifier_call_chain(MSM_DRM_EARLY_EVENT_BLANK,
+					    &notifier_data);
+	} else if (power_mode == SDE_MODE_DPMS_LP1) {
+		blank = MSM_DRM_BLANK_NORMAL;
+		notifier_data.data = &blank;
+		notifier_data.id = connector_state_crtc_index;
+		msm_drm_notifier_call_chain(MSM_DRM_EARLY_EVENT_BLANK,
+					    &notifier_data);
+	}
+	#endif
 	return rc;
 }
 

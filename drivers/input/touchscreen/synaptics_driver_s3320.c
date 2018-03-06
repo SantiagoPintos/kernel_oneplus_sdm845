@@ -5765,7 +5765,7 @@ static int msm_drm_notifier_callback(
 		TPD_DEBUG("%s blank[%d],event[0x%lx],evdata->id[%d]\n",
 			__func__, *blank, event, evdata->id);
 
-		if ((*blank == MSM_DRM_BLANK_UNBLANK)
+		if ((*blank == MSM_DRM_BLANK_UNBLANK_CUST)
 		&& (event == MSM_DRM_EARLY_EVENT_BLANK)) {
 			if (gesture_flag == 1) {
 				ts->gesture_enable = 0;
