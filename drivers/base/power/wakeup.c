@@ -21,6 +21,10 @@
 #include <linux/irqdesc.h>
 
 #include "power.h"
+#ifdef VENDOR_EDIT
+#include <linux/wakeup_reason.h>
+#include <linux/pm_wakeup.h>
+#endif
 
 /*
  * If set, the suspend/hibernate code will abort transitions to a sleep state
@@ -69,6 +73,13 @@ static struct wakeup_source deleted_ws = {
 	.name = "deleted",
 	.lock =  __SPIN_LOCK_UNLOCKED(deleted_ws.lock),
 };
+
+#ifdef VENDOR_EDIT
+//wujialong@BSP, 2016/05/4, add for sleep debug
+#define WORK_TIMEOUT	(60*1000)
+static void ws_printk(struct work_struct *work);
+static DECLARE_DELAYED_WORK(ws_printk_work, ws_printk);
+#endif
 
 /**
  * wakeup_source_prepare - Prepare a new wakeup source for initialization.
@@ -865,6 +876,26 @@ void pm_print_active_wakeup_sources(void)
 }
 EXPORT_SYMBOL_GPL(pm_print_active_wakeup_sources);
 
+#ifdef VENDOR_EDIT
+static void ws_printk(struct work_struct *work)
+{
+		pm_print_active_wakeup_sources();
+		queue_delayed_work(system_freezable_wq,
+		&ws_printk_work, msecs_to_jiffies(WORK_TIMEOUT));
+}
+
+void pm_print_active_wakeup_sources_queue(bool on)
+{
+	if (on) {
+		queue_delayed_work(system_freezable_wq, &ws_printk_work,
+		msecs_to_jiffies(WORK_TIMEOUT));
+	} else {
+		cancel_delayed_work(&ws_printk_work);
+	}
+}
+EXPORT_SYMBOL_GPL(pm_print_active_wakeup_sources_queue);
+#endif /* VENDOR_EDIT */
+
 /**
  * pm_wakeup_pending - Check if power transition in progress should be aborted.
  *
@@ -921,7 +952,9 @@ void pm_system_irq_wakeup(unsigned int irq_number)
 				name = "stray irq";
 			else if (desc->action && desc->action->name)
 				name = desc->action->name;
-
+#ifdef VENDOR_EDIT
+			log_wakeup_reason(irq_number);
+#endif
 			pr_warn("%s: %d triggered %s\n", __func__,
 					irq_number, name);
 

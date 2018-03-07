@@ -22,7 +22,9 @@
 
 #include "dsi_panel.h"
 #include "dsi_ctrl_hw.h"
-
+//#ifdef VENDOR_EDIT
+#include <linux/pm_wakeup.h>
+//#endif
 /**
  * topology is currently defined by a set of following 3 values:
  * 1. num of layer mixers
@@ -4054,6 +4056,8 @@ int dsi_panel_enable(struct dsi_panel *panel)
 
 	if (panel->hbm_mode)
 		dsi_panel_set_hbm_mode(panel, panel->hbm_mode);
+	/* remove print actvie ws */
+	pm_print_active_wakeup_sources_queue(false);
 //#endif
 	return rc;
 }
@@ -4136,6 +4140,10 @@ int dsi_panel_disable(struct dsi_panel *panel)
 
 error:
 	mutex_unlock(&panel->panel_lock);
+//#ifdef VENDOR_EDIT
+	/* add print actvie ws */
+	pm_print_active_wakeup_sources_queue(true);
+//#endif
 	return rc;
 }
 
