@@ -1,4 +1,6 @@
-
+ifdef CONFIG_OEM_DEBUG_SUPPORT
+obj-y += sysrq_x.o
+endif
 #ifdef VENDOR_EDIT
 ifdef CONFIG_OEM_DEBUG_SUPPORT
 # oem trace

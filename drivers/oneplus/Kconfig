@@ -1,3 +1,7 @@
+config OEM_SYSRQ_X
+	default y
+	depends on OEM_DEBUG_SUPPORT
+	bool "echo x > /proc/sysrq-trigger to get init process stacktrace"
 
 config OEM_DEBUG_SUPPORT
         bool
