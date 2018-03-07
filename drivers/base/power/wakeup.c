@@ -24,6 +24,7 @@
 #ifdef VENDOR_EDIT
 #include <linux/wakeup_reason.h>
 #include <linux/pm_wakeup.h>
+static int resume_wakeup_flag = 0;
 #endif
 
 /*
@@ -940,10 +941,49 @@ void pm_wakeup_clear(void)
 	pm_wakeup_irq = 0;
 }
 
+#ifdef VENDOR_EDIT
+static void init_resume_wakeup_flag(void)
+{
+        resume_wakeup_flag = 0;
+}
+
+static int is_speedup_irq(struct irq_desc *desc, char *irq_name)
+{
+        return strstr(desc->action->name, irq_name) != NULL;
+}
+
+static void set_resume_wakeup_flag(int irq)
+{
+        struct irq_desc *desc;
+        desc = irq_to_desc(irq);
+
+        if (desc && desc->action && desc->action->name) {
+                if (is_speedup_irq(desc, "synaptics,s3320") || \
+                       is_speedup_irq(desc, "qpnp_kpdpwr_status"))
+                       resume_wakeup_flag = 1;
+       }
+}
+
+int get_resume_wakeup_flag(void)
+{
+        int flag = resume_wakeup_flag;
+
+        pr_debug("%s: flag = %d\n", __func__, flag);
+        /* Clear it for next calling */
+        init_resume_wakeup_flag();
+
+        return flag;
+}
+#endif
+
 void pm_system_irq_wakeup(unsigned int irq_number)
 {
 	struct irq_desc *desc;
 	const char *name = "null";
+
+#ifdef VENDOR_EDIT
+        init_resume_wakeup_flag();
+#endif
 
 	if (pm_wakeup_irq == 0) {
 		if (msm_show_resume_irq_mask) {
@@ -953,6 +993,7 @@ void pm_system_irq_wakeup(unsigned int irq_number)
 			else if (desc->action && desc->action->name)
 				name = desc->action->name;
 #ifdef VENDOR_EDIT
+			set_resume_wakeup_flag(irq_number);
 			log_wakeup_reason(irq_number);
 #endif
 			pr_warn("%s: %d triggered %s\n", __func__,
