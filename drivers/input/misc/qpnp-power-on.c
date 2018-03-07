@@ -34,6 +34,10 @@
 #include <linux/qpnp/qpnp-pbs.h>
 #include <linux/qpnp/qpnp-misc.h>
 #include <linux/power_supply.h>
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20171023 Battery & Charging porting */
+#include <linux/power/oem_external_fg.h>
+#endif
 
 #define PMIC_VER_8941           0x01
 #define PMIC_VERSION_REG        0x0105
@@ -196,6 +200,8 @@ struct pon_regulator {
 	bool			enabled;
 };
 
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20171023 Battery & Charging porting */
 struct qpnp_pon {
 	struct platform_device	*pdev;
 	struct regmap		*regmap;
@@ -237,6 +243,7 @@ struct qpnp_pon {
 	struct notifier_block   pon_nb;
 	bool			legacy_hard_reset_offset;
 };
+#endif
 
 static int pon_ship_mode_en;
 module_param_named(

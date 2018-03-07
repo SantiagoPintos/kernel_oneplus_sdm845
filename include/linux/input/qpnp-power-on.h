@@ -50,6 +50,51 @@ enum pon_power_off_type {
 	PON_POWER_OFF_MAX_TYPE		= 0x10,
 };
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20171023 Battery & Charging porting */
+struct qpnp_pon {
+	struct platform_device	*pdev;
+	struct regmap		*regmap;
+	struct input_dev	*pon_input;
+	struct qpnp_pon_config	*pon_cfg;
+	struct pon_regulator	*pon_reg_cfg;
+	struct list_head	list;
+	struct delayed_work	bark_work;
+	struct dentry		*debugfs;
+	struct device_node      *pbs_dev_node;
+	int			pon_trigger_reason;
+	int			pon_power_off_reason;
+	int			num_pon_reg;
+	int			num_pon_config;
+	u32			dbc_time_us;
+	u32			uvlo;
+	int			warm_reset_poff_type;
+	int			hard_reset_poff_type;
+	int			shutdown_poff_type;
+	int			resin_warm_reset_type;
+	int			resin_hard_reset_type;
+	int			resin_shutdown_type;
+	u16			base;
+	u8			subtype;
+	u8			pon_ver;
+	u8			warm_reset_reason1;
+	u8			warm_reset_reason2;
+	u8                      twm_state;
+	bool			is_spon;
+	bool			store_hard_reset_reason;
+	bool			resin_hard_reset_disable;
+	bool			resin_shutdown_disable;
+	bool			ps_hold_hard_reset_disable;
+	bool			ps_hold_shutdown_disable;
+	bool			kpdpwr_dbc_enable;
+	bool                    support_twm_config;
+	bool			resin_pon_reset;
+	ktime_t			kpdpwr_last_release_time;
+	struct notifier_block   pon_nb;
+	bool			legacy_hard_reset_offset;
+};
+#endif
+
 enum pon_restart_reason {
 	/* 0 ~ 31 for common defined features */
 	PON_RESTART_REASON_UNKNOWN		= 0x00,

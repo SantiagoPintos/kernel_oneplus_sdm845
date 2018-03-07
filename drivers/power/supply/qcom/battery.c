@@ -612,7 +612,9 @@ static int pl_fcc_vote_callback(struct votable *votable, void *data,
 
 	if (!chip->main_psy)
 		return 0;
-
+#ifdef VENDOR_EDIT
+	pr_info("total_fcc_ua=%d\n", total_fcc_ua);
+#endif
 	if (chip->pl_mode != POWER_SUPPLY_PL_NONE) {
 		get_fcc_split(chip, total_fcc_ua, &master_fcc_ua,
 				&slave_fcc_ua);
