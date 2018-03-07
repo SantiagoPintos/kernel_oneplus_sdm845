@@ -183,6 +183,5 @@ obj-$(CONFIG_SENSORS_SSC)		+= sensors/
 obj-$(CONFIG_TEE)		+= tee/
 
 #ifdef VENDOR_EDIT
-#ifdef VENDOR_EDIT
 obj-$(CONFIG_OEM_DEBUG_SUPPORT)  += oneplus/
 #endif
