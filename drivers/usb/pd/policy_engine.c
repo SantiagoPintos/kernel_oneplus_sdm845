@@ -2278,12 +2278,12 @@ static void usbpd_sm(struct work_struct *w)
 		break;
 
 	case PE_SRC_SEND_CAPABILITIES:
-#ifdef VENDOR_EDIT
+/*#ifdef VENDOR_EDIT
 		ret = pd_send_msg(pd, MSG_PS_RDY, NULL, 0, SOP_MSG);
-#else
+#else*/
 		ret = pd_send_msg(pd, MSG_SOURCE_CAPABILITIES, default_src_caps,
 				ARRAY_SIZE(default_src_caps), SOP_MSG);
-#endif
+/*#endif*/
 		if (ret) {
 			pd->caps_count++;
 
@@ -2311,13 +2311,13 @@ static void usbpd_sm(struct work_struct *w)
 			break;
 		}
 
-#ifdef VENDOR_EDIT
+/*#ifdef VENDOR_EDIT*/
 /* david.liu@bsp, 201710523 Fix C2C swap failed with Pixel */
-		usbpd_info(&pd->dev, "Start host snd msg ok\n");
+/*		usbpd_info(&pd->dev, "Start host snd msg ok\n");
 		if (pd->current_dr == DR_DFP)
 			start_usb_host(pd, true);
 		break;
-#else
+#else */
 		/* transmit was successful if GoodCRC was received */
 		pd->caps_count = 0;
 		pd->hard_reset_count = 0;
@@ -2331,7 +2331,7 @@ static void usbpd_sm(struct work_struct *w)
 		power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PD_ACTIVE, &val);
 		break;
-#endif
+/*#endif*/
 
 	case PE_SRC_SEND_CAPABILITIES_WAIT:
 		if (IS_DATA(rx_msg, MSG_REQUEST)) {
