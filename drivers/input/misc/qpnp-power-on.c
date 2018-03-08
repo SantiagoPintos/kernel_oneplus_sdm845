@@ -36,6 +36,7 @@
 #include <linux/power_supply.h>
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
+#include <linux/syscalls.h>
 #include <linux/power/oem_external_fg.h>
 #endif
 
@@ -210,6 +211,9 @@ struct qpnp_pon {
 	struct pon_regulator	*pon_reg_cfg;
 	struct list_head	list;
 	struct delayed_work	bark_work;
+#ifdef VENDOR_EDIT
+	struct delayed_work     press_work;
+#endif
 	struct dentry		*debugfs;
 	struct device_node      *pbs_dev_node;
 	int			pon_trigger_reason;
@@ -978,6 +982,18 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 		//#endif /* VENDOR_EDIT */
 
 		pon_rt_bit = QPNP_PON_KPDPWR_N_SET;
+		if ((pon_rt_sts & pon_rt_bit) == 0) {
+			pr_info("Power-Key UP\n");
+			#ifdef VENDOR_EDIT
+				cancel_delayed_work(&pon->press_work);
+			#endif
+		} else {
+			pr_info("Power-Key DOWN\n");
+			#ifdef VENDOR_EDIT
+				schedule_delayed_work(&pon->press_work,
+						msecs_to_jiffies(3000));
+			#endif
+		}
 		break;
 	case PON_RESIN:
 		pon_rt_bit = QPNP_PON_RESIN_N_SET;
@@ -1167,6 +1183,35 @@ static void bark_work_func(struct work_struct *work)
 err_return:
 	return;
 }
+
+#ifdef VENDOR_EDIT
+static void press_work_func(struct work_struct *work)
+{
+       int rc;
+       uint pon_rt_sts = 0;
+       struct qpnp_pon_config *cfg;
+       struct qpnp_pon *pon =
+               container_of(work, struct qpnp_pon, press_work.work);
+
+       cfg = qpnp_get_cfg(pon, PON_KPDPWR);
+       if (!cfg) {
+               dev_err(&pon->pdev->dev, "Invalid config pointer\n");
+               goto err_return;
+       }
+       /* check the RT status to get the current status of the line */
+       rc = regmap_read(pon->regmap, QPNP_PON_RT_STS(pon), &pon_rt_sts);
+       if (rc) {
+               dev_err(&pon->pdev->dev, "Unable to read PON RT status\n");
+               goto err_return;
+       }
+       if ((pon_rt_sts & QPNP_PON_KPDPWR_N_SET) == 1)
+               dev_err(&pon->pdev->dev, "after 3s Power-Key is still DOWN\n");
+       msleep(20);
+       sys_sync();
+err_return:
+       return;
+}
+#endif
 
 static irqreturn_t qpnp_resin_bark_irq(int irq, void *_pon)
 {
@@ -2536,6 +2581,9 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK(&pon->bark_work, bark_work_func);
 
+#ifdef VENDOR_EDIT
+	INIT_DELAYED_WORK(&pon->press_work, press_work_func);
+#endif
 	/* register the PON configurations */
 	rc = qpnp_pon_config_init(pon);
 	if (rc) {
