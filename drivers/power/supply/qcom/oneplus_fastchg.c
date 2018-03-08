@@ -78,6 +78,9 @@ struct fastchg_device_info *fastchg_di;
 static unsigned char *dashchg_firmware_data;
 static struct i2c_client *mcu_client;
 
+//for mcu_data irq delay issue 2017.10.14@Infi
+extern void msm_cpuidle_set_sleep_disable(bool disable);
+
 void opchg_set_data_active(struct fastchg_device_info *chip)
 {
 	gpio_direction_input(chip->ap_data);
@@ -609,6 +612,7 @@ void switch_mode_to_normal(void)
 {
 	usb_sw_gpio_set(0);
 	mcu_en_gpio_set(1);
+	msm_cpuidle_set_sleep_disable(false);
 }
 
 static void update_fast_chg_started(void)
@@ -897,6 +901,7 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				notify_check_usb_suspend(false, false);
 				dash_write(di, ALLOW_DATA);
 				di->fast_chg_started = true;
+				msm_cpuidle_set_sleep_disable(true);
 			}
 			break;
 		case DASH_NOTIFY_FAST_ABSENT:
