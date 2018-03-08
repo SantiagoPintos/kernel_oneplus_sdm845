@@ -498,5 +498,7 @@ static inline void print_hex_dump_debug(const char *prefix_str, int prefix_type,
 {
 }
 #endif
-
+#ifdef VENDOR_EDIT
+int force_oem_console_setup(char *str);
+#endif
 #endif
