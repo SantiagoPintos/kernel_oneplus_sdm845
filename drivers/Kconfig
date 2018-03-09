@@ -209,6 +209,9 @@ source "drivers/hwtracing/intel_th/Kconfig"
 source "drivers/fpga/Kconfig"
 
 source "drivers/sensors/Kconfig"
+#ifdef VENDOR_EDIT
+source "drivers/oem_debug/Kconfig"
+#endif
 
 source "drivers/tee/Kconfig"
 
