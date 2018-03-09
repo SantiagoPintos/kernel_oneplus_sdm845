@@ -333,7 +333,7 @@ static int param_get_backcover_color_flag(char *val, const struct kernel_param *
         uint32 offset = offsetof(param_saleinfo_t, backcover_color);
 
         get_param_by_index_and_offset(sid_index,offset, &backcover_color, sizeof(backcover_color));
-        cnt = sprintf(val, "%x", backcover_color);
+        cnt = sprintf(val, "%X", backcover_color);
         pr_err("param_get_backcover_color_flag(): backcover_color=%d\n", backcover_color);
 
         return cnt;
@@ -345,7 +345,7 @@ static int param_set_backcover_color_flag(const char *val, const struct kernel_p
 	uint32 sid_index = PARAM_SID_SALEINFO;
 	uint32 offset = offsetof(param_saleinfo_t, backcover_color);
 
-	sscanf(val, "%x", &backcover_color);
+	sscanf(val, "%X", &backcover_color);
 	set_param_by_index_and_offset(sid_index, offset, &backcover_color, sizeof(backcover_color));
 
 	return 0;
