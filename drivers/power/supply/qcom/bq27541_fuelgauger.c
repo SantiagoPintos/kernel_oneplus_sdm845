@@ -37,6 +37,8 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #endif
+#include <linux/proc_fs.h>
+
 #include <linux/power/oem_external_fg.h>
 
 /* david.liu@bsp, 20161004 Add BQ27411 support */
@@ -1171,6 +1173,32 @@ static void bq_modify_soc_smooth_parameter(struct work_struct *work)
 	di->set_smoothing = false;
 	bq27541_set_allow_reading(true);
 }
+static ssize_t battery_exist_read(struct file *p_file,
+	char __user *puser_buf, size_t count, loff_t *p_offset)
+{
+	return 0;
+}
+
+static ssize_t battery_exist_write(struct file *p_file,
+	const char __user *puser_buf,
+	size_t count, loff_t *p_offset)
+{
+	return 0;
+}
+
+static const struct file_operations battery_exist_operations = {
+	.read = battery_exist_read,
+	.write = battery_exist_write,
+};
+
+static void init_battery_exist_node(void)
+{
+	if (!proc_create("battery_exist", 0644, NULL,
+			 &battery_exist_operations)){
+		pr_err("%s : Failed to register proc interface\n", __func__);
+	}
+}
+
 
 static bool check_bat_present(struct bq27541_device_info *di)
 {
@@ -1913,8 +1941,14 @@ static int bq27541_battery_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&di->battery_soc_work, update_battery_soc_work);
 	schedule_delayed_work(&di->hw_config, BQ27541_INIT_DELAY);
 	schedule_delayed_work(&di->battery_soc_work, BATTERY_SOC_UPDATE_MS);
-	pr_info("probe sucdess\n");
-	check_bat_present(di);
+	retval = check_bat_present(di);
+	if( retval ) {
+		init_battery_exist_node();
+		pr_info("probe success battery exist \n");
+	}
+	else {
+		pr_info("probe success battery not exist \n");
+	}
 	return 0;
 
 batt_failed_4:
