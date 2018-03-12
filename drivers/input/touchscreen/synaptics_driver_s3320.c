@@ -66,7 +66,7 @@
 #include "synaptics_baseline.h"
 //#define VENDOR_EDIT
 #include "synaptics_dsx_core.h"
-//#include <linux/oneplus/boot_mode.h>
+#include <linux/oneplus/boot_mode.h>
 /*------------------------------------------------Global Define--------------------------------------------*/
 
 #define TP_UNKNOWN 0
@@ -3626,7 +3626,7 @@ static ssize_t synaptics_update_fw_store(struct device *dev,
 	struct synaptics_ts_data *ts = dev_get_drvdata(dev);
 	unsigned long val;
 	int rc;
-/*
+
 	int bootmode;
 
 	bootmode = get_boot_mode();
@@ -3637,7 +3637,7 @@ static ssize_t synaptics_update_fw_store(struct device *dev,
 		TPD_ERR("synaptics disable tp update firmware update\n");
 		return size;
 	}
-*/
+
 	if (ts->is_suspended && ts->support_hw_poweroff){
 		TPD_ERR("power off firmware abort!\n");
 		return size;
