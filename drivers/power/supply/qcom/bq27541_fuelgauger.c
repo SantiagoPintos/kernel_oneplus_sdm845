@@ -234,6 +234,7 @@ struct bq27541_device_info {
 	atomic_t suspended;
 	int temp_pre;
 	int lcd_off_delt_soc;
+	int  t_count;
 	bool lcd_is_off;
 	bool allow_reading;
 	bool fastchg_started;
@@ -943,16 +944,25 @@ static int bq27541_get_batt_bq_soc(void)
 #define SHUTDOWN_TBAT 680
 static int bq27541_get_battery_temperature(void)
 {
-	static int t_cout;
 	int ret;
+	static unsigned long pre_time;
+	unsigned long current_time, time_last;
 
 	ret = bq27541_battery_temperature(bq27541_di);
 	if (ret >= SHUTDOWN_TBAT) {
-		t_cout++;
-		if (t_cout < 2)
+		bq27541_di->t_count++;
+		if (bq27541_di->t_count == 1)
+			get_current_time(&pre_time);
+		get_current_time(&current_time);
+		time_last = current_time - pre_time;
+		if (time_last < 8)
 			return SHUTDOWN_TBAT - 1;
+		else {
+			pr_info("Tbat =%d T_tol=%d\n",
+				ret, (int)(current_time - pre_time));
+}
 	}
-	t_cout = 0;
+	bq27541_di->t_count = 0;
 	return ret;
 }
 static bool bq27541_is_battery_present(void)
@@ -1934,6 +1944,7 @@ static int bq27541_battery_probe(struct i2c_client *client,
 	}
 	bq27541_di = di;
 	bq27541_parse_dt(di);
+	di->t_count = 0;
 	di->lcd_is_off = false;
 	INIT_DELAYED_WORK(&di->hw_config, bq27541_hw_config);
 	INIT_DELAYED_WORK(&di->modify_soc_smooth_parameter,
