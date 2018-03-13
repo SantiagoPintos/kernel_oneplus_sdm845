@@ -1133,6 +1133,9 @@ static void update_battery_soc_work(struct work_struct *work)
 	bq27541_get_battery_soc();
 	bq27541_get_batt_remaining_capacity();
 	bq27541_set_allow_reading(false);
+	if (!bq27541_di->already_modify_smooth)
+		schedule_delayed_work(
+		&bq27541_di->modify_soc_smooth_parameter, 1000);
 	schedule_delayed_work(&bq27541_di->battery_soc_work,
 			msecs_to_jiffies(BATTERY_SOC_UPDATE_MS));
 }
@@ -1177,6 +1180,10 @@ static void bq_modify_soc_smooth_parameter(struct work_struct *work)
 
 	di = container_of(work, struct bq27541_device_info,
 			modify_soc_smooth_parameter.work);
+	if (get_dash_started())
+		return;
+	if (di->already_modify_smooth)
+		return;
 	bq27541_set_allow_reading(false);
 	di->set_smoothing = true;
 	bq27411_modify_soc_smooth_parameter(di, true);
