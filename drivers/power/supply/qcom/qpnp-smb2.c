@@ -2913,7 +2913,7 @@ static int smb2_probe(struct platform_device *pdev)
 	op_charge_info_init(chg);
 	pdata = msm_bus_cl_get_pdata(pdev);
 	if (!pdata)
-		pr_err("GPIO44 failed get_pdata client_id\n");
+		pr_err("Fail to get bus data\n");
 	else
 		chg->bus_client = msm_bus_scale_register_client(pdata);
 #endif
