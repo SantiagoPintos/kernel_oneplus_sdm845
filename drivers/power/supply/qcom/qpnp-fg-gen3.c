@@ -5057,6 +5057,7 @@ static struct fg_irq_info fg_irqs[FG_IRQ_MAX] = {
 	[BSOC_DELTA_IRQ] = {
 		.name		= "bsoc-delta",
 		.handler	= fg_delta_bsoc_irq_handler,
+		.wakeable	= true,
 	},
 	[SOC_READY_IRQ] = {
 		.name		= "soc-ready",
