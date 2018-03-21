@@ -960,7 +960,7 @@ static int bq27541_get_battery_temperature(void)
 		else {
 			pr_info("Tbat =%d T_tol=%d\n",
 				ret, (int)(current_time - pre_time));
-}
+		}
 	}
 	bq27541_di->t_count = 0;
 	return ret;

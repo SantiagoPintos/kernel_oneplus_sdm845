@@ -5579,6 +5579,8 @@ static void op_handle_usb_removal(struct smb_charger *chg)
 	chg->ck_dash_count = 0;
 	chg->re_trigr_dash_done = 0;
 	chg->recovery_boost_count = 0;
+	vote(chg->fcc_votable,
+	DEFAULT_VOTER, true, SDP_CURRENT_UA);
 	op_battery_temp_region_set(chg, BATT_TEMP_INVALID);
 }
 
