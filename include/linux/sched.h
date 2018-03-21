@@ -1752,6 +1752,8 @@ struct task_struct {
 	//huruihuan add for kill task in D status
 	unsigned int kill_flag;
 	struct timespec ttu;
+	int compensate_time;
+	int compensate_need;
 #endif
 #ifdef CONFIG_SMP
 	struct llist_node wake_entry;

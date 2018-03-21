@@ -1766,6 +1766,13 @@ done:
 
 static u64 add_to_task_demand(struct rq *rq, struct task_struct *p, u64 delta)
 {
+#ifdef VENDOR_EDIT
+	if (p->compensate_need) {
+		delta += p->compensate_time;
+		p->compensate_time = 0;
+		p->compensate_need = 0;
+	}
+#endif
 	delta = scale_exec_time(delta, rq);
 	p->ravg.sum += delta;
 	if (unlikely(p->ravg.sum > sched_ravg_window))
@@ -1953,6 +1960,8 @@ static inline void run_walt_irq_work(u64 old_window_start, struct rq *rq)
 	if (result == old_window_start)
 		irq_work_queue(&walt_cpufreq_irq_work);
 }
+
+
 
 /* Reflect task activity on its demand and cpu's busy time statistics */
 void update_task_ravg(struct task_struct *p, struct rq *rq, int event,
