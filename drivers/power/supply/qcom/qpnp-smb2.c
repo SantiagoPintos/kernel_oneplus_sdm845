@@ -3041,8 +3041,6 @@ static int smb2_probe(struct platform_device *pdev)
 #endif
 
 	if (usb_present) {
-		schedule_delayed_work(&chg->non_standard_charger_check_work,
-		msecs_to_jiffies(TIME_1000MS));
 		chg->boot_usb_present = true;
 	}
 	if (!usb_present && chg->vbus_present)
@@ -3053,6 +3051,9 @@ static int smb2_probe(struct platform_device *pdev)
 #ifdef VENDOR_EDIT
 	/*yangfb@bsp, 20180302,enable stm6620 sheepmode */
 	op_stm6620_off_ctrl(chg);
+#endif
+#ifdef VENDOR_EDIT
+	chg->probe_done = true;
 #endif
 
 	pr_info("QPNP SMB2 probed successfully usb:present=%d type=%d batt:present = %d health = %d charge = %d\n",

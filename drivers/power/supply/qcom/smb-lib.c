@@ -4592,7 +4592,7 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 			schedule_delayed_work(&chg->re_det_work,
 				msecs_to_jiffies(TIME_1000MS));
 		} else {
-			if (!chg->boot_usb_present)
+			if (chg->probe_done)
 				schedule_delayed_work(
 				&chg->non_standard_charger_check_work,
 				msecs_to_jiffies(TIME_1000MS));
@@ -6921,6 +6921,15 @@ void checkout_term_current(struct smb_charger *chg, int batt_temp)
 	}
 }
 
+static void trigger_check_charger(struct smb_charger *chg)
+{
+	chg->non_stand_chg_count = 0;
+	schedule_delayed_work(
+		&chg->non_standard_charger_check_work,
+		msecs_to_jiffies(TIME_1000MS));
+}
+
+
 static int usb_enum_check(const char *val, const struct kernel_param *kp)
 {
 	const struct apsd_result *apsd_result;
@@ -6928,28 +6937,28 @@ static int usb_enum_check(const char *val, const struct kernel_param *kp)
 	unsigned long usb_sw_reset = 0;
 	int ret = 0;
 
-	chg->non_stand_chg_count = 0;
-	schedule_delayed_work(
-		&chg->non_standard_charger_check_work,
-		msecs_to_jiffies(TIME_1000MS));
-
 	if (chg->usb_enum_status)
+		return 0;
+
+	if (!is_usb_present(chg))
+		return 0;
+
+	trigger_check_charger(chg);
+	apsd_result = smblib_get_apsd_result(chg);
+	if (apsd_result->bit != SDP_CHARGER_BIT
+		&& apsd_result->bit != CDP_CHARGER_BIT)
 		return 0;
 
 	ret = kstrtoul(val, 10, &usb_sw_reset);
 	if (ret)
 		return ret;
 
-	if (!usb_sw_reset || !is_usb_present(chg))
-		return 0;
-
-	apsd_result = smblib_get_apsd_result(chg);
-	if (apsd_result->bit != SDP_CHARGER_BIT
-		&& apsd_result->bit != CDP_CHARGER_BIT)
+	if (!usb_sw_reset)
 		return 0;
 
 	pr_info("usb don't enum for longtime in boot\n");
 	op_handle_usb_removal(chg);
+
 	return 0;
 }
 module_param_call(sys_boot_complete, usb_enum_check, NULL, NULL, 0644);

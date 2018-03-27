@@ -402,6 +402,7 @@ struct smb_charger {
 	bool				use_fake_temp;
 	bool				use_fake_protect_sts;
 	bool				vbus_present;
+	bool				probe_done;
 	bool				hvdcp_present;
 	bool				dash_present;
 	bool				charger_collpse;
