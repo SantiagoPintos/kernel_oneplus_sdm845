@@ -18,10 +18,11 @@
 #include <linux/interrupt.h>
 #include <linux/power/oem_external_fg.h>
 #include <linux/pm_qos.h>
+#include <linux/proc_fs.h>
 
 #define BYTE_OFFSET			2
 #define BYTES_TO_WRITE		16
-#define ERASE_COUNT		384	/* 0x8800-0x9FFF */
+
 #define READ_COUNT			192
 #define	FW_CHECK_FAIL		0
 #define	FW_CHECK_SUCCESS	1
@@ -48,6 +49,8 @@ struct fastchg_device_info {
 	bool irq_enabled;
 	bool fast_chg_allow;
 	bool firmware_already_updated;
+	bool n76e_present;
+	int erase_count;
 	int adapter_update_report;
 	int adapter_update_real;
 	int battery_type;
@@ -77,6 +80,32 @@ struct fastchg_device_info *fastchg_di;
 
 static unsigned char *dashchg_firmware_data;
 static struct i2c_client *mcu_client;
+
+static ssize_t n76e_exist_read(struct file *p_file,
+	char __user *puser_buf, size_t count, loff_t *p_offset)
+{
+	return 0;
+}
+
+static ssize_t n76e_exist_write(struct file *p_file,
+	const char __user *puser_buf,
+	size_t count, loff_t *p_offset)
+{
+	return 0;
+}
+
+static const struct file_operations n76e_exist_operations = {
+	.read = n76e_exist_read,
+	.write = n76e_exist_write,
+};
+
+static void init_n76e_exist_node(void)
+{
+	if (!proc_create("n76e_exit", 0644, NULL,
+			 &n76e_exist_operations)){
+		pr_info("Failed to register n76e node\n");
+	}
+}
 
 //for mcu_data irq delay issue 2017.10.14@Infi
 extern void msm_cpuidle_set_sleep_disable(bool disable);
@@ -174,9 +203,50 @@ static int oneplus_dash_i2c_write(
 	return i2c_smbus_write_i2c_block_data(client, addr, len, txbuf);
 }
 
+static unsigned char addr_buf[2];
+static bool n76e_fw_check(struct fastchg_device_info *chip)
+{
+	unsigned char data_buf[16] = {0x0};
+	int rc = 0;
+	int j = 0, i;
+	int fw_line = 0;
+	int total_line = 0;
+
+	total_line = chip->dashchg_fw_ver_count / 18;
+
+	for (fw_line = 0; fw_line < total_line; fw_line++) {
+		addr_buf[0] = dashchg_firmware_data[fw_line * 18 + 1];
+		addr_buf[1] = dashchg_firmware_data[fw_line * 18];
+		rc = oneplus_dash_i2c_write(chip->client,
+				0x01, 2, &addr_buf[0]);
+		if (rc < 0) {
+			pr_err("i2c_write 0x01 error\n");
+			return FW_CHECK_FAIL;
+		}
+
+		data_buf[0] = 0;
+		oneplus_dash_i2c_write(chip->client, 0x03, 1, &data_buf[0]);
+		usleep_range(2000, 2100);
+		oneplus_dash_i2c_read(chip->client, 0x03, 16, &data_buf[0]);
+
+		for (j = 0; j < 16; j++) {
+			if (data_buf[j] != dashchg_firmware_data[fw_line * 18 + 2 + j]) {
+				pr_err("fail, data_buf[%d]:0x%x != n76e_firmware_data[%d]:0x%x\n",
+						j, data_buf[j], (fw_line * 18 + 2 + j),
+						dashchg_firmware_data[fw_line * 18 + 2 + j]);
+				for (i = 0; i < 16; i++)
+					pr_info("data_buf[%d]:0x%x\n", i, data_buf[i]);
+				pr_info("fail line=%d\n", fw_line);
+				return FW_CHECK_FAIL;
+			}
+		}
+	}
+		return FW_CHECK_SUCCESS;
+}
+
+
 static bool dashchg_fw_check(void)
 {
-	unsigned char addr_buf[2] = {0x88, 0x00};
 	unsigned char data_buf[32] = {0x0};
 	int rc, i, j, addr;
 	int fw_line = 0;
@@ -232,7 +302,6 @@ static int dashchg_fw_write(
 	unsigned int count = 0;
 	unsigned char zero_buf[1] = {0};
 	unsigned char temp_buf[1] = {0};
-	unsigned char addr_buf[2] = {0x88, 0x00};
 	int rc;
 
 	count = offset;
@@ -254,13 +323,17 @@ static int dashchg_fw_write(
 		oneplus_dash_i2c_read(mcu_client, 0x05, 1, &temp_buf[0]);
 
 		/* write 16 bytes data to dashchg again */
-		oneplus_dash_i2c_write(mcu_client,
-		0x02, BYTES_TO_WRITE,
-		&data_buf[count+BYTE_OFFSET+BYTES_TO_WRITE]);
-		oneplus_dash_i2c_write(mcu_client, 0x05, 1, &zero_buf[0]);
-		oneplus_dash_i2c_read(mcu_client, 0x05, 1, &temp_buf[0]);
-
-		count = count + BYTE_OFFSET + 2 * BYTES_TO_WRITE;
+		if (!fastchg_di->n76e_present) {
+			oneplus_dash_i2c_write(mcu_client,
+			0x02, BYTES_TO_WRITE,
+			&data_buf[count+BYTE_OFFSET+BYTES_TO_WRITE]);
+			oneplus_dash_i2c_write(mcu_client,
+					0x05, 1, &zero_buf[0]);
+			oneplus_dash_i2c_read(mcu_client,
+					0x05, 1, &temp_buf[0]);
+			count = count + BYTE_OFFSET + 2 * BYTES_TO_WRITE;
+		} else
+			count = count + BYTE_OFFSET +  BYTES_TO_WRITE;
 
 		usleep_range(2000, 2001);
 		if (count > (offset + length - 1))
@@ -298,17 +371,20 @@ static void reset_mcu_and_request_irq(struct fastchg_device_info *di)
 static void dashchg_fw_update(struct work_struct *work)
 {
 	unsigned char zero_buf[1] = {0};
-	unsigned char addr_buf[2] = {0x88, 0x00};
 	unsigned char temp_buf[1] = {0};
 	int i, rc = 0;
-	unsigned int addr = 0x8800;
+	unsigned int addr;
 	int download_again = 0;
 	struct fastchg_device_info *di = container_of(work,
 			struct fastchg_device_info,
 			update_firmware.work);
 
+	addr = (addr_buf[0] <<  8)  +  (addr_buf[1] & 0xFF);
 	__pm_stay_awake(&di->fastchg_update_fireware_lock);
-	rc = dashchg_fw_check();
+	if (di->n76e_present)
+		rc = n76e_fw_check(di);
+	else
+		rc = dashchg_fw_check();
 	if (rc == FW_CHECK_SUCCESS) {
 		di->firmware_already_updated = true;
 		reset_mcu_and_request_irq(di);
@@ -321,7 +397,7 @@ static void dashchg_fw_update(struct work_struct *work)
 
 update_fw:
 	/* erase address 0x200-0x7FF */
-	for (i = 0; i < ERASE_COUNT; i++) {
+	for (i = 0; i < di->erase_count; i++) {
 		/* first:set address */
 		rc = oneplus_dash_i2c_write(mcu_client, 0x01, 2, &addr_buf[0]);
 		if (rc < 0) {
@@ -330,10 +406,13 @@ update_fw:
 		}
 
 		/* erase data:0x10 words once */
-		oneplus_dash_i2c_write(mcu_client, 0x04, 1, &zero_buf[0]);
+		if (!di->n76e_present)
+			oneplus_dash_i2c_write(mcu_client,
+					0x04, 1, &zero_buf[0]);
 		usleep_range(1000, 1001);
 		oneplus_dash_i2c_read(mcu_client, 0x04, 1, &temp_buf[0]);
-
+		if (di->n76e_present)
+			usleep_range(7000, 7100);
 		/* erase data:0x10 words once */
 		addr = addr + 0x10;
 		addr_buf[0] = addr >> 8;
@@ -344,7 +423,10 @@ update_fw:
 
 	/* fw check begin:read data from mcu and compare*/
 	/*it with dashchg_firmware_data[] */
-	rc = dashchg_fw_check();
+	if (di->n76e_present)
+		rc = dashchg_fw_check();
+	else
+		rc = n76e_fw_check(di);
 	if (rc == FW_CHECK_FAIL) {
 		download_again++;
 		if (download_again > 3)
@@ -1094,6 +1176,8 @@ static int dash_parse_dt(struct fastchg_device_info *di)
 			"microchip,ap-data", 0, &flags);
 	di->mcu_en_gpio = of_get_named_gpio_flags(dev_node,
 			"microchip,mcu-en-gpio", 0, &flags);
+	di->n76e_present = of_property_read_bool(dev_node,
+			"oem,n76e_support");
 	return 0;
 }
 
@@ -1104,20 +1188,23 @@ static int request_dash_gpios(struct fastchg_device_info *di)
 	if (gpio_is_valid(di->usb_sw_1_gpio)
 		&& gpio_is_valid(di->usb_sw_2_gpio)) {
 		ret = gpio_request(di->usb_sw_1_gpio, "usb_sw_1_gpio");
-		if (ret)
+		if (ret) {
 			pr_err("gpio_request failed for %d ret=%d\n",
 			di->usb_sw_1_gpio, ret);
-		else
-			gpio_direction_output(di->usb_sw_1_gpio, 0);
+			return -EINVAL;
+		}
+		gpio_direction_output(di->usb_sw_1_gpio, 0);
 
 		ret = gpio_request(di->usb_sw_2_gpio, "usb_sw_2_gpio");
-		if (ret)
+		if (ret) {
 			pr_err("gpio_request failed for %d ret=%d\n",
 			di->usb_sw_2_gpio, ret);
-		else
-			gpio_direction_output(di->usb_sw_2_gpio, 0);
+			return -EINVAL;
+		}
+		gpio_direction_output(di->usb_sw_2_gpio, 0);
 
-	}
+	} else
+		return -EINVAL;
 
 	if (gpio_is_valid(di->ap_clk)) {
 		ret = gpio_request(di->ap_clk, "ap_clk");
@@ -1209,6 +1296,22 @@ static int dash_pinctrl_init(struct fastchg_device_info *di)
 
 }
 
+static void check_n76e_support(struct fastchg_device_info *di)
+{
+	if (di->n76e_present) {
+		addr_buf[0] = 0;
+		addr_buf[1] = 0;
+		init_n76e_exist_node();
+		di->erase_count = 959; /*0x3BFF - 0x0000*/
+		pr_info("n76e exist\n");
+	} else {
+		addr_buf[0] = 0x88;
+		addr_buf[1] = 0;
+		di->erase_count = 384; /*0x9FFF - 0x88000*/
+		pr_info("n76e not exist\n");
+	}
+
+}
 static int dash_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct fastchg_device_info *di;
@@ -1225,7 +1328,6 @@ static int dash_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		ret = -ENOMEM;
 		goto err_check_functionality_failed;
 	}
-
 	di->client = mcu_client = client;
 	di->firmware_already_updated = false;
 	di->irq_enabled = true;
@@ -1238,8 +1340,11 @@ static int dash_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	ret = dash_parse_dt(di);
 	if (ret == -EINVAL)
 		goto err_read_dt;
-
-	request_dash_gpios(di);
+	if (is_hw_support_n76e() && !di->n76e_present)
+		goto err_read_dt;
+	ret = request_dash_gpios(di);
+	if (ret < 0)
+		goto err_read_dt;
 	dash_pinctrl_init(di);
 	mutex_init(&di->read_mutex);
 
@@ -1272,7 +1377,7 @@ static int dash_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 
 	mcu_init(di);
-
+	check_n76e_support(di);
 	fastcharge_information_register(&fastcharge_information);
 	schedule_delayed_work(&di->update_fireware_version_work,
 			msecs_to_jiffies(SHOW_FW_VERSION_DELAY_MS));
