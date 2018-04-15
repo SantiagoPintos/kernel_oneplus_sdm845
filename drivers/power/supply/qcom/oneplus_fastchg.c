@@ -424,9 +424,9 @@ update_fw:
 	/* fw check begin:read data from mcu and compare*/
 	/*it with dashchg_firmware_data[] */
 	if (di->n76e_present)
-		rc = dashchg_fw_check();
-	else
 		rc = n76e_fw_check(di);
+	else
+		rc = dashchg_fw_check();
 	if (rc == FW_CHECK_FAIL) {
 		download_again++;
 		if (download_again > 3)
