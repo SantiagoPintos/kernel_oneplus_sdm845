@@ -1736,6 +1736,25 @@ struct tlbflush_unmap_batch {
 	bool writable;
 };
 
+#ifdef VENDOR_EDIT
+/*Ted, 20180425, non-exist dcache*/
+#define FILE_MAP_NUM            0x20
+#define FILE_MAP_MAX_INDEX	0x1F
+#define NEDF_PATH_MAX		504
+struct nedf {
+	size_t len;
+	char pathname[NEDF_PATH_MAX];
+};
+
+struct nedf_node {
+	u64 nf_tag;
+	struct nedf *nf;
+	uint16_t nf_cnt;
+	uint16_t nf_index;
+	bool is_valid;
+};
+#endif
+
 struct task_struct {
 #ifdef CONFIG_THREAD_INFO_IN_TASK
 	/*
@@ -2267,6 +2286,8 @@ struct task_struct {
 	int etask_claim;
 	int claim_cpu;
 	bool utask_slave;
+	/* Ted, 20180425, non-exist dcache*/
+	struct nedf_node *nn;
 #endif
 #ifdef VENDOR_EDIT
 	int hot_count;

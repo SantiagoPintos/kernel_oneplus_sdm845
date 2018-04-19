@@ -1802,6 +1802,11 @@ struct inode_operations {
 			   umode_t create_mode, int *opened);
 	int (*tmpfile) (struct inode *, struct dentry *, umode_t);
 	int (*set_acl)(struct inode *, struct posix_acl *, int);
+#ifdef VENDOR_EDIT
+	/*Curtis, 2018/04/25 reset non-exist dcache*/
+	void (*settag)(void);
+	long long (*gettag)(void);
+#endif
 } ____cacheline_aligned;
 
 ssize_t rw_copy_check_uvector(int type, const struct iovec __user * uvector,

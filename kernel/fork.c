@@ -362,6 +362,12 @@ void free_task(struct task_struct *tsk)
 	 */
 	WARN_ON_ONCE(atomic_read(&tsk->stack_refcount) != 0);
 #endif
+#ifdef VENDOR_EDIT
+	if (tsk->nn) {
+		kfree(tsk->nn->nf);
+		kfree(tsk->nn);
+	}
+#endif
 	rt_mutex_debug_task_free(tsk);
 	ftrace_graph_exit_task(tsk);
 	put_seccomp_filter(tsk);
@@ -558,6 +564,8 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 	tsk->etask_claim = 0;
 	tsk->claim_cpu = -1;
 	tsk->utask_slave = 0;
+	/*Curtis, 20180425, non-exist dcache*/
+	tsk->nn = NULL;
 #endif
 	account_kernel_stack(tsk, 1);
 
@@ -1501,6 +1509,9 @@ static __latent_entropy struct task_struct *copy_process(
 {
 	int retval;
 	struct task_struct *p;
+#ifdef VENDOR_EDIT
+	struct nedf_node *nn = NULL;
+#endif
 
 	if ((clone_flags & (CLONE_NEWNS|CLONE_FS)) == (CLONE_NEWNS|CLONE_FS))
 		return ERR_PTR(-EINVAL);
@@ -1878,6 +1889,12 @@ static __latent_entropy struct task_struct *copy_process(
 			attach_pid(p, PIDTYPE_PGID);
 			attach_pid(p, PIDTYPE_SID);
 			__this_cpu_inc(process_counts);
+#ifdef VENDOR_EDIT
+			/*Ted, 20180425, non-exist dcache*/
+			if (!(p->flags & PF_KTHREAD))
+				nn =
+				kmalloc(sizeof(struct nedf_node), GFP_NOWAIT);
+#endif
 		} else {
 			current->signal->nr_threads++;
 			atomic_inc(&current->signal->live);
@@ -1903,6 +1920,20 @@ static __latent_entropy struct task_struct *copy_process(
 
 	trace_task_newtask(p, clone_flags);
 	uprobe_copy_process(p, clone_flags);
+#ifdef VENDOR_EDIT
+	if (nn) {
+		p->nn = nn;
+		nn->nf =
+		kmalloc(sizeof(struct nedf) * FILE_MAP_NUM, GFP_NOWAIT);
+		nn->nf_cnt = 0;
+		nn->nf_index = 0;
+		nn->nf_tag = 0;
+		if (nn->nf)
+			nn->is_valid = true;
+		else
+			nn->is_valid = false;
+	}
+#endif
 
 	return p;
 

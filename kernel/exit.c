@@ -196,6 +196,10 @@ repeat:
 	 * group, and the leader is zombie, then notify the
 	 * group leader's parent process. (if it wants notification.)
 	 */
+#ifdef VENDOR_EDIT
+	if (p && p->nn && p->nn->is_valid)
+		p->nn->is_valid = false;
+#endif
 	zap_leader = 0;
 	leader = p->group_leader;
 	if (leader != p && thread_group_empty(leader)
