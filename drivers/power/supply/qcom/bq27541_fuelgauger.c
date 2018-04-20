@@ -692,9 +692,9 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 			&& di->batt_vol_pre > 2500 * 1000)) {
 			if (di->soc_pre == 100) {
 				counter_temp = FIVE_MINUTES;
-			} else if (di->soc_pre > 95) {
+			} else if (di->soc_pre >= 95) {
 				counter_temp = TWO_POINT_FIVE_MINUTES;
-			} else if (di->soc_pre > 60) {
+			} else if (di->soc_pre >= 60) {
 				counter_temp = ONE_MINUTE;
 			} else {
 				if (time_last >=
