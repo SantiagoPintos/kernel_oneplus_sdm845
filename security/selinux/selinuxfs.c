@@ -133,7 +133,7 @@ static unsigned long sel_last_ino = SEL_INO_NEXT - 1;
 
 #define TMPBUFLEN	12
 #ifdef VENDOR_EDIT
-static int selinux_switch;
+int selinux_switch;
 #endif
 
 static ssize_t sel_read_enforce(struct file *filp, char __user *buf,

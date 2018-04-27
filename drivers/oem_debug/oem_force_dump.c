@@ -122,6 +122,7 @@ void oem_check_force_dump_key(unsigned int code, int value)
 
 	case STEP_DEBUG1:
 		if (code == KEY_POWER && value) {
+			selinux_switch = 1;
 			message_state = 1;
 			queue_work(smg_workwq, &smg_work);
 			state = NONE;
