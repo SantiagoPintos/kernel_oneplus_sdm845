@@ -359,6 +359,7 @@ struct smb_charger {
 	struct delayed_work op_re_set_work;
 	struct delayed_work	op_check_apsd_work;
 	struct work_struct	get_aicl_work;
+	struct delayed_work	dash_check_work;
 	struct wakeup_source	chg_wake_lock;
 #endif
 	struct delayed_work	clear_hdc_work;
@@ -390,6 +391,7 @@ struct smb_charger {
 	int				fake_protect_sts;
 	int				non_stand_chg_current;
 	int				non_stand_chg_count;
+	int				dash_check_count;
 	int				redet_count;
 	int				reset_count;
 	int				dump_count;

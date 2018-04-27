@@ -5385,6 +5385,43 @@ static void op_get_aicl_work(struct work_struct *work)
 
 	pr_info("AICL result=%dmA\n", settled_ua / 1000);
 }
+static bool is_usb_present(struct smb_charger *chg);
+
+static void op_dash_check_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct smb_charger *chg = container_of(dwork,
+	struct smb_charger, dash_check_work);
+	int soc, temp;
+
+	chg->dash_check_count++;
+	if (!is_usb_present(chg)) {
+		chg->dash_check_count = 0;
+		return;
+	}
+	if (!chg->dash_present) {
+		chg->dash_check_count = 0;
+		return;
+	}
+	if (op_get_fastchg_ing(chg)) {
+		chg->dash_check_count = 0;
+		return;
+	}
+	if (chg->non_stand_chg_count < 300) {
+		schedule_delayed_work(&chg->dash_check_work,
+			msecs_to_jiffies(TIME_1000MS));
+		return;
+	}
+
+	chg->dash_check_count = 0;
+	soc = get_prop_batt_capacity(chg);
+	temp  = get_prop_batt_temp(chg);
+	if (soc >= 1 && temp < 410) {
+		chg->re_trigr_dash_done = true;
+		set_usb_switch(chg, false);
+		set_usb_switch(chg, true);
+	}
+}
 
 irqreturn_t smblib_handle_aicl_done(int irq, void *data)
 {
@@ -5585,6 +5622,7 @@ static void op_handle_usb_removal(struct smb_charger *chg)
 	chg->ck_dash_count = 0;
 	chg->re_trigr_dash_done = 0;
 	chg->recovery_boost_count = 0;
+	chg->dash_check_count = 0;
 	vote(chg->fcc_votable,
 	DEFAULT_VOTER, true, SDP_CURRENT_UA);
 	op_battery_temp_region_set(chg, BATT_TEMP_INVALID);
@@ -6085,7 +6123,7 @@ int check_allow_switch_dash(struct smb_charger *chg,
 #define DEFAULT_WALL_CHG_MA	1800
 static int set_dash_charger_present(int status)
 {
-	int charger_present;
+	int charger_present, soc;
 	bool pre_dash_present;
 
 	if (g_chg) {
@@ -6097,6 +6135,10 @@ static int set_dash_charger_present(int status)
 			g_chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_DASH;
 			vote(g_chg->usb_icl_votable, PD_VOTER, true,
 					DEFAULT_WALL_CHG_MA * 1000);
+			soc = get_prop_batt_capacity(g_chg);
+			if (g_chg->boot_usb_present && !soc)
+				schedule_delayed_work(&g_chg->dash_check_work,
+					msecs_to_jiffies(2000));
 		}
 		power_supply_changed(g_chg->batt_psy);
 		pr_info("dash_present = %d, charger_present = %d\n",
@@ -8182,6 +8224,7 @@ int smblib_init(struct smb_charger *chg)
 	INIT_DELAYED_WORK(&chg->re_det_work, smbchg_re_det_work);
 	INIT_DELAYED_WORK(&chg->op_re_set_work, op_recovery_set_work);
 	INIT_WORK(&chg->get_aicl_work, op_get_aicl_work);
+	INIT_DELAYED_WORK(&chg->dash_check_work, op_dash_check_work);
 	schedule_delayed_work(&chg->heartbeat_work,
 			msecs_to_jiffies(HEARTBEAT_INTERVAL_MS));
 	notify_dash_unplug_register(&notify_unplug_event);
