@@ -149,8 +149,10 @@ int ufs_fill_info(struct ufs_hba *hba)
 
 	/* Combine vendor name with firmware revision */
 	strcat(ufs_vendor_and_rev, ufs_vendor);
-	strcat(ufs_vendor_and_rev, " ");
-	strcat(ufs_vendor_and_rev, ufs_get_capacity_size(ufs_capacity));
+	if (strncmp(ufs_vendor, "MICRON", 6) != 0) {
+		strcat(ufs_vendor_and_rev, " ");
+		strcat(ufs_vendor_and_rev, ufs_get_capacity_size(ufs_capacity));
+	}
 	strcat(ufs_vendor_and_rev, " ");
 	strcat(ufs_vendor_and_rev, ufs_rev);
 
