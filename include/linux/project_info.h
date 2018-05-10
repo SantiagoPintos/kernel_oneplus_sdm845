@@ -28,6 +28,7 @@ struct project_info {
 	uint32  platform_id;
 	uint32  ftm_uart_boot_mode;
 	uint32  feature_id;
+    uint32  a_board_version;
 };
 
 struct component_info {

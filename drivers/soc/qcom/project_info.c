@@ -434,20 +434,22 @@ void get_cpu_type(void)
 static char mainboard_version[16] = {0};
 static char mainboard_manufacture[8] = {'O',
 	'N', 'E', 'P', 'L', 'U', 'S', '\0'};
-static char Aboard_version[4] = {0};
-static int Aboard_gpio = 130;
+static char Aboard_version[16] = {0};
 
-void init_a_board_gpio(void)
-{
-	if (gpio_is_valid(Aboard_gpio)) {
-		if (gpio_request(Aboard_gpio, "ID_ANT_PCBA"))
-			pr_err("%s: gpio_request(%d) fail!\n",
-			__func__, Aboard_gpio);
-		gpio_direction_input(Aboard_gpio);
-	} else
-		pr_err("%s: Aboard_gpio %d is invalid\n",
-		__func__, Aboard_gpio);
-}
+struct a_borad_version{
+
+       int  version;
+       char   name[16];
+};
+
+struct a_borad_version a_borad_version_string_arry[]={
+
+    {1,   "TMO"},
+    {2,   "US/EU" },
+    {3,   "CN/IN"},
+    {4,   "Unknown"},
+    {5,   "Unknown" },
+};
 
 uint32 get_hw_version(void)
 {
@@ -567,13 +569,12 @@ int __init init_project_info(void)
 		mainboard_version,
 		mainboard_manufacture);
 
-	init_a_board_gpio();
-	snprintf(Aboard_version, sizeof(Aboard_version), "%d",
-		gpio_get_value(Aboard_gpio));
-	push_component_info(ABOARD, Aboard_version,
-		mainboard_manufacture);
-	pr_err("%s: Aboard_gpio(%d) value(%d)\n", __func__, Aboard_gpio,
-		gpio_get_value(Aboard_gpio));
+	snprintf(Aboard_version, sizeof(Aboard_version), "%d %s",
+    project_info_desc->a_board_version,project_info_desc->a_board_version <=5 ?
+    a_borad_version_string_arry[project_info_desc->a_board_version -1].name:"");
+
+	push_component_info(ABOARD, Aboard_version,	mainboard_manufacture);
+	pr_err("%s: Aboard_gpio(%s)\n", __func__, Aboard_version);
 
 	get_ddr_manufacture_name();
 
