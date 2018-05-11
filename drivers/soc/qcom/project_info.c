@@ -521,7 +521,7 @@ int __init init_project_info(void)
 		break;
 	case 22:
 	    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
-		project_info_desc->project_name, "DVT1");
+		project_info_desc->project_name, "PVT");
 		break;
 	case 23:
 	    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
@@ -529,8 +529,13 @@ int __init init_project_info(void)
 		break;
 	case 24:
 	    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
-		project_info_desc->project_name, "PVT1");
+		project_info_desc->project_name, "PVT_MCU");
 		break;
+	case 25:
+	snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
+		project_info_desc->project_name, "DVTBACKUP");
+		break;
+
 	case 33:
 	    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
 		project_info_desc->project_name, "EVB");
@@ -557,7 +562,7 @@ int __init init_project_info(void)
 		break;
 	case 55:
 	    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
-		project_info_desc->project_name, "BACKUP");
+		project_info_desc->project_name, "DVTUSB30");
 		break;
 
 	default:
