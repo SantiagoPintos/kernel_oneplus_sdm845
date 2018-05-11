@@ -92,6 +92,9 @@ struct lpm_cluster *lpm_root_node;
 static bool lpm_prediction = true;
 module_param_named(lpm_prediction, lpm_prediction, bool, 0664);
 
+static bool cluster_prediction = true;
+module_param_named(cluster_prediction, cluster_prediction, bool, 0664);
+
 static uint32_t bias_hyst;
 module_param_named(bias_hyst, bias_hyst, uint, 0664);
 
@@ -456,7 +459,7 @@ static uint64_t lpm_cpuidle_predict(struct cpuidle_device *dev,
 	uint32_t *min_residency = get_per_cpu_min_residency(dev->cpu);
 	uint32_t *max_residency = get_per_cpu_max_residency(dev->cpu);
 
-	if (!lpm_prediction || !cpu->lpm_prediction)
+	if (!lpm_prediction || (!cpu->lpm_prediction && !cluster_prediction))
 		return 0;
 
 	/*
