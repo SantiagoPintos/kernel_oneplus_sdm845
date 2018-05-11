@@ -1076,7 +1076,9 @@ static struct external_battery_gauge bq27541_batt_gauge = {
 	.fast_chg_started_status    = bq27541_get_fastchg_started_status,
 #endif
 };
-#define BATTERY_SOC_UPDATE_MS 6000
+#define BATTERY_SOC_UPDATE_MS 12000
+#define LOW_BAT_SOC_UPDATE_MS 6000
+
 #define RESUME_SCHDULE_SOC_UPDATE_WORK_MS 60000
 
 static int is_usb_pluged(void)
@@ -1115,6 +1117,8 @@ static bool get_dash_started(void)
 
 static void update_battery_soc_work(struct work_struct *work)
 {
+	int schedule_time, vbat;
+
 	if (is_usb_pluged() || get_dash_started()) {
 		schedule_delayed_work(
 				&bq27541_di->battery_soc_work,
@@ -1128,7 +1132,7 @@ static void update_battery_soc_work(struct work_struct *work)
 		return;
 	}
 	bq27541_set_allow_reading(true);
-	bq27541_get_battery_mvolts();
+	vbat = bq27541_get_battery_mvolts()/1000;
 	bq27541_get_average_current();
 	bq27541_get_battery_temperature();
 	bq27541_get_battery_soc();
@@ -1137,8 +1141,10 @@ static void update_battery_soc_work(struct work_struct *work)
 	if (!bq27541_di->already_modify_smooth)
 		schedule_delayed_work(
 		&bq27541_di->modify_soc_smooth_parameter, 1000);
+	schedule_time =
+		vbat < 3600 ? LOW_BAT_SOC_UPDATE_MS : BATTERY_SOC_UPDATE_MS;
 	schedule_delayed_work(&bq27541_di->battery_soc_work,
-			msecs_to_jiffies(BATTERY_SOC_UPDATE_MS));
+			msecs_to_jiffies(schedule_time));
 }
 
 static bool bq27541_registered;
