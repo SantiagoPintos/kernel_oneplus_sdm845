@@ -145,6 +145,11 @@ struct qusb_phy {
 	int			vdd_levels[3]; /* none, low, high */
 	int			init_seq_len;
 	int			*qusb_phy_init_seq;
+#ifdef VENDOR_EDIT
+/*2018/03/31 @BSP add host mode phy init parameters*/
+	int			ophost_init_seq_len;
+	int			*qusb_phy_ophost_init_seq;
+#endif
 	int			host_init_seq_len;
 	int			*qusb_phy_host_init_seq;
 
@@ -645,9 +650,24 @@ static int qusb_phy_init(struct usb_phy *phy)
 			PWR_CTRL1_POWR_DOWN,
 			qphy->base + qphy->phy_reg[PWR_CTRL1]);
 
+#ifdef VENDOR_EDIT
+/*2018/03/31 @BSP add host mode phy init parameters*/
+	if (qphy->qusb_phy_init_seq || qphy->qusb_phy_ophost_init_seq){
+		if ((qphy->phy.flags & PHY_HOST_MODE) && qphy->qusb_phy_ophost_init_seq){
+			dev_info(phy->dev, "%s PHY_HOST_MODE!\n", __func__);
+			qusb_phy_write_seq(qphy->base, qphy->qusb_phy_ophost_init_seq,
+					qphy->init_seq_len, 0);
+		}
+		else
+			qusb_phy_write_seq(qphy->base, qphy->qusb_phy_init_seq,
+					qphy->init_seq_len, 0);
+	}
+#else
 	if (qphy->qusb_phy_init_seq)
 		qusb_phy_write_seq(qphy->base, qphy->qusb_phy_init_seq,
 				qphy->init_seq_len, 0);
+#endif
+
 	if (qphy->efuse_reg) {
 		if (!qphy->tune_val)
 			qusb_phy_get_tune1_param(qphy);
@@ -1349,6 +1369,33 @@ static int qusb_phy_probe(struct platform_device *pdev)
 			"error allocating memory for phy_init_seq\n");
 		}
 	}
+
+#ifdef VENDOR_EDIT
+/*2018/03/31 @BSP add host mode phy init parameters*/
+	size = 0;
+	of_get_property(dev->of_node, "qcom,qusb-phy-ophost-init-seq", &size);
+	if (size) {
+		dev_info(dev,"%s:qusb-phy-ophost-init-seq got!",__func__);
+		qphy->qusb_phy_ophost_init_seq = devm_kzalloc(dev,
+						size, GFP_KERNEL);
+		if (qphy->qusb_phy_ophost_init_seq) {
+			qphy->ophost_init_seq_len =
+				(size / sizeof(*qphy->qusb_phy_ophost_init_seq));
+			if (qphy->ophost_init_seq_len % 2) {
+				dev_err(dev, "invalid ophost_init_seq_len\n");
+				return -EINVAL;
+			}
+
+			of_property_read_u32_array(dev->of_node,
+				"qcom,qusb-phy-ophost-init-seq",
+				qphy->qusb_phy_ophost_init_seq,
+				qphy->ophost_init_seq_len);
+		} else {
+			dev_err(dev,
+			"error allocating memory for phy_ophost_init_seq\n");
+		}
+	}
+#endif
 
 	qphy->host_init_seq_len = of_property_count_elems_of_size(dev->of_node,
 				"qcom,qusb-phy-host-init-seq",
