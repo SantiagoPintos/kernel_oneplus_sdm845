@@ -3,3 +3,4 @@ obj-$(CONFIG_ADJ_CHAIN) += adj_chain/
 obj-$(CONFIG_CRPL) += crpl/
 obj-$(CONFIG_DEFRAG_HELPER) += defrag/
 obj-$(CONFIG_OPCHAIN) += opchain/
+obj-$(CONFIG_HOUSTON) += houston/

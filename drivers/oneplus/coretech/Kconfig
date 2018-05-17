@@ -15,3 +15,9 @@ config ADJ_CHAIN
 	bool "Chain task adj for victim select"
 	help
 	 To chain task adj for any purpose
+
+config HOUSTON
+	default n
+	bool "houston rocket play your temperature guard"
+	help
+	 Realtime temperature monitor
