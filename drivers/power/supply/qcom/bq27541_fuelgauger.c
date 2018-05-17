@@ -125,6 +125,17 @@
 
 #endif
 
+#define BQ28Z610_MAC_CELL_VOLTAGE_EN_ADDR       0x3E
+#define BQ28Z610_MAC_CELL_VOLTAGE_CMD           0x0071
+#define BQ28Z610_MAC_CELL_VOLTAGE_ADDR          0x40
+#define BQ28Z610_MAC_CELL_VOLTAGE_SIZE          4
+/*total 34byte,only read 4byte(aaAA bbBB)*/
+
+#define BQ28Z610_MAC_CELL_BALANCE_TIME_EN_ADDR  0x3E
+#define BQ28Z610_MAC_CELL_BALANCE_TIME_CMD      0x0076
+#define BQ28Z610_MAC_CELL_BALANCE_TIME_ADDR     0x40
+#define BQ28Z610_MAC_CELL_BALANCE_TIME_SIZE     4
+
 /* BQ27541 Control subcommands */
 #define BQ27541_SUBCMD_CTNL_STATUS  0x0000
 #define BQ27541_SUBCMD_DEVCIE_TYPE  0x0001
@@ -222,6 +233,9 @@ struct bq27541_device_info {
 	struct wakeup_source update_soc_wake_lock;
 	struct power_supply	*batt_psy;
 	int saltate_counter;
+	int t_dash_rising;
+	int t_normal_rising;
+	int low_vbat_thr;
 	/*  Add for retry when config fail */
 	int retry_count;
 	/*  Add for get right soc when sleep long time */
@@ -229,6 +243,10 @@ struct bq27541_device_info {
 	int  batt_vol_pre;
 	int current_pre;
 	int health_pre;
+	int batt_cell_1_vol;
+	int batt_cell_2_vol;
+	int batt_cell_max_vol;
+	int batt_cell_min_vol;
 	unsigned long rtc_resume_time;
 	unsigned long rtc_suspend_time;
 	atomic_t suspended;
@@ -337,6 +355,68 @@ static int bq27541_battery_temperature(struct bq27541_device_info *di)
 	di->temp_pre = temp;
 	return temp + ZERO_DEGREE_CELSIUS_IN_TENTH_KELVIN;
 }
+struct bq27541_device_info *bq27541_di;
+static struct i2c_client *new_client;
+
+static int bq27541_read_i2c_block(u8 cmd, u8 length, u8 *returnData)
+{
+	if (!new_client) {
+		pr_err(" new_client NULL,return\n");
+		return 0;
+	}
+	if (cmd == BQ27541_BQ27411_CMD_INVALID)
+		return 0;
+	mutex_lock(&battery_mutex);
+	i2c_smbus_read_i2c_block_data(new_client, cmd, length, returnData);
+	mutex_unlock(&battery_mutex);
+	return 0;
+}
+
+static int bq27541_get_battery_mvolts_2cell_max(void)
+{
+
+	if (!bq27541_di)
+		return 0;
+	return bq27541_di->batt_cell_max_vol;
+}
+
+static int bq27541_get_battery_mvolts_2cell_min(void)
+{
+
+	if (!bq27541_di)
+		return 0;
+
+	return bq27541_di->batt_cell_min_vol;
+}
+
+static int bq28z610_get_2cell_voltage(void)
+{
+	u8 cell_vol[BQ28Z610_MAC_CELL_VOLTAGE_SIZE] = {0, 0, 0, 0};
+
+	if (!bq27541_di)
+		return 0;
+
+	bq27541_i2c_txsubcmd(BQ28Z610_MAC_CELL_VOLTAGE_EN_ADDR,
+			BQ28Z610_MAC_CELL_VOLTAGE_CMD, bq27541_di);
+	usleep_range(1000, 1001);
+	bq27541_read_i2c_block(BQ28Z610_MAC_CELL_VOLTAGE_ADDR,
+			BQ28Z610_MAC_CELL_VOLTAGE_SIZE, cell_vol);
+
+	bq27541_di->batt_cell_1_vol = (cell_vol[1] << 8) | cell_vol[0];
+	bq27541_di->batt_cell_2_vol = (cell_vol[3] << 8) | cell_vol[2];
+	if (bq27541_di->batt_cell_1_vol < bq27541_di->batt_cell_2_vol) {
+		bq27541_di->batt_cell_max_vol = bq27541_di->batt_cell_2_vol;
+		bq27541_di->batt_cell_min_vol = bq27541_di->batt_cell_1_vol;
+	} else {
+		bq27541_di->batt_cell_max_vol = bq27541_di->batt_cell_1_vol;
+		bq27541_di->batt_cell_min_vol = bq27541_di->batt_cell_2_vol;
+	}
+	pr_debug("vbat1 = %dmV, vbat2 = %dmV\n, vbat3 = %dmV",
+	bq27541_di->batt_cell_1_vol, bq27541_di->batt_cell_2_vol,
+	bq27541_di->batt_cell_max_vol);
+
+	return 0;
+}
 
 /*
  * Return the battery Voltage in milivolts
@@ -365,6 +445,9 @@ static int bq27541_battery_voltage(struct bq27541_device_info *di)
 			pr_err("error reading voltage,ret:%d\n", ret);
 			return ret;
 		}
+
+		if (op_sdash_support())
+			bq28z610_get_2cell_voltage();
 	} else {
 		return di->batt_vol_pre;
 	}
@@ -436,8 +519,6 @@ static int bq27541_chip_config(struct bq27541_device_info *di)
 	return 0;
 }
 
-struct bq27541_device_info *bq27541_di;
-static struct i2c_client *new_client;
 
 #ifdef VENDOR_EDIT
 #define TEN_PERCENT                            10
@@ -457,7 +538,6 @@ static struct i2c_client *new_client;
 #define CAPACITY_SALTATE_COUNTER_CHARGING_TERM 30 /* 30 1min */
 #define CAPACITY_SALTATE_COUNTER               4
 #define CAPACITY_SALTATE_COUNTER_NOT_CHARGING  24 /* >=40sec */
-#define LOW_BATTERY_PROTECT_VOLTAGE  3250000
 #define CAPACITY_CALIBRATE_TIME_60_PERCENT     45 /* 45s */
 #define LOW_BATTERY_CAPACITY_THRESHOLD         20
 
@@ -608,9 +688,9 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 			if (soc - di->soc_pre > 0) {
 				di->saltate_counter++;
 				if ((bq27541_di->fastchg_started
-					&& time_last < 20)
+					&& time_last < di->t_dash_rising)
 				|| (!bq27541_di->fastchg_started
-				&& time_last < 30))
+				&& time_last < di->t_normal_rising))
 					return di->soc_pre;
 				di->saltate_counter = 0;
 				soc_calib = di->soc_pre + 1;
@@ -641,7 +721,7 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 
 				/* avoid dead battery shutdown */
 				if (di->batt_vol_pre <=
-					LOW_BATTERY_PROTECT_VOLTAGE
+					di->low_vbat_thr
 					&& di->batt_vol_pre > 2500 * 1000
 					&& di->soc_pre
 					<= LOW_BATTERY_CAPACITY_THRESHOLD) {
@@ -649,7 +729,7 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 					vbat_mv =
 					bq27541_battery_voltage(di);
 					if (vbat_mv <=
-						LOW_BATTERY_PROTECT_VOLTAGE
+						di->low_vbat_thr
 						&& vbat_mv > 2500 * 1000) {
 						/* about 9s */
 						counter_temp =
@@ -688,7 +768,7 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 		}
 	} else { /* not charging */
 		if ((soc < di->soc_pre)
-			|| (di->batt_vol_pre <= LOW_BATTERY_PROTECT_VOLTAGE
+			|| (di->batt_vol_pre <= di->low_vbat_thr
 			&& di->batt_vol_pre > 2500 * 1000)) {
 			if (di->soc_pre == 100) {
 				counter_temp = FIVE_MINUTES;
@@ -709,13 +789,13 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 			}
 			/* avoid dead battery shutdown */
 			if (di->batt_vol_pre <=
-				LOW_BATTERY_PROTECT_VOLTAGE
+				di->low_vbat_thr
 				&& di->batt_vol_pre > 2500 * 1000
 				&& di->soc_pre <=
 				LOW_BATTERY_CAPACITY_THRESHOLD) {
 				/* check again */
 				vbat_mv = bq27541_battery_voltage(di);
-				if (vbat_mv <= LOW_BATTERY_PROTECT_VOLTAGE
+				if (vbat_mv <= di->low_vbat_thr
 				&& vbat_mv > 2500 * 1000 && time_last > 9)
 				counter_temp = 0;
 			}
@@ -726,7 +806,7 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 
 		if (soc < di->soc_pre)
 			soc_calib = di->soc_pre - 1;
-		else if (di->batt_vol_pre <= LOW_BATTERY_PROTECT_VOLTAGE
+		else if (di->batt_vol_pre <= di->low_vbat_thr
 				&& di->batt_vol_pre > 2500 * 1000
 				&& di->soc_pre > 0 && time_last > 9)
 			soc_calib = di->soc_pre - 1;
@@ -1054,6 +1134,8 @@ static int bq27541_get_fastchg_started_status(bool fastchg_started_status)
 }
 
 static struct external_battery_gauge bq27541_batt_gauge = {
+	.get_battery_mvolts_2cell_max  = bq27541_get_battery_mvolts_2cell_max,
+	.get_battery_mvolts_2cell_min  = bq27541_get_battery_mvolts_2cell_min,
 	.get_battery_mvolts     = bq27541_get_battery_mvolts,
 	.get_battery_temperature    = bq27541_get_battery_temperature,
 	.is_battery_present     = bq27541_is_battery_present,
@@ -1480,10 +1562,26 @@ static void update_pre_capacity_func(struct work_struct *w)
 static void bq27541_parse_dt(struct bq27541_device_info *di)
 {
 	struct device_node *node = di->dev->of_node;
+	int rc;
 
 	di->modify_soc_smooth = of_property_read_bool(node,
 				"qcom,modify-soc-smooth");
-	pr_err("di->modify_soc_smooth=%d\n", di->modify_soc_smooth);
+	rc = of_property_read_u32(node,
+		"op,t-normal-rising", &di->t_normal_rising);
+	if (rc < 0)
+		di->t_normal_rising = 20;
+	rc = of_property_read_u32(node,
+		"op,t-dash-rising", &di->t_dash_rising);
+	if (rc < 0)
+		di->t_dash_rising = 10;
+	rc = of_property_read_u32(node,
+		"op,low-vbat-thr", &di->low_vbat_thr);
+	if (rc < 0)
+		di->low_vbat_thr = 3250000;
+	pr_info("t_dash_rising:%d, t-normal-rising:%d\n",
+		di->t_dash_rising, di->t_normal_rising);
+	pr_info("di->modify_soc_smooth:%d, di->low_vbat_thr:%d\n",
+		di->modify_soc_smooth, di->low_vbat_thr);
 }
 static int sealed(void)
 {
@@ -1871,6 +1969,10 @@ static int bq27541_battery_probe(struct i2c_client *client,
 	int num;
 	int retval = 0;
 
+	if (op_dash_probe_status()) {
+		pr_info("will do after dash probe\n");
+		return -EPROBE_DEFER;
+	}
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
 		return -ENODEV;
 

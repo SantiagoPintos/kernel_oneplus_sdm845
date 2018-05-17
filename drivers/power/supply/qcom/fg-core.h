@@ -495,6 +495,7 @@ struct fg_chip {
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	bool			use_external_fg;
+	bool			use_alarm;
 #endif
 	bool			fg_restarting;
 	bool			charge_full;

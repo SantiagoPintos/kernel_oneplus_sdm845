@@ -1,0 +1,18 @@
+"ti,bq25882-charger"
+
+
+
+Required properties:
+
+- compatible : should be "microchip,oneplus_fastchg"
+
+
+Example:
+	bq25882-charger@6b {
+
+               status = "ok";
+
+               compatible = "ti,bq25882-charger";
+
+               reg = <0x6b>;
+
