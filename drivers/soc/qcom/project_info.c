@@ -14,6 +14,8 @@
 #include <linux/project_info.h>
 #include <soc/qcom/smem.h>
 #include <linux/gpio.h>
+#include <soc/qcom/socinfo.h>
+
 
 static struct component_info component_info_desc[COMPONENT_MAX];
 static struct kobject *project_info_kobj;
@@ -103,11 +105,11 @@ static ssize_t project_info_get(struct device *dev,
 		if (attr == &dev_attr_platform_id)
 			return snprintf(buf, BUF_SIZE, "%d\n",
 			project_info_desc->platform_id);
-        /*
+
 		if (attr == &dev_attr_serialno)
 			return snprintf(buf, BUF_SIZE, "0x%x\n",
-			chip_serial_num);
-        */
+			socinfo_get_serial_number());
+
 		if (attr == &dev_attr_feature_id)
 			return snprintf(buf, BUF_SIZE, "%d\n",
 			project_info_desc->feature_id);
@@ -161,6 +163,9 @@ static DEVICE_ATTR(Aboard, 0444, component_info_get, NULL);
 static DEVICE_ATTR(nfc, 0444, component_info_get, NULL);
 static DEVICE_ATTR(fast_charge, 0444, component_info_get, NULL);
 static DEVICE_ATTR(cpu, 0444, component_info_get, NULL);
+static DEVICE_ATTR(super_charge, 0444, component_info_get, NULL);
+static DEVICE_ATTR(rf_version, 0444, component_info_get, NULL);
+
 
 char *get_component_version(enum COMPONENT_TYPE type)
 {
@@ -227,6 +232,8 @@ static struct attribute *component_info_sysfs_entries[] = {
 	&dev_attr_nfc.attr,
 	&dev_attr_fast_charge.attr,
 	&dev_attr_cpu.attr,
+    &dev_attr_super_charge.attr,
+    &dev_attr_rf_version.attr,
 	NULL,
 };
 
@@ -322,6 +329,14 @@ static ssize_t component_info_get(struct device *dev,
 		return snprintf(buf, BUF_SIZE, "VER:\t%s\nMANU:\t%s\n",
 		get_component_version(CPU),
 		get_component_manufacture(CPU));
+    if (attr == &dev_attr_super_charge)
+		return snprintf(buf, BUF_SIZE, "VER:\t%s\nMANU:\t%s\n",
+		get_component_version(SUPER_CHARGE),
+		get_component_manufacture(SUPER_CHARGE));
+    if (attr == &dev_attr_rf_version)
+		return snprintf(buf, BUF_SIZE, "VER:\t%s\nMANU:\t%s\n",
+		get_component_version(RF_VERSION),
+		get_component_manufacture(RF_VERSION));
 	return -EINVAL;
 }
 
@@ -435,6 +450,7 @@ static char mainboard_version[16] = {0};
 static char mainboard_manufacture[8] = {'O',
 	'N', 'E', 'P', 'L', 'U', 'S', '\0'};
 static char Aboard_version[16] = {0};
+static char rf_version[16] = {0};
 
 struct a_borad_version{
 
@@ -536,11 +552,11 @@ int __init init_project_info(void)
 		project_info_desc->project_name, "DVTBACKUP");
 		break;
 
-	case 33:
+	case 31:
 	    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
 		project_info_desc->project_name, "EVB");
 		break;
-	case 34:
+	case 32:
 	    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
 		project_info_desc->project_name, "T0");
 		break;
@@ -580,6 +596,10 @@ int __init init_project_info(void)
 
 	push_component_info(ABOARD, Aboard_version,	mainboard_manufacture);
 	pr_err("%s: Aboard_gpio(%s)\n", __func__, Aboard_version);
+
+
+    snprintf(rf_version, sizeof(rf_version),  " %d",project_info_desc->rf_v1);
+    push_component_info(RF_VERSION, rf_version,	mainboard_manufacture);
 
 	get_ddr_manufacture_name();
 
