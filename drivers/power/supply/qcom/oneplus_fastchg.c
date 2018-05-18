@@ -1490,6 +1490,8 @@ static int dash_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	fastcharge_information_register(&fastcharge_information);
 	schedule_delayed_work(&di->update_fireware_version_work,
 			msecs_to_jiffies(SHOW_FW_VERSION_DELAY_MS));
+	push_component_info(SUPER_CHARGE,
+		di->sdash_present ? "SDash" : "Dash", "ONEPLUS");
 	di->dash_probe_done = true;
 	pr_info("dash_probe success\n");
 
