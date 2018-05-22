@@ -2494,10 +2494,6 @@ static int smb2_determine_initial_status(struct smb2 *chip)
 	struct smb_irq_data irq_data = {chip, "determine-initial-status"};
 	struct smb_charger *chg = &chip->chg;
 
-#ifdef VENDOR_EDIT
-	if (op_sdash_support())
-		return 0;
-#endif
 	if (chg->bms_psy)
 		smblib_suspend_on_debug_battery(chg);
 	smblib_handle_usb_plugin(0, &irq_data);
