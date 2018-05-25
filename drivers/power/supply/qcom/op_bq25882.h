@@ -414,7 +414,7 @@ extern int bq25882_enable_charging(struct bq_chg_chip *chip);
 extern int bq25882_disable_charging(struct bq_chg_chip *chip);
 extern int bq25882_check_charging_enable(struct bq_chg_chip *chip);
 extern int bq25882_registers_read_full(struct bq_chg_chip *chip);
-extern int bq25882_suspend_charger(struct bq_chg_chip *chip);
+extern int bq25882_suspend_charger(struct bq_chg_chip *chip, bool suspend);
 extern int bq25882_unsuspend_charger(struct bq_chg_chip *chip);
 extern bool bq25882_check_charger_resume(struct bq_chg_chip *chip);
 extern int bq25882_reset_charger(struct bq_chg_chip *chip);

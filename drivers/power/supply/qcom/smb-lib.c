@@ -830,6 +830,10 @@ void smblib_suspend_on_debug_battery(struct smb_charger *chg)
 	int rc;
 	union power_supply_propval val;
 
+#ifdef VENDOR_EDIT
+	if (op_sdash_support())
+		return;
+#endif
 	if (!chg->suspend_input_on_debug_batt)
 		return;
 
@@ -1067,10 +1071,21 @@ int smblib_set_icl_current(struct smb_charger *chg, int icl_ua)
 	int rc = 0;
 	bool override;
 #ifdef VENDOR_EDIT
-/* david.liu@bsp, 20171023 Battery & Charging porting */
 	pr_info("icl_ua=%d\n", icl_ua);
+	if (op_sdash_support()) {
+	if (icl_ua == chg->op_icl_val)
+		return 0;
+	chg->op_icl_val = icl_ua;
+	if (icl_ua <= USBIN_25MA) {
+		schedule_delayed_work(&chg->op_icl_set_work,
+			msecs_to_jiffies(200));
+		return 0;
+	}
+	schedule_delayed_work(&chg->op_icl_set_work,
+		msecs_to_jiffies(200));
+	return 0;
+	}
 #endif
-
 	/* suspend and return if 25mA or less is requested */
 	if (icl_ua <= USBIN_25MA)
 		return smblib_set_usb_suspend(chg, true);
@@ -4211,7 +4226,8 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 				if (vbus_val.intval > 3000) {
 					pr_err("unplg,Vbus=%d",
 						vbus_val.intval);
-					op_dump_regs(chg);
+					if (!op_sdash_support())
+						op_dump_regs(chg);
 				}
 			}
 		}
@@ -4486,6 +4502,10 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 	int typec_mode;
 	int rp_ua;
 
+#ifdef VENDOR_EDIT
+	if (op_sdash_support())
+		return;
+#endif
 	/* while PD is active it should have complete ICL control */
 	if (chg->pd_active)
 		return;
@@ -4619,7 +4639,6 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 		return;
 
 	apsd_result = smblib_update_usb_type(chg);
-
 	if (!chg->typec_legacy_valid)
 		smblib_force_legacy_icl(chg, apsd_result->pst);
 
@@ -4647,7 +4666,6 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 	default:
 		break;
 	}
-
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	if ((apsd_result->bit) == SDP_CHARGER_BIT)
@@ -5552,6 +5570,16 @@ static void op_dash_check_work(struct work_struct *work)
 		set_usb_switch(chg, true);
 	}
 }
+static void op_set_icl_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct smb_charger *chg = container_of(dwork,
+		struct smb_charger, op_icl_set_work);
+
+	if (bq25882_chip)
+		bq25882_input_current_limit_write(bq25882_chip,
+			chg->op_icl_val/1000);
+}
 
 irqreturn_t smblib_handle_aicl_done(int irq, void *data)
 {
@@ -5881,7 +5909,7 @@ int op_handle_switcher_power_ok(void)
 	u8 stat;
 	union power_supply_propval vbus_val;
 
-	if (!op_sdash_support())
+	if (op_sdash_support())
 		return 0;
 	if (!g_chg)
 		return 0;
@@ -7474,7 +7502,7 @@ static void op_heartbeat_work(struct work_struct *work)
 		chg->dump_count = 0;
 		if ((get_prop_batt_current_now(chg) / 1000) > 0) {
 			op_dump_regs(chg);
-			if (bq25882_chip)
+			if (bq25882_chip && op_sdash_support())
 				bq25882_dump_registers(bq25882_chip);
 			aging_test_check_aicl(chg);
 		}
@@ -7484,7 +7512,7 @@ static void op_heartbeat_work(struct work_struct *work)
 		chg->dump_count++;
 		if (chg->dump_count == 600) {
 			chg->dump_count = 0;
-			if (bq25882_chip)
+			if (bq25882_chip && op_sdash_support())
 				bq25882_dump_registers(bq25882_chip);
 			if ((get_prop_batt_current_now(chg) / 1000) > 0) {
 				op_dump_regs(chg);
@@ -8459,6 +8487,8 @@ int smblib_init(struct smb_charger *chg)
 	INIT_DELAYED_WORK(&chg->op_re_set_work, op_recovery_set_work);
 	INIT_WORK(&chg->get_aicl_work, op_get_aicl_work);
 	INIT_DELAYED_WORK(&chg->dash_check_work, op_dash_check_work);
+	if (op_sdash_support())
+		INIT_DELAYED_WORK(&chg->op_icl_set_work, op_set_icl_work);
 	schedule_delayed_work(&chg->heartbeat_work,
 			msecs_to_jiffies(HEARTBEAT_INTERVAL_MS));
 	notify_dash_unplug_register(&notify_unplug_event);

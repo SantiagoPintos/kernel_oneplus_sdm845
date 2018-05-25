@@ -1087,12 +1087,6 @@ static int smb2_usb_main_set_prop(struct power_supply *psy,
 					&chg->param.fcc, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-#ifdef VENDOR_EDIT
-		if (bq25882_chip && op_sdash_support())
-			rc = bq25882_input_current_limit_write(bq25882_chip,
-					val->intval/1000);
-		else
-#endif
 		rc = smblib_set_icl_current(chg, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_TOGGLE_STAT:
@@ -1515,10 +1509,13 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 		rc = check_allow_switch_dash(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_MAX:
-		pr_info("set iusb %d mA\n", val->intval);
-		if (__debug_mask == PR_OP_DEBUG
+		pr_info("set iusb %d uA\n", val->intval);
+		if (bq25882_chip && op_sdash_support())
+			bq25882_input_current_limit_write(bq25882_chip,
+				val->intval/1000);
+		else if (__debug_mask == PR_OP_DEBUG
 			|| val->intval == 900000)
-		op_usb_icl_set(chg, val->intval);
+			op_usb_icl_set(chg, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
 		rc = smblib_set_prop_chg_voltage(chg, val);
@@ -1540,11 +1537,14 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 				op_set_fast_chg_allow(chg, false);
 			}
 		}
-		rc = vote(chg->usb_icl_votable, USER_VOTER,
-				!val->intval, 0);
-		rc = vote(chg->dc_suspend_votable, USER_VOTER,
-				!val->intval, 0);
-		chg->chg_enabled = (bool)val->intval;
+
+	if (bq25882_chip && op_sdash_support())
+		bq25882_suspend_charger(bq25882_chip, !val->intval);
+	rc = vote(chg->usb_icl_votable, USER_VOTER,
+	!val->intval, 0);
+	rc = vote(chg->dc_suspend_votable, USER_VOTER,
+	!val->intval, 0);
+	chg->chg_enabled = (bool)val->intval;
 		break;
 	case POWER_SUPPLY_PROP_IS_AGING_TEST:
 		chg->is_aging_test = (bool)val->intval;

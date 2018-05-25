@@ -139,7 +139,11 @@ int bq25882_input_current_limit_write(struct bq_chg_chip *chip, int value)
 	int chg_vol = 0;
 
 	pr_info("%s,ICL mA=%d\n", __func__, value);
-
+	if (value == 0) {
+		rc = bq25882_config_interface(chip, REG03_BQ25882_ADDRESS,
+			0, REG03_BQ25882_INPUT_CURRENT_LIMIT_MASK);
+		return rc;
+	}
 	if (atomic_read(&chip->charger_suspended) == 1)
 		return 0;
 	for (i = ARRAY_SIZE(bq25882_usbin_input_current_limit) - 1;
@@ -378,29 +382,20 @@ int bq25882_registers_read_full(struct bq_chg_chip *chip)
 	return reg_full;
 }
 
-int bq25882_suspend_charger(struct bq_chg_chip *chip)
+int bq25882_suspend_charger(struct bq_chg_chip *chip, bool suspend)
 {
 	int rc = 0;
 
 	rc = 0;
 	if (atomic_read(&chip->charger_suspended) == 1)
 		return 0;
-
-	pr_info("rc = %d\n", rc);
+	rc = bq25882_config_interface(chip, REG01_BQ25882_ADDRESS,
+		suspend ? REG01_BQ25882_EN_HIZ_ENABLE
+				: REG01_BQ25882_EN_HIZ_DISABLE,
+		REG01_BQ25882_EN_HIZ_MASK);
+	pr_info("bq charger suspend:%d\n", suspend);
 	if (rc < 0)
 		pr_err("Couldn't bq25882_suspend_charger rc = %d\n", rc);
-	return rc;
-}
-int bq25882_unsuspend_charger(struct bq_chg_chip *chip)
-{
-	int rc = 0;
-
-	if (atomic_read(&chip->charger_suspended) == 1)
-		return 0;
-
-	pr_info("rc = %d\n", rc);
-	if (rc < 0)
-		pr_err("Couldn't bq25882_unsuspend_charger rc = %d\n", rc);
 	return rc;
 }
 
@@ -588,7 +583,7 @@ int bq25882_hardware_init(struct bq_chg_chip *chip)
 	bq25882_adc_en_enable(chip);
 	bq25882_ibus_adc_dis_enable(chip);
 	bq25882_ichg_adc_dis_enable(chip);
-	bq25882_unsuspend_charger(chip);
+	bq25882_suspend_charger(chip, false);
 	bq25882_enable_charging(chip);
 	bq25882_set_wdt_timer(chip, 0);
 	return true;
@@ -608,8 +603,6 @@ static int bq25882_driver_probe(struct i2c_client *client,
 	chip->dev = &client->dev;
 
 	atomic_set(&chip->charger_suspended, 0);
-	bq25882_dump_registers(chip);
-
 	bq25882_hardware_init(chip);
 	bq25882_chip = chip;
 
