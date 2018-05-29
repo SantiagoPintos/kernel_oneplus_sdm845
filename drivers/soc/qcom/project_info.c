@@ -42,6 +42,7 @@ static DEVICE_ATTR(secboot_status, 0444, project_info_get, NULL);
 static DEVICE_ATTR(platform_id, 0444, project_info_get, NULL);
 static DEVICE_ATTR(serialno, 0444, project_info_get, NULL);
 static DEVICE_ATTR(feature_id, 0444, project_info_get, NULL);
+static DEVICE_ATTR(aboard_id, 0444, project_info_get, NULL);
 
 uint8 get_secureboot_fuse_status(void)
 {
@@ -113,6 +114,10 @@ static ssize_t project_info_get(struct device *dev,
 		if (attr == &dev_attr_feature_id)
 			return snprintf(buf, BUF_SIZE, "%d\n",
 			project_info_desc->feature_id);
+
+		if (attr == &dev_attr_aboard_id)
+			return snprintf(buf, BUF_SIZE, "%d\n",
+			project_info_desc->a_board_version);
 	}
 
 	return -EINVAL;
@@ -135,6 +140,7 @@ static struct attribute *project_info_sysfs_entries[] = {
 	&dev_attr_platform_id.attr,
 	&dev_attr_serialno.attr,
 	&dev_attr_feature_id.attr,
+	&dev_attr_aboard_id.attr,
 	NULL,
 };
 
