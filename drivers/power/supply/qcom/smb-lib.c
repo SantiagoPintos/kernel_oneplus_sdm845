@@ -6512,7 +6512,7 @@ int get_prop_batt_status(struct smb_charger *chg)
 			|| temp_region == BATT_TEMP_LITTLE_COOL
 			|| temp_region == BATT_TEMP_PRE_NORMAL
 			|| temp_region == BATT_TEMP_NORMAL)
-			&& capacity > 90) {
+			&&(capacity == 100)) {
 		return POWER_SUPPLY_STATUS_FULL;
 	} else if (chg->dash_on) {
 		return POWER_SUPPLY_STATUS_CHARGING;
