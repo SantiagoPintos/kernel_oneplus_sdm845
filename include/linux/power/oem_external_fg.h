@@ -29,8 +29,6 @@ struct op_adapter_operations {
 };
 
 struct external_battery_gauge {
-	int (*get_battery_mvolts_2cell_max)(void);
-	int (*get_battery_mvolts_2cell_min)(void);
 	int (*get_battery_mvolts)(void);
 	int (*get_battery_temperature)(void);
 	bool (*is_battery_present)(void);
@@ -125,6 +123,4 @@ extern void op_bus_vote(int disable);
 extern bool dash_adapter_update_is_tx_gpio(unsigned int  gpio_num);
 extern bool dash_adapter_update_is_rx_gpio(unsigned  int gpio_num);
 extern int is_hw_support_n76e(void);
-extern bool op_sdash_support(void);
-extern bool op_dash_probe_status(void);
 #endif

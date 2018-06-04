@@ -36,7 +36,6 @@ struct fastchg_device_info {
 	struct mutex        read_mutex;
 	wait_queue_head_t   read_wq;
 
-	struct pinctrl_state *pinctrl_sdash_check_active;
 	struct pinctrl_state *pinctrl_state_active;
 	struct pinctrl_state *pinctrl_state_suspended;
 	struct pinctrl_state *pinctrl_mcu_data_state_active;
@@ -51,8 +50,6 @@ struct fastchg_device_info {
 	bool fast_chg_allow;
 	bool firmware_already_updated;
 	bool n76e_present;
-	bool sdash_present;
-	bool dash_probe_done;
 	int erase_count;
 	int addr_low;
 	int addr_high;
@@ -63,8 +60,6 @@ struct fastchg_device_info {
 	int mcu_en_gpio;
 	int usb_sw_1_gpio;
 	int usb_sw_2_gpio;
-	int sdash_gpio;
-
 	int ap_clk;
 	int ap_data;
 	int dashchg_fw_ver_count;
@@ -113,32 +108,8 @@ static void init_n76e_exist_node(void)
 		pr_info("Failed to register n76e node\n");
 	}
 }
-static ssize_t sdash_exist_read(struct file *p_file,
-	char __user *puser_buf, size_t count, loff_t *p_offset)
-{
-	return 0;
-}
 
-static ssize_t sdash_exist_write(struct file *p_file,
-	const char __user *puser_buf,
-	size_t count, loff_t *p_offset)
-{
-	return 0;
-}
-
-static const struct file_operations sdash_exist_operations = {
-	.read = sdash_exist_read,
-	.write = sdash_exist_write,
-};
-
-static void init_sdash_exist_node(void)
-{
-	if (!proc_create("sdash_exit", 0644, NULL,
-			 &sdash_exist_operations)){
-		pr_info("Failed to register sdash node\n");
-	}
-}
-
+//for mcu_data irq delay issue 2017.10.14@Infi
 extern void msm_cpuidle_set_sleep_disable(bool disable);
 
 void opchg_set_data_active(struct fastchg_device_info *chip)
@@ -1217,8 +1188,6 @@ static int dash_parse_dt(struct fastchg_device_info *di)
 			"microchip,ap-clk", 0, &flags);
 	di->ap_data = of_get_named_gpio_flags(dev_node,
 			"microchip,ap-data", 0, &flags);
-	di->sdash_gpio = of_get_named_gpio_flags(dev_node,
-			"microchip,sdash-gpio", 0, &flags);
 	di->mcu_en_gpio = of_get_named_gpio_flags(dev_node,
 			"microchip,mcu-en-gpio", 0, &flags);
 	di->n76e_present = of_property_read_bool(dev_node,
@@ -1298,7 +1267,7 @@ static int dash_pinctrl_init(struct fastchg_device_info *di)
 				"Unable to acquire pinctrl\n");
 		di->pinctrl = NULL;
 		return 0;
-	}
+	} else {
 	di->pinctrl_state_active =
 		pinctrl_lookup_state(di->pinctrl, "mux_fastchg_active");
 	if (IS_ERR_OR_NULL(di->pinctrl_state_active)) {
@@ -1319,25 +1288,26 @@ static int dash_pinctrl_init(struct fastchg_device_info *di)
 		return PTR_ERR(di->pinctrl_state_suspended);
 	}
 
-	di->pinctrl_mcu_data_state_active =
-		pinctrl_lookup_state(di->pinctrl,
-				"mcu_data_active");
-	if (IS_ERR_OR_NULL(di->pinctrl_mcu_data_state_active)) {
-		dev_err(&di->client->dev,
-				"Can not mcu_data_active state\n");
-		devm_pinctrl_put(di->pinctrl);
-		di->pinctrl = NULL;
-		return PTR_ERR(di->pinctrl_mcu_data_state_active);
-	}
-	di->pinctrl_mcu_data_state_suspended =
-				pinctrl_lookup_state(di->pinctrl,
-						"mcu_data_suspend");
-	if (IS_ERR_OR_NULL(di->pinctrl_mcu_data_state_suspended)) {
-		dev_err(&di->client->dev,
-				"Can not fastchg_suspend state\n");
-		devm_pinctrl_put(di->pinctrl);
-		di->pinctrl = NULL;
-		return PTR_ERR(di->pinctrl_mcu_data_state_suspended);
+		di->pinctrl_mcu_data_state_active =
+			pinctrl_lookup_state(di->pinctrl,
+					"mcu_data_active");
+		if (IS_ERR_OR_NULL(di->pinctrl_mcu_data_state_active)) {
+			dev_err(&di->client->dev,
+					"Can not mcu_data_active state\n");
+			devm_pinctrl_put(di->pinctrl);
+			di->pinctrl = NULL;
+			return PTR_ERR(di->pinctrl_mcu_data_state_active);
+		}
+		di->pinctrl_mcu_data_state_suspended =
+					pinctrl_lookup_state(di->pinctrl,
+							"mcu_data_suspend");
+		if (IS_ERR_OR_NULL(di->pinctrl_mcu_data_state_suspended)) {
+			dev_err(&di->client->dev,
+					"Can not fastchg_suspend state\n");
+			devm_pinctrl_put(di->pinctrl);
+			di->pinctrl = NULL;
+			return PTR_ERR(di->pinctrl_mcu_data_state_suspended);
+		}
 	}
 
 	if (pinctrl_select_state(di->pinctrl,
@@ -1362,65 +1332,6 @@ static void check_n76e_support(struct fastchg_device_info *di)
 	}
 
 }
-
-bool op_dash_probe_status(void)
-{
-	if (!fastchg_di)
-		return false;
-	return fastchg_di->dash_probe_done;
-}
-
-bool op_sdash_support(void)
-{
-	if (!fastchg_di)
-		return false;
-	return fastchg_di->sdash_present;
-}
-
-static void check_sdash_support(struct fastchg_device_info *di)
-{
-	int ret;
-
-	di->pinctrl = devm_pinctrl_get(&di->client->dev);
-	if (IS_ERR_OR_NULL(di->pinctrl)) {
-		pr_err("Unable to acquire pinctrl\n");
-		return;
-	}
-	di->pinctrl_sdash_check_active =
-		pinctrl_lookup_state(di->pinctrl, "sdash_check");
-	if (IS_ERR_OR_NULL(di->pinctrl_sdash_check_active)) {
-		dev_err(&di->client->dev,
-				"Can not sdash_check_active state\n");
-		devm_pinctrl_put(di->pinctrl);
-		return;
-	}
-
-	if (pinctrl_select_state(di->pinctrl,
-				di->pinctrl_sdash_check_active) < 0)
-		pr_err("pinctrl sdash_check_active fail\n");
-
-	if (!gpio_is_valid(di->sdash_gpio)) {
-		pr_err("sdash_gpio invalid\n");
-		return;
-	}
-
-	ret = gpio_request(di->sdash_gpio, "sdash_gpio");
-	if (ret) {
-		pr_err("gpio_request failed for sdash %d ret=%d\n",
-		di->sdash_gpio, ret);
-	}
-
-	di->sdash_present = gpio_get_value(di->sdash_gpio);
-
-	if (op_sdash_support()) {
-		init_sdash_exist_node();
-		pr_info("sdash exist\n");
-	} else {
-		pr_info("sdash not exist\n");
-	}
-
-}
-
 static int dash_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct fastchg_device_info *di;
@@ -1486,13 +1397,9 @@ static int dash_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	mcu_init(di);
 	check_n76e_support(di);
-	check_sdash_support(di);
 	fastcharge_information_register(&fastcharge_information);
 	schedule_delayed_work(&di->update_fireware_version_work,
 			msecs_to_jiffies(SHOW_FW_VERSION_DELAY_MS));
-	push_component_info(SUPER_CHARGE,
-		di->sdash_present ? "SDash" : "Dash", "ONEPLUS");
-	di->dash_probe_done = true;
 	pr_info("dash_probe success\n");
 
 	return 0;
@@ -1500,7 +1407,6 @@ static int dash_probe(struct i2c_client *client, const struct i2c_device_id *id)
 err_misc_register_failed:
 	pm_qos_remove_request(&big_cpu_update_freq);
 err_read_dt:
-	di->dash_probe_done = true;
 	kfree(di);
 err_check_functionality_failed:
 	pr_err("dash_probe fail\n");

@@ -44,10 +44,6 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #endif
-#ifdef VENDOR_EDIT
-#include "op_bq25882.h"
-#include "op_da9313.h"
-#endif
 
 #define SMB2_DEFAULT_WPWR_UW	8000000
 
@@ -282,49 +278,8 @@ static int smb2_parse_dt(struct smb2 *chip)
 				"qcom,qcs605-ipc-wa");
 
 #ifdef VENDOR_EDIT
-	if (op_sdash_support()) {
+/* david.liu@bsp, 20171023 Battery & Charging porting */
 	/* read ibatmax setting for different temp regions */
-	OF_PROP_READ(node, "s-ibatmax-little-cold-ma",
-			chg->ibatmax[BATT_TEMP_LITTLE_COLD], rc, 1);
-	OF_PROP_READ(node, "s-ibatmax-cool-ma",
-			chg->ibatmax[BATT_TEMP_COOL], rc, 1);
-	OF_PROP_READ(node, "s-ibatmax-little-cool-ma",
-			chg->ibatmax[BATT_TEMP_LITTLE_COOL], rc, 1);
-	OF_PROP_READ(node, "s-ibatmax-pre-normal-ma",
-			chg->ibatmax[BATT_TEMP_PRE_NORMAL], rc, 1);
-	OF_PROP_READ(node, "s-ibatmax-normal-ma",
-			chg->ibatmax[BATT_TEMP_NORMAL], rc, 1);
-	OF_PROP_READ(node, "s-ibatmax-warm-ma",
-			chg->ibatmax[BATT_TEMP_WARM], rc, 1);
-
-	/* read vbatmax setting for different temp regions */
-	OF_PROP_READ(node, "s-vbatmax-little-cold-mv",
-			chg->vbatmax[BATT_TEMP_LITTLE_COLD], rc, 1);
-	OF_PROP_READ(node, "s-vbatmax-cool-mv",
-			chg->vbatmax[BATT_TEMP_COOL], rc, 1);
-	OF_PROP_READ(node, "s-vbatmax-little-cool-mv",
-			chg->vbatmax[BATT_TEMP_LITTLE_COOL], rc, 1);
-	OF_PROP_READ(node, "s-vbatmax-pre-normal-mv",
-			chg->vbatmax[BATT_TEMP_PRE_NORMAL], rc, 1);
-	OF_PROP_READ(node, "s-vbatmax-normal-mv",
-			chg->vbatmax[BATT_TEMP_NORMAL], rc, 1);
-	OF_PROP_READ(node, "s-vbatmax-warm-mv",
-			chg->vbatmax[BATT_TEMP_WARM], rc, 1);
-
-	/* read vbatdet setting for different temp regions */
-	OF_PROP_READ(node, "s-vbatdet-little-cold-mv",
-			chg->vbatdet[BATT_TEMP_LITTLE_COLD], rc, 1);
-	OF_PROP_READ(node, "s-vbatdet-cool-mv",
-			chg->vbatdet[BATT_TEMP_COOL], rc, 1);
-	OF_PROP_READ(node, "s-vbatdet-little-cool-mv",
-			chg->vbatdet[BATT_TEMP_LITTLE_COOL], rc, 1);
-	OF_PROP_READ(node, "s-vbatdet-pre-normal-mv",
-			chg->vbatdet[BATT_TEMP_PRE_NORMAL], rc, 1);
-	OF_PROP_READ(node, "s-vbatdet-normal-mv",
-			chg->vbatdet[BATT_TEMP_NORMAL], rc, 1);
-	OF_PROP_READ(node, "s-vbatdet-warm-mv",
-			chg->vbatdet[BATT_TEMP_WARM], rc, 1);
-	} else {
 	OF_PROP_READ(node, "ibatmax-little-cold-ma",
 			chg->ibatmax[BATT_TEMP_LITTLE_COLD], rc, 1);
 	OF_PROP_READ(node, "ibatmax-cool-ma",
@@ -365,7 +320,6 @@ static int smb2_parse_dt(struct smb2 *chip)
 			chg->vbatdet[BATT_TEMP_NORMAL], rc, 1);
 	OF_PROP_READ(node, "vbatdet-warm-mv",
 			chg->vbatdet[BATT_TEMP_WARM], rc, 1);
-	}
 
 	/* read temp region settings */
 	OF_PROP_READ(node, "cold-bat-decidegc",
@@ -383,6 +337,7 @@ static int smb2_parse_dt(struct smb2 *chip)
 			chg->BATT_TEMP_T5, rc, 1);
 	OF_PROP_READ(node, "hot-bat-decidegc",
 			chg->BATT_TEMP_T6, rc, 1);
+
 #ifdef VENDOR_EDIT
 /*yangfb@bsp, 20181023 icl set 1A if battery lower than 15%*/
 	chg->OTG_ICL_CTRL = of_property_read_bool(node,
@@ -470,23 +425,11 @@ static int smb2_parse_dt(struct smb2 *chip)
 				"qcom,fcc-max-ua", &chg->batt_profile_fcc_ua);
 	if (rc < 0)
 		chg->batt_profile_fcc_ua = -EINVAL;
-#ifdef VENDOR_EDIT
-	if (op_sdash_support()) {
-		rc = of_property_read_u32(node,
-			"s-qcom,fv-max-uv", &chg->batt_profile_fv_uv);
-	} else {
-		rc = of_property_read_u32(node,
-			"qcom,fv-max-uv", &chg->batt_profile_fv_uv);
-	}
 
-	if (rc < 0)
-		chg->batt_profile_fv_uv = -EINVAL;
-#else
 	rc = of_property_read_u32(node,
 				"qcom,fv-max-uv", &chg->batt_profile_fv_uv);
 	if (rc < 0)
 		chg->batt_profile_fv_uv = -EINVAL;
-#endif
 
 	rc = of_property_read_u32(node,
 				"qcom,usb-icl-ua", &chip->dt.usb_icl_ua);
@@ -1067,24 +1010,12 @@ static int smb2_usb_main_set_prop(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
-#ifdef VENDOR_EDIT
-		if (bq25882_chip && op_sdash_support())
-			rc = bq25882_float_voltage_write(bq25882_chip,
-						val->intval/1000);
-		else
-#endif
-			rc = smblib_set_charge_param(chg,
-					&chg->param.fv, val->intval);
+		rc = smblib_set_charge_param(chg,
+			&chg->param.fv, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX:
-#ifdef VENDOR_EDIT
-		if (bq25882_chip && op_sdash_support())
-			bq25882_charging_current_write_fast(bq25882_chip,
-				val->intval/1000);
-		else
-#endif
-			rc = smblib_set_charge_param(chg,
-					&chg->param.fcc, val->intval);
+		rc = smblib_set_charge_param(chg,
+			&chg->param.fcc, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		rc = smblib_set_icl_current(chg, val->intval);
@@ -1285,7 +1216,6 @@ static enum power_supply_property smb2_batt_props[] = {
 	POWER_SUPPLY_PROP_CHARGING_ENABLED,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_MAX,
 	POWER_SUPPLY_PROP_IS_AGING_TEST,
-	POWER_SUPPLY_PROP_SDASH_SUPPORT,
 #endif
 	POWER_SUPPLY_PROP_CHARGER_TEMP,
 	POWER_SUPPLY_PROP_CHARGER_TEMP_MAX,
@@ -1372,9 +1302,6 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_IS_AGING_TEST:
 		val->intval = chg->is_aging_test;
-		break;
-	case POWER_SUPPLY_PROP_SDASH_SUPPORT:
-		val->intval = op_sdash_support();
 		break;
 #endif
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
@@ -1510,10 +1437,7 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_MAX:
 		pr_info("set iusb %d uA\n", val->intval);
-		if (bq25882_chip && op_sdash_support())
-			bq25882_input_current_limit_write(bq25882_chip,
-				val->intval/1000);
-		else if (__debug_mask == PR_OP_DEBUG
+		if (__debug_mask == PR_OP_DEBUG
 			|| val->intval == 900000)
 			op_usb_icl_set(chg, val->intval);
 		break;
@@ -1537,9 +1461,6 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 				op_set_fast_chg_allow(chg, false);
 			}
 		}
-
-	if (bq25882_chip && op_sdash_support())
-		bq25882_suspend_charger(bq25882_chip, !val->intval);
 	rc = vote(chg->usb_icl_votable, USER_VOTER,
 	!val->intval, 0);
 	rc = vote(chg->dc_suspend_votable, USER_VOTER,
@@ -2939,16 +2860,8 @@ static int smb2_probe(struct platform_device *pdev)
 	int usb_present, batt_present, batt_health, batt_charge_type;
 #ifdef VENDOR_EDIT
 	struct msm_bus_scale_pdata *pdata;
-
-	if (!op_dash_probe_status()) {
-		pr_info("will do after dash probe\n");
-		return -EPROBE_DEFER;
-	}
-	if (!bq25882_chip && op_sdash_support()) {
-		pr_info("will do after bq25882 init.\n");
-		return -EPROBE_DEFER;
-	}
 #endif
+
 	chip = devm_kzalloc(&pdev->dev, sizeof(*chip), GFP_KERNEL);
 	if (!chip)
 		return -ENOMEM;

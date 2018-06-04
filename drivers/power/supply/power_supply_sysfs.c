@@ -212,9 +212,6 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(fg_current_now),
 	POWER_SUPPLY_ATTR(fg_voltage_now),
 	POWER_SUPPLY_ATTR(is_aging_test),
-	POWER_SUPPLY_ATTR(vbat_cell_max),
-	POWER_SUPPLY_ATTR(vbat_cell_min),
-	POWER_SUPPLY_ATTR(sdash_support),
 	POWER_SUPPLY_ATTR(bq_soc),
 	POWER_SUPPLY_ATTR(oem_cc_orientation),
 #endif

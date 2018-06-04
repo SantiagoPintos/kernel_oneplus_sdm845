@@ -41,7 +41,6 @@ enum print_reason {
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #define BATT_TYPE_FCC_VOTER "BATT_TYPE_FCC_VOTER"
 #define PSY_ICL_VOTER		"PSY_ICL_VOTER"
-#define BQ_OTG_VOTER		"BQ_OTG_VOTER"
 #define TEMP_REGION_MAX               9
 #define NON_STANDARD_CHARGER_CHECK_S 100
 #define TIME_1000MS 1000
@@ -402,7 +401,6 @@ struct smb_charger {
 	int				ck_apsd_count;
 	int				ck_dash_count;
 	int				recovery_boost_count;
-	int				rechg_count;
 	int				op_icl_val;
 	bool				otg_switch;
 	bool				use_fake_chgvol;
@@ -632,8 +630,6 @@ bool op_get_fastchg_ing(struct smb_charger *chg);
 bool get_prop_fastchg_status(struct smb_charger *chg);
 int op_usb_icl_set(struct smb_charger *chg, int icl_ua);
 int op_get_aicl_result(struct smb_charger *chg);
-bool op_sdash_support(void);
-extern bool op_dash_probe_status(void);
 #endif
 int smblib_set_prop_input_current_limited(struct smb_charger *chg,
 				const union power_supply_propval *val);

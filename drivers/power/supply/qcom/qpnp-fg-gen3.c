@@ -29,7 +29,6 @@
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #include <linux/power/oem_external_fg.h>
-#include "op_bq25882.h"
 #endif
 
 #define FG_GEN3_DEV_NAME	"qcom,fg-gen3"
@@ -4236,22 +4235,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 		else
 			pval->intval = 50;
 		break;
-	case POWER_SUPPLY_PROP_VBAT_CELL_MAX:
-		if (chip->use_external_fg && external_fg
-			&& external_fg->get_battery_mvolts_2cell_max)
-			pval->intval =
-				external_fg->get_battery_mvolts_2cell_max();
-		else
-			pval->intval = 3800;
-		break;
-	case POWER_SUPPLY_PROP_VBAT_CELL_MIN:
-		if (chip->use_external_fg && external_fg
-			&& external_fg->get_battery_mvolts_2cell_min)
-			pval->intval =
-				external_fg->get_battery_mvolts_2cell_min();
-		else
-			pval->intval = 3800;
-		break;
 #endif
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE:
 		rc = fg_get_sram_prop(chip, FG_SRAM_VBATT_FULL, &pval->intval);
@@ -4493,8 +4476,6 @@ static enum power_supply_property fg_psy_props[] = {
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	POWER_SUPPLY_PROP_SET_ALLOW_READ_EXTERN_FG_IIC,
 	POWER_SUPPLY_PROP_BQ_SOC,
-	POWER_SUPPLY_PROP_VBAT_CELL_MAX,
-	POWER_SUPPLY_PROP_VBAT_CELL_MIN,
 #endif
 };
 
@@ -5850,9 +5831,6 @@ static void fg_cleanup(struct fg_chip *chip)
 			devm_free_irq(chip->dev, fg_irqs[i].irq, chip);
 	}
 
-#ifdef VENDOR_EDIT
-	if (chip->use_alarm)
-#endif
 	alarm_try_to_cancel(&chip->esr_filter_alarm);
 	debugfs_remove_recursive(chip->dfs_root);
 	if (chip->awake_votable)
@@ -6029,9 +6007,7 @@ static int fg_gen3_probe(struct platform_device *pdev)
 	INIT_WORK(&chip->esr_filter_work, esr_filter_work);
 	alarm_init(&chip->esr_filter_alarm, ALARM_BOOTTIME,
 			fg_esr_filter_alarm_cb);
-#ifdef VENDOR_EDIT
-	chip->use_alarm = true;
-#endif
+
 	rc = fg_memif_init(chip);
 	if (rc < 0) {
 		dev_err(chip->dev, "Error in initializing FG_MEMIF, rc:%d\n",
