@@ -63,6 +63,11 @@
 
 struct smb_charger *g_chg;
 struct qpnp_pon *pm_pon;
+#ifdef VENDOR_EDIT
+/*2018/06/14 @bsp add for support notify audio adapter switch*/
+static BLOCKING_NOTIFIER_HEAD(typec_cc_chain);
+static int cc_notifier_call_chain(unsigned long val);
+#endif
 
 static struct external_battery_gauge *fast_charger;
 static int op_charging_en(struct smb_charger *chg, bool en);
@@ -4857,8 +4862,18 @@ static void typec_sink_insertion(struct smb_charger *chg)
 	}
 
 	typec_mode = smblib_get_prop_typec_mode(chg);
+#ifdef VENDOR_EDIT
+/*2018/06/14 @bsp add for support notify audio adapter switch*/
+	if (typec_mode == POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER) {
+		chg->is_audio_adapter = true;
+		pr_info("Type-C %s detected,notify!\n",
+				smblib_typec_mode_name[chg->typec_mode]);
+		cc_notifier_call_chain(1);
+	}
+#else
 	if (typec_mode == POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER)
 		chg->is_audio_adapter = true;
+#endif
 
 	/* when a sink is inserted we should not wait on hvdcp timeout to
 	 * enable pd
@@ -5003,11 +5018,24 @@ static void smblib_handle_typec_removal(struct smb_charger *chg)
 		smblib_err(chg, "Couldn't set USBIN_ADAPTER_ALLOW_5V_OR_9V_TO_12V rc=%d\n",
 			rc);
 
+#ifdef VENDOR_EDIT
+/*2018/06/14 @bsp add for support notify audio adapter switch*/
+	if (chg->is_audio_adapter == true) {
+		/* wait for the audio driver to lower its en gpio */
+		msleep(*chg->audio_headset_drp_wait_ms);
+
+		chg->is_audio_adapter = false;
+		pr_info("Type-C removal, audio_adapter_present=(%d),notify!\n",
+				chg->is_audio_adapter);
+		cc_notifier_call_chain(0);
+	}
+#else
 	if (chg->is_audio_adapter == true)
 		/* wait for the audio driver to lower its en gpio */
 		msleep(*chg->audio_headset_drp_wait_ms);
 
 	chg->is_audio_adapter = false;
+#endif
 
 	/* enable DRP */
 #ifdef VENDOR_EDIT
@@ -5126,6 +5154,39 @@ static void smblib_handle_rp_change(struct smb_charger *chg, int typec_mode)
 	vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, rp_ua);
 }
 
+#ifdef VENDOR_EDIT
+/*2018/06/14 @bsp add for support notify audio adapter switch*/
+int register_cc_notifier_client(struct notifier_block *nb)
+{
+	int ret;
+
+	ret = blocking_notifier_chain_register(&typec_cc_chain, nb);
+	if (ret)
+		pr_err("Cann't register cc notifier, ret = %d\n", ret);
+
+	return ret;
+}
+EXPORT_SYMBOL(register_cc_notifier_client);
+
+int unregister_cc_notifier_client(struct notifier_block *nb)
+{
+	int ret;
+
+	ret = blocking_notifier_chain_unregister(&typec_cc_chain, nb);
+	if (ret)
+		pr_err("Cann't unregister cc notifier, ret = %d\n", ret);
+
+	return ret;
+}
+EXPORT_SYMBOL(unregister_cc_notifier_client);
+
+static int cc_notifier_call_chain(unsigned long val)
+{
+	return (blocking_notifier_call_chain(&typec_cc_chain, val, NULL)
+			== NOTIFY_BAD) ? -EINVAL : 0;
+}
+
+#endif
 static void smblib_handle_typec_cc_state_change(struct smb_charger *chg)
 {
 	int typec_mode;
