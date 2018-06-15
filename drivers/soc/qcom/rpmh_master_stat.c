@@ -97,10 +97,136 @@ struct rpmh_master_stats_prv_data {
 
 static struct msm_rpmh_master_stats apss_master_stats;
 static void __iomem *rpmh_unit_base;
+#ifndef VENDOR_EDIT
 static uint32_t use_alt_unit;
+#endif
 
 static DEFINE_MUTEX(rpmh_stats_mutex);
 
+#ifdef VENDOR_EDIT
+static void msm_rpmh_master_stats_print_data(struct seq_file *s,
+				struct msm_rpmh_master_stats *record,
+				const char *name)
+{
+	uint64_t temp_accumulated_duration = record->accumulated_duration;
+	/*
+	 * If a master is in sleep when reading the sleep stats from SMEM
+	 * adjust the accumulated sleep duration to show actual sleep time.
+	 * This ensures that the displayed stats are real when used for
+	 * the purpose of computing battery utilization.
+	 */
+	if (record->last_entered > record->last_exited)
+		temp_accumulated_duration +=
+				(arch_counter_get_cntvct()
+				- record->last_entered);
+
+	seq_printf(s, "%s\n\tVersion:0x%x\n"
+			"\tSleep Count:0x%x\n"
+			"\tSleep Last Entered At:0x%llx\n"
+			"\tSleep Last Exited At:0x%llx\n"
+			"\tSleep Accumulated Duration:0x%llx\n\n",
+			name, record->version_id,
+			record->counts, record->last_entered,
+			record->last_exited, temp_accumulated_duration);
+}
+
+static int rpmh_master_stats_show(struct seq_file *s, void *data)
+{
+	int i = 0;
+	unsigned int size = 0;
+	struct msm_rpmh_master_stats *record = NULL;
+
+	mutex_lock(&rpmh_stats_mutex);
+	/* First Read APSS master stats */
+	msm_rpmh_master_stats_print_data(s, &apss_master_stats,
+		"APSS");
+
+	/*
+	 * Read SMEM data written by masters
+	 */
+
+	for (i = 0; i < ARRAY_SIZE(rpmh_masters); i++) {
+		record = (struct msm_rpmh_master_stats *) smem_get_entry(
+					rpmh_masters[i].smem_id, &size,
+					rpmh_masters[i].pid, 0);
+		if (!IS_ERR_OR_NULL(record))
+			msm_rpmh_master_stats_print_data(s, record,
+			rpmh_masters[i].master_name);
+	}
+
+	mutex_unlock(&rpmh_stats_mutex);
+
+	return 0;
+}
+
+int rpmh_master_stats_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, rpmh_master_stats_show, inode->i_private);
+}
+
+static inline void msm_rpmh_apss_master_stats_update(
+				struct msm_rpmh_profile_unit *profile_unit)
+{
+	apss_master_stats.counts++;
+	apss_master_stats.last_entered = profile_unit[POWER_DOWN_END].value;
+	apss_master_stats.last_exited = profile_unit[POWER_UP_START].value;
+	apss_master_stats.accumulated_duration +=
+					(apss_master_stats.last_exited
+					- apss_master_stats.last_entered);
+}
+
+void msm_rpmh_master_stats_update(void)
+{
+	int i;
+	struct msm_rpmh_profile_unit profile_unit[NUM_UNIT];
+
+	if (!rpmh_unit_base)
+		return;
+
+	for (i = POWER_DOWN_END; i < NUM_UNIT; i++) {
+		profile_unit[i].valid = readl_relaxed(rpmh_unit_base +
+						GET_ADDR(REG_VALID, i));
+
+		/*
+		 * Do not update APSS stats if valid bit is not set.
+		 * It means APSS did not execute cx-off sequence.
+		 * This can be due to fall through at some point.
+		 */
+
+		if (!(profile_unit[i].valid & BIT(REG_VALID)))
+			return;
+
+		profile_unit[i].value = readl_relaxed(rpmh_unit_base +
+						GET_ADDR(REG_DATA_LO, i));
+		profile_unit[i].value |= ((uint64_t)
+					readl_relaxed(rpmh_unit_base +
+					GET_ADDR(REG_DATA_HI, i)) << 32);
+	}
+	msm_rpmh_apss_master_stats_update(profile_unit);
+}
+EXPORT_SYMBOL(msm_rpmh_master_stats_update);
+
+static int msm_rpmh_master_stats_probe(struct platform_device *pdev)
+{
+	rpmh_unit_base = of_iomap(pdev->dev.of_node, 0);
+	if (!rpmh_unit_base) {
+		pr_err("Failed to get rpmh_unit_base\n");
+		return -ENOMEM;
+	}
+
+	apss_master_stats.version_id = 0x1;
+
+	return 0;
+}
+
+static int msm_rpmh_master_stats_remove(struct platform_device *pdev)
+{
+	iounmap(rpmh_unit_base);
+
+	return 0;
+}
+
+#else
 static ssize_t msm_rpmh_master_stats_print_data(char *prvbuf, ssize_t length,
 				struct msm_rpmh_master_stats *record,
 				const char *name)
@@ -288,6 +414,7 @@ static int msm_rpmh_master_stats_remove(struct platform_device *pdev)
 
 	return 0;
 }
+#endif
 
 static const struct of_device_id rpmh_master_table[] = {
 	{.compatible = "qcom,rpmh-master-stats-v1"},

@@ -22,6 +22,10 @@
 #include <linux/of.h>
 #include <linux/uaccess.h>
 #include <asm/arch_timer.h>
+#ifdef VENDOR_EDIT
+#include <linux/debugfs.h>
+#include "rpmh_master_stat.h"
+#endif
 
 #define RPM_STATS_NUM_REC	2
 #define MSM_ARCH_TIMER_FREQ	19200000
@@ -83,6 +87,10 @@ static inline u64 get_time_in_msec(u64 counter)
 
 	return counter;
 }
+
+#ifdef VENDOR_EDIT
+struct dentry *debugfs_root;
+#endif
 
 static inline int msm_rpmstats_append_data_to_buf(char *buf,
 		struct msm_rpm_stats_data *data, int buflength)
@@ -174,6 +182,62 @@ static inline int msm_rpmstats_copy_stats(
 	return length;
 }
 
+#ifdef VENDOR_EDIT
+#ifdef CONFIG_DEBUG_FS
+static int rpmh_stats_show(struct seq_file *s, void *data)
+{
+
+	struct msm_rpmstats_private_data prvdata;
+	struct msm_rpmstats_platform_data *pdata = NULL;
+
+	pdata = s->private;
+
+	prvdata.reg_base = ioremap_nocache(pdata->phys_addr_base,
+					pdata->phys_size);
+	if (!prvdata.reg_base) {
+		pr_err("%s: ERROR could not ioremap start=%pa, len=%u\n",
+			__func__, &pdata->phys_addr_base,
+			pdata->phys_size);
+		return -EBUSY;
+	}
+
+	prvdata.read_idx = prvdata.len = 0;
+	prvdata.platform_data = pdata;
+	prvdata.num_records = RPM_STATS_NUM_REC;
+
+	if (prvdata.read_idx < prvdata.num_records)
+		prvdata.len = msm_rpmstats_copy_stats(&prvdata);
+
+	seq_printf(s, "%s", prvdata.buf);
+	return 0;
+}
+
+static int rpmh_stats_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, rpmh_stats_show, inode->i_private);
+}
+
+#endif
+
+static const struct file_operations rpmh_stats_fops = {
+#ifdef CONFIG_DEBUG_FS
+	.open		= rpmh_stats_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+#endif
+};
+
+static const struct file_operations rpmh_master_stats_fops = {
+#ifdef CONFIG_DEBUG_FS
+	.open	   = rpmh_master_stats_open,
+	.read	   = seq_read,
+	.llseek	 = seq_lseek,
+	.release	= single_release,
+#endif
+};
+
+#else
 static ssize_t rpmstats_show(struct kobject *kobj,
 			struct kobj_attribute *attr, char *buf)
 {
@@ -239,6 +303,7 @@ static int msm_rpmstats_create_sysfs(struct platform_device *pdev,
 fail:
 	return ret;
 }
+#endif
 
 static int msm_rpmstats_probe(struct platform_device *pdev)
 {
@@ -277,7 +342,21 @@ static int msm_rpmstats_probe(struct platform_device *pdev)
 	if (of_property_read_u32(pdev->dev.of_node, key, &pdata->num_records))
 		pdata->num_records = RPM_STATS_NUM_REC;
 
+#ifdef VENDOR_EDIT
+	debugfs_root = debugfs_create_dir("rpmh", NULL);
+	if (!debugfs_root) {
+		pr_err("%s: Cannot create rpmh dir\n", __func__);
+		return -ENOMEM;
+	}
+
+	debugfs_create_file("stats", 0444, debugfs_root, pdata,
+			    &rpmh_stats_fops);
+
+	debugfs_create_file("master_stats", 0444, debugfs_root, NULL,
+		&rpmh_master_stats_fops);
+#else
 	msm_rpmstats_create_sysfs(pdev, pdata);
+#endif
 
 	return 0;
 }
