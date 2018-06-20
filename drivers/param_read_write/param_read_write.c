@@ -22,6 +22,7 @@
 
 
 #define PARAM_PARTITION "/dev/block/bootdevice/by-name/param"
+#define READ_CHUNK_MAX_SIZE (128)
 static uint default_param_data_dump_size= DEFAULT_PARAM_DUMP_SIZE;
 
 typedef struct{
@@ -464,32 +465,51 @@ module_param_call(fastboot_count, NULL, param_get_fastboot_count, &fastboot_coun
 /* liochen@BSP, 2017/05/15, Add update_count */
 
 static ssize_t param_read(struct file *file, char __user *buff,
-            size_t count, loff_t *pos)
+			size_t count, loff_t *pos)
 {
 	void * temp_buffer;
+	int chunk_sz;
+	int copied;
+	int left;
 	int ret;
+
 	if (mutex_lock_interruptible(&param_lock))
 		return -ERESTARTSYS;
 
-	temp_buffer = kzalloc(count, GFP_KERNEL);
-	ret = get_param_by_index_and_offset(*pos/PARAM_SID_LENGTH,
-	        *pos%PARAM_SID_LENGTH, temp_buffer, count);
-	if(ret < 0){
-		pr_err("get_param_by_index_and_offset failure %d\n",ret);
-		goto out;
-	}
+	temp_buffer = kzalloc(READ_CHUNK_MAX_SIZE, GFP_KERNEL);
 
-	ret =copy_to_user(buff, temp_buffer, count);
-	if (ret < 0) {
-		pr_info("copy_to_user failure %d\n", ret );
-		goto out;
+	if (temp_buffer == NULL)
+		return -ENOMEM;
+
+	left = count;
+	copied = 0;
+
+	while (left) {
+		chunk_sz = (left <= READ_CHUNK_MAX_SIZE) ?
+			left : READ_CHUNK_MAX_SIZE;
+		ret = get_param_by_index_and_offset(*pos/PARAM_SID_LENGTH,
+				*pos%PARAM_SID_LENGTH, temp_buffer, chunk_sz);
+
+		if (ret < 0) {
+			pr_err("get_param_by_index_and_offset fail %d\n", ret);
+			goto out;
+		}
+
+		if (copy_to_user(buff + copied, temp_buffer, chunk_sz)) {
+			ret =  -EFAULT;
+			pr_info("copy_to_user failure\n");
+			goto out;
+		}
+
+		*pos += chunk_sz;
+		left -= chunk_sz;
+		copied += chunk_sz;
 	}
-	*pos += ret;
 
 out:
 	kfree(temp_buffer);
 	mutex_unlock(&param_lock);
-	return ret;
+	return copied;
 }
 
 static ssize_t param_write(struct file *file, const char __user *buff,
