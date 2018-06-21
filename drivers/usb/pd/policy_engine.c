@@ -427,6 +427,10 @@ struct usbpd {
 	bool			peer_usb_comm;
 	bool			peer_pr_swap;
 	bool			peer_dr_swap;
+#ifdef VENDOR_EDIT
+/*2018/06/21 handle pixel-sink connect failed issue*/
+	bool		oem_bypass;
+#endif
 
 	u32			sink_caps[7];
 	int			num_sink_caps;
@@ -1325,6 +1329,23 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 
 			usbpd_err(&pd->dev, "Invalid request: %08x\n", pd->rdo);
 
+#ifdef VENDOR_EDIT
+/*2018/06/21 handle pixel-sink connect failed issue*/
+			if (pd->oem_bypass) {
+				usbpd_info(&pd->dev, "oem bypass invalid request!\n");
+			} else {
+				if (pd->in_explicit_contract)
+					usbpd_set_state(pd, PE_SRC_READY);
+				else
+					/*
+					 * bypass PE_SRC_Capability_Response and
+					 * PE_SRC_Wait_New_Capabilities in this
+					 * implementation for simplicity.
+					 */
+				usbpd_set_state(pd, PE_SRC_SEND_CAPABILITIES);
+				break;
+			}
+#else
 			if (pd->in_explicit_contract)
 				usbpd_set_state(pd, PE_SRC_READY);
 			else
@@ -1335,6 +1356,7 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 				 */
 				usbpd_set_state(pd, PE_SRC_SEND_CAPABILITIES);
 			break;
+#endif
 		}
 
 		/* PE_SRC_TRANSITION_SUPPLY pseudo-state */
@@ -4333,6 +4355,10 @@ struct usbpd *usbpd_create(struct device *parent)
 		pd->dual_role->drv_data = pd;
 	}
 
+#ifdef VENDOR_EDIT
+/*2018/06/21 handle pixel-sink connect failed issue*/
+	pd->oem_bypass = true;
+#endif
 	pd->current_pr = PR_NONE;
 	pd->current_dr = DR_NONE;
 	list_add_tail(&pd->instance, &_usbpd);
