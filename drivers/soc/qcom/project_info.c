@@ -30,6 +30,7 @@ static ssize_t project_info_get(struct device *dev,
     struct device_attribute *attr, char *buf);
 static ssize_t component_info_get(struct device *dev,
     struct device_attribute *attr, char *buf);
+static int op_aboard_read_gpio(void);
 
 static DEVICE_ATTR(project_name, 0444, project_info_get, NULL);
 static DEVICE_ATTR(hw_id, 0444, project_info_get, NULL);
@@ -324,10 +325,12 @@ static ssize_t component_info_get(struct device *dev,
         return snprintf(buf, BUF_SIZE, "VER:\t%s\nMANU:\t%s\n",
         get_component_version(UFS),
         get_component_manufacture(UFS));
-    if (attr == &dev_attr_Aboard)
+    if (attr == &dev_attr_Aboard) {
+        op_aboard_read_gpio();
         return snprintf(buf, BUF_SIZE, "VER:\t%s\nMANU:\t%s\n",
         get_component_version(ABOARD),
         get_component_manufacture(ABOARD));
+    }
     if (attr == &dev_attr_nfc)
         return snprintf(buf, BUF_SIZE, "VER:\t%s\nMANU:\t%s\n",
         get_component_version(NFC),
@@ -672,7 +675,7 @@ struct aborad_data {
 
     struct device *dev;
 };
-static struct aborad_data *data;
+static struct aborad_data *data = NULL ;
 
 static int op_aboard_request_named_gpio(const char *label, int *gpio)
 {
@@ -697,12 +700,45 @@ static int op_aboard_request_named_gpio(const char *label, int *gpio)
     return 0;
 }
 
+static int op_aboard_read_gpio(void)
+{
+    int gpio0 = 0;
+    int gpio1 = 0;
+    gpio0 = gpio_get_value(data->aboard_gpio_0);
+    gpio1 = gpio_get_value(data->aboard_gpio_1);
+
+    pr_err("%s: gpio0=%d gpio1=%d\n", __func__, gpio0,gpio1);
+
+    if( gpio0 == 0 && gpio1 == 0 )
+    {
+        project_info_desc->a_board_version = 0 ;
+    }
+    else if( gpio0 == 0 && gpio1 == 1 )
+    {
+        project_info_desc->a_board_version = 1 ;
+    }
+    else if( gpio0 == 1 && gpio1 == 0 )
+    {
+        project_info_desc->a_board_version = 2 ;
+    }
+    else
+    {
+        project_info_desc->a_board_version = -1 ;
+    }
+    snprintf(Aboard_version, sizeof(Aboard_version), "%d %s",
+    project_info_desc->a_board_version,project_info_desc->a_board_version <3 ?
+    a_borad_version_string_arry_gpio[project_info_desc->a_board_version].name:"Unknown");
+
+    push_component_info(ABOARD, Aboard_version, mainboard_manufacture);
+    pr_err("%s: Aboard_gpio(%s)\n", __func__, Aboard_version);
+    return 0 ;
+
+}
+
 static int oem_aboard_probe(struct platform_device *pdev)
 {
     int rc = 0;
     struct device *dev = &pdev->dev;
-    int gpio0 = 0;
-    int gpio1 = 0;
 
     data = kzalloc(sizeof(struct aborad_data), GFP_KERNEL);
     if (!data) {
@@ -747,37 +783,7 @@ static int oem_aboard_probe(struct platform_device *pdev)
 
     gpio_direction_input(data->aboard_gpio_0);
     gpio_direction_input(data->aboard_gpio_1);
-
-    gpio0 = gpio_get_value(data->aboard_gpio_0);
-    gpio1 = gpio_get_value(data->aboard_gpio_1);
-
-    pr_err("%s: gpio0=%d gpio1=%d\n", __func__, gpio1,gpio1);
-    
-    if( gpio0 == 0 && gpio1 == 0 )
-    {
-        project_info_desc->a_board_version = 0 ;
-    }
-    else if( gpio0 == 0 && gpio1 == 1 )
-    {
-        project_info_desc->a_board_version = 1 ;
-    }
-    else if( gpio0 == 1 && gpio1 == 0 )
-    {
-        project_info_desc->a_board_version = 2 ;
-    }
-    else 
-    {
-        project_info_desc->a_board_version = -1 ;
-    }
-    snprintf(Aboard_version, sizeof(Aboard_version), "%d %s",
-    project_info_desc->a_board_version,project_info_desc->a_board_version <3 ?
-    a_borad_version_string_arry_gpio[project_info_desc->a_board_version].name:"Unknown");
-
-    push_component_info(ABOARD, Aboard_version, mainboard_manufacture);
-    pr_err("%s: Aboard_gpio(%s)\n", __func__, Aboard_version);
-
-
-
+    op_aboard_read_gpio();
     pr_err("%s: probe ok!\n", __func__);
     return 0;
     
