@@ -2045,6 +2045,7 @@ static int __target_index(struct cpufreq_policy *policy, int index)
 	target_freq = clamp_val(target_freq, qos->min_cpufreq, qos->max_cpufreq);
 
 	index = cpufreq_frequency_table_target(policy, target_freq, relation);
+	target_freq = policy->freq_table[index].frequency;
 #else
 	if (newfreq == policy->cur)
 		return 0;
