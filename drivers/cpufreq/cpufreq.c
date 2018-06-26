@@ -2030,6 +2030,8 @@ static int __target_index(struct cpufreq_policy *policy, int index)
 	bool notify;
 
 #ifdef VENDOR_EDIT
+	struct qos_request_value *qos;
+
 	if (newfreq == policy->cur) {
 		if (c1_cpufreq_update_flag)
 			c1_cpufreq_update_flag = false;
@@ -2037,17 +2039,11 @@ static int __target_index(struct cpufreq_policy *policy, int index)
 			return 0;
 	}
 
-	if (policy->cpu >= cluster1_first_cpu) {
-		target_freq = min(c1_qos_request_value.max_cpufreq,
-				target_freq);
-		target_freq = max(c1_qos_request_value.min_cpufreq,
-				target_freq);
-	} else {
-		target_freq = min(c0_qos_request_value.max_cpufreq,
-				target_freq);
-		target_freq = max(c0_qos_request_value.min_cpufreq,
-				target_freq);
-	}
+	qos = policy->cpu >= cluster1_first_cpu?
+			&c1_qos_request_value: &c0_qos_request_value;
+
+	target_freq = clamp_val(target_freq, qos->min_cpufreq, qos->max_cpufreq);
+
 	index = cpufreq_frequency_table_target(policy, target_freq, relation);
 #else
 	if (newfreq == policy->cur)
