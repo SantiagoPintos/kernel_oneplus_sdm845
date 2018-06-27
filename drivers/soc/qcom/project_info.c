@@ -326,7 +326,7 @@ static ssize_t component_info_get(struct device *dev,
         get_component_version(UFS),
         get_component_manufacture(UFS));
     if (attr == &dev_attr_Aboard) {
-        op_aboard_read_gpio();
+        //op_aboard_read_gpio();
         return snprintf(buf, BUF_SIZE, "VER:\t%s\nMANU:\t%s\n",
         get_component_version(ABOARD),
         get_component_manufacture(ABOARD));
@@ -704,6 +704,10 @@ static int op_aboard_read_gpio(void)
 {
     int gpio0 = 0;
     int gpio1 = 0;
+    if ( data == NULL )
+    {
+        return 0 ;
+    }
     gpio0 = gpio_get_value(data->aboard_gpio_0);
     gpio1 = gpio_get_value(data->aboard_gpio_1);
 
@@ -799,17 +803,17 @@ exit:
     return rc;
 }
 
-static const struct of_device_id abord_of_match[] = {
-    { .compatible = "oem,abord", },
+static const struct of_device_id aboard_of_match[] = {
+    { .compatible = "oem,aboard", },
     {}
 };
-MODULE_DEVICE_TABLE(of, abord_of_match);
+MODULE_DEVICE_TABLE(of, aboard_of_match);
 
-static struct platform_driver abord_driver = {
+static struct platform_driver aboard_driver = {
     .driver = {
-        .name       = "op_abord",
+        .name       = "op_aboard",
         .owner      = THIS_MODULE,
-        .of_match_table = abord_of_match,
+        .of_match_table = aboard_of_match,
     },
     .probe = oem_aboard_probe,
 };
@@ -821,9 +825,9 @@ static int __init init_project(void)
     init_project_info();
 
     if( project_info_desc->hw_version > 32 ){
-        ret = platform_driver_register(&abord_driver);
+        ret = platform_driver_register(&aboard_driver);
         if (ret)
-            pr_err("abord_driver register failed: %d\n", ret);
+            pr_err("aboard_driver register failed: %d\n", ret);
     }else {
         ret = 0;
     }
