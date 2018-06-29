@@ -363,6 +363,7 @@ struct smb_charger {
 	struct work_struct	get_aicl_work;
 	struct delayed_work	dash_check_work;
 	struct delayed_work	op_icl_set_work;
+	struct work_struct	otg_switch_work;
 	struct wakeup_source	chg_wake_lock;
 #endif
 	struct delayed_work	clear_hdc_work;
@@ -402,6 +403,7 @@ struct smb_charger {
 	int				ck_dash_count;
 	int				recovery_boost_count;
 	int				op_icl_val;
+	int				plug_irq;
 	bool				otg_switch;
 	bool				use_fake_chgvol;
 	bool				use_fake_temp;
@@ -722,6 +724,7 @@ int smblib_set_prop_pr_swap_in_progress(struct smb_charger *chg,
 int smblib_stat_sw_override_cfg(struct smb_charger *chg, bool override);
 void smblib_usb_typec_change(struct smb_charger *chg);
 int smblib_toggle_stat(struct smb_charger *chg, int reset);
+int op_set_otg_switch(struct smb_charger *chg, bool enable);
 
 int smblib_init(struct smb_charger *chg);
 int smblib_deinit(struct smb_charger *chg);

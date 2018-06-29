@@ -2354,6 +2354,54 @@ int op_set_prop_otg_switch(struct smb_charger *chg,
 	return rc;
 }
 
+int op_set_otg_switch(struct smb_charger *chg, bool enable)
+{
+	int rc = 0;
+	u8 power_role;
+	u8 ctrl = 0;
+	bool pre_otg_switch;
+	int i = 0;
+
+	pre_otg_switch = chg->otg_switch;
+	chg->otg_switch = enable;
+
+	if (chg->otg_switch == pre_otg_switch)
+		return rc;
+
+	pr_info("set otg_switch=%d\n", chg->otg_switch);
+	if (chg->otg_switch)
+		power_role = 0;
+	else
+		power_role = UFP_EN_CMD_BIT;
+
+	for (i = 0; i < 10; i++) {
+		rc = smblib_masked_write(chg,
+				TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
+				TYPEC_POWER_ROLE_CMD_MASK, power_role);
+		if (rc < 0) {
+			smblib_err(chg, "Couldn't write 0x%02x to 0x1368 rc=%d\n",
+			power_role, rc);
+			return rc;
+	}
+	usleep_range(30000, 31000);
+	ctrl = 0;
+	rc = smblib_read(chg,
+		TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG, &ctrl);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read err=%d\n", rc);
+		return rc;
+	}
+	if ((power_role == 0) && ((ctrl & POWER_ROLE_BIT) == 0))
+		break;
+	if ((power_role == UFP_EN_CMD_BIT) && (ctrl & UFP_EN_CMD_BIT))
+		break;
+	}
+	pr_info("retry time = %d,ctrl = %d\n", i, ctrl);
+	if (i == 10)
+		pr_err("retry time over\n");
+	return rc;
+}
+
 int smblib_set_prop_chg_voltage(struct smb_charger *chg,
 				  const union power_supply_propval *val)
 {
@@ -7237,6 +7285,26 @@ void aging_test_check_aicl(struct smb_charger *chg)
 	}
 }
 
+static void op_otg_switch(struct work_struct *work)
+{
+	bool usb_pluged;
+	static int pre_usb_pluged = true;
+
+	if (!g_chg)
+		return;
+	usb_pluged = gpio_get_value(g_chg->plug_irq) ? false : true;
+	if (usb_pluged == pre_usb_pluged) {
+		pr_info("same status,return;usb_present:%d\n", usb_pluged);
+		return;
+	}
+	pr_info("%s,usb_present:%d\n", __func__, usb_pluged);
+	if (usb_pluged)
+		op_set_otg_switch(g_chg, true);
+	else
+		op_set_otg_switch(g_chg, false);
+	pre_usb_pluged = usb_pluged;
+}
+
 static void op_heartbeat_work(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
@@ -8317,6 +8385,7 @@ int smblib_init(struct smb_charger *chg)
 	INIT_DELAYED_WORK(&chg->re_det_work, smbchg_re_det_work);
 	INIT_DELAYED_WORK(&chg->op_re_set_work, op_recovery_set_work);
 	INIT_WORK(&chg->get_aicl_work, op_get_aicl_work);
+	INIT_WORK(&chg->otg_switch_work, op_otg_switch);
 	INIT_DELAYED_WORK(&chg->dash_check_work, op_dash_check_work);
 	schedule_delayed_work(&chg->heartbeat_work,
 			msecs_to_jiffies(HEARTBEAT_INTERVAL_MS));

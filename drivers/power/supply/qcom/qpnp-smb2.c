@@ -364,6 +364,8 @@ static int smb2_parse_dt(struct smb2 *chip)
 	/*yangfb@bsp, 20180302,enable stm6620 sheepmode */
 	chg->shipmode_en = of_get_named_gpio_flags(node, "op,stm-off-gpio", 0,
 							  &flags);
+	chg->plug_irq = of_get_named_gpio_flags(node,
+						"op,usb-check", 0, &flags);
 #endif
 	/* read other settings */
 	OF_PROP_READ(node, "qcom,cutoff-voltage-with-charger",
@@ -748,6 +750,8 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170414 Add otg switch */
 	case POWER_SUPPLY_PROP_OTG_SWITCH:
+		if (gpio_is_valid(chg->plug_irq))
+			break;
 		rc = op_set_prop_otg_switch(chg, val);
 		break;
 #endif
@@ -2850,7 +2854,40 @@ static int op_stm6620_off_ctrl(struct smb_charger *chip)
 	return 0;
 
 }
+
+static irqreturn_t op_usb_plugin_irq_handler(int irq, void *dev_id)
+{
+	schedule_work(&g_chip->otg_switch_work);
+	return IRQ_HANDLED;
+}
+
+static void request_plug_irq(struct smb_charger *chip)
+{
+	int ret;
+
+	if (!gpio_is_valid(chip->plug_irq))
+		return;
+	ret = gpio_request(chip->plug_irq, "op_usb_plug");
+	if (ret) {
+		pr_err("request failed,gpio:%d ret=%d\n", chip->plug_irq, ret);
+		return;
+	}
+	gpio_direction_input(chip->plug_irq);
+	ret = request_irq(gpio_to_irq(chip->plug_irq),
+			op_usb_plugin_irq_handler,
+			IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
+			"op_usb_plug", chip);
+	if (ret < 0) {
+		pr_err("request usb_plug irq failed.\n");
+		return;
+	}
+	enable_irq_wake(gpio_to_irq(chip->plug_irq));
+	pr_info("request usb_plug irq success\n");
+	if (!gpio_get_value(chip->plug_irq))
+		op_set_otg_switch(chip, true);
+}
 #endif
+
 static int smb2_probe(struct platform_device *pdev)
 {
 	struct smb2 *chip;
@@ -3056,8 +3093,8 @@ static int smb2_probe(struct platform_device *pdev)
 #endif
 #ifdef VENDOR_EDIT
 	chg->probe_done = true;
+	request_plug_irq(chg);
 #endif
-
 	pr_info("QPNP SMB2 probed successfully usb:present=%d type=%d batt:present = %d health = %d charge = %d\n",
 		usb_present, chg->real_charger_type,
 		batt_present, batt_health, batt_charge_type);
