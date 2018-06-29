@@ -181,6 +181,12 @@ struct qusb_phy {
 	struct pinctrl_state	*atest_usb_suspend;
 	struct pinctrl_state	*atest_usb_active;
 
+#ifdef VENDOR_EDIT
+/*2018/06/28 @BSP Add HW-SW WR to optimize the usb diagram*/
+	struct pinctrl_state	*usb_oe_active;
+	struct pinctrl_state	*usb_oe_suspend;
+	bool			usb_oe_exist;
+#endif
 	/* emulation targets specific */
 	void __iomem		*emu_phy_base;
 	bool			emulation;
@@ -796,6 +802,16 @@ static enum hrtimer_restart qusb_dis_ext_pulldown_timer(struct hrtimer *timer)
 		if (ret < 0)
 			dev_err(qphy->phy.dev,
 				"pinctrl state suspend select failed\n");
+#ifdef VENDOR_EDIT
+/*2018/06/28 @BSP Add HW-SW WR to optimize the usb diagram*/
+		if (qphy->usb_oe_exist && qphy->usb_oe_active) {
+			ret = pinctrl_select_state(qphy->pinctrl,
+					qphy->usb_oe_active);
+			if (ret < 0)
+				dev_err(qphy->phy.dev,
+					"pinctrl state usb_oe_active select failed\n");
+		}
+#endif
 	}
 
 	return HRTIMER_NORESTART;
@@ -816,10 +832,39 @@ static void qusb_phy_enable_ext_pulldown(struct usb_phy *phy)
 					"pinctrl state active select failed\n");
 			return;
 		}
-
+#ifdef VENDOR_EDIT
+/*2018/06/28 @BSP Add HW-SW WR to optimize the usb diagram*/
+		if (qphy->usb_oe_exist && qphy->usb_oe_suspend) {
+			ret = pinctrl_select_state(qphy->pinctrl,
+					qphy->usb_oe_suspend);
+			if (ret < 0)
+				dev_err(phy->dev,
+					"pinctrl state usb_oe_suspend select failed\n");
+		}
+#endif
 		hrtimer_start(&qphy->timer, ms_to_ktime(10), HRTIMER_MODE_REL);
 	}
 }
+
+#ifdef VENDOR_EDIT
+/*2018/06/28 @BSP Add HW-SW WR to optimize the usb diagram*/
+static void qusb_phy_enable_usb_oe(struct usb_phy *phy)
+{
+	struct qusb_phy *qphy = container_of(phy, struct qusb_phy, phy);
+	int ret = 0;
+
+	dev_dbg(phy->dev, "%s\n", __func__);
+
+	if (qphy->pinctrl && qphy->usb_oe_active) {
+		ret = pinctrl_select_state(qphy->pinctrl,
+				qphy->usb_oe_active);
+		if (ret < 0)
+			dev_err(phy->dev,
+				"pinctrl state usb_oe_active select failed\n");
+	}
+}
+#endif
+
 
 static void qusb_phy_shutdown(struct usb_phy *phy)
 {
@@ -1482,6 +1527,24 @@ static int qusb_phy_probe(struct platform_device *pdev)
 			dev_err(dev, "pinctrl lookup active failed\n");
 	}
 
+#ifdef VENDOR_EDIT
+/*2018/06/28 @BSP Add HW-SW WR to optimize the usb diagram*/
+	qphy->usb_oe_exist = of_property_read_bool(dev->of_node,
+							"qcom,usb-oe-exist");
+	dev_info(dev, "usb_oe_exist=%d\n", qphy->usb_oe_exist);
+	if (qphy->usb_oe_exist) {
+		qphy->usb_oe_suspend = pinctrl_lookup_state(qphy->pinctrl,
+								"usb_oe_suspend");
+		if (IS_ERR(qphy->usb_oe_suspend))
+			dev_err(dev, "pinctrl lookup usb_oe_suspend failed\n");
+
+		qphy->usb_oe_active = pinctrl_lookup_state(qphy->pinctrl,
+								"usb_oe_active");
+		if (IS_ERR(qphy->usb_oe_active))
+			dev_err(dev, "pinctrl lookup usb_oe_active failed\n");
+	}
+#endif
+
 	hrtimer_init(&qphy->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	qphy->timer.function = qusb_dis_ext_pulldown_timer;
 
@@ -1513,7 +1576,11 @@ skip_pinctrl_config:
 	ret = qusb_phy_regulator_init(qphy);
 	if (ret)
 		usb_remove_phy(&qphy->phy);
-
+#ifdef VENDOR_EDIT
+/*2018/06/28 @BSP Add HW-SW WR to optimize the usb diagram*/
+	if (qphy->usb_oe_exist)
+		qusb_phy_enable_usb_oe(&qphy->phy);
+#endif
 	qusb_phy_create_debugfs(qphy);
 
 	return ret;
