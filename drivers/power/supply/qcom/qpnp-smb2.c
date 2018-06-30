@@ -366,6 +366,8 @@ static int smb2_parse_dt(struct smb2 *chip)
 							  &flags);
 	chg->plug_irq = of_get_named_gpio_flags(node,
 						"op,usb-check", 0, &flags);
+	chg->vbus_ctrl = of_get_named_gpio_flags(node,
+						"op,vbus-ctrl-gpio", 0, &flags);
 #endif
 	/* read other settings */
 	OF_PROP_READ(node, "qcom,cutoff-voltage-with-charger",
@@ -1220,6 +1222,7 @@ static enum power_supply_property smb2_batt_props[] = {
 	POWER_SUPPLY_PROP_CHARGING_ENABLED,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_MAX,
 	POWER_SUPPLY_PROP_IS_AGING_TEST,
+	POWER_SUPPLY_PROP_CONNECTER_TEMP,
 #endif
 	POWER_SUPPLY_PROP_CHARGER_TEMP,
 	POWER_SUPPLY_PROP_CHARGER_TEMP_MAX,
@@ -1306,6 +1309,9 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_IS_AGING_TEST:
 		val->intval = chg->is_aging_test;
+		break;
+	case POWER_SUPPLY_PROP_CONNECTER_TEMP:
+		val->intval = chg->connecter_temp;
 		break;
 #endif
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
@@ -2886,6 +2892,17 @@ static void request_plug_irq(struct smb_charger *chip)
 	if (!gpio_get_value(chip->plug_irq))
 		op_set_otg_switch(chip, true);
 }
+
+void requset_vbus_ctrl_gpio(struct smb_charger *chg)
+{
+	int ret;
+
+	if (!gpio_is_valid(chg->vbus_ctrl))
+		return;
+	ret = gpio_request(chg->vbus_ctrl, "VbusCtrl");
+	if (ret)
+		pr_err("request failed,gpio:%d ret=%d\n", chg->vbus_ctrl, ret);
+}
 #endif
 
 static int smb2_probe(struct platform_device *pdev)
@@ -3094,6 +3111,7 @@ static int smb2_probe(struct platform_device *pdev)
 #ifdef VENDOR_EDIT
 	chg->probe_done = true;
 	request_plug_irq(chg);
+	requset_vbus_ctrl_gpio(chg);
 #endif
 	pr_info("QPNP SMB2 probed successfully usb:present=%d type=%d batt:present = %d health = %d charge = %d\n",
 		usb_present, chg->real_charger_type,

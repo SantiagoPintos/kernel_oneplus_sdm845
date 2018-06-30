@@ -49,6 +49,9 @@
 #endif /*CONFIG_FB*/
 #include <linux/moduleparam.h>
 #include <linux/msm-bus.h>
+#include <linux/qpnp/qpnp-adc.h>
+#include "op_charge.h"
+
 
 #define SOC_INVALID                   0x7E
 #define SOC_DATA_REG_0                0x88D
@@ -5532,6 +5535,23 @@ static void op_dash_check_work(struct work_struct *work)
 	}
 }
 
+static int get_usb_temp(struct smb_charger *chg);
+static void op_disconnect_vbus(struct smb_charger *chg);
+
+static void op_connect_temp_check_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct smb_charger *chg = container_of(dwork,
+				struct smb_charger, connecter_check_work);
+
+	chg->connecter_temp = get_usb_temp(chg);
+	if (chg->connecter_temp < 68)
+		schedule_delayed_work(&chg->connecter_check_work,
+				msecs_to_jiffies(200));
+	else
+		op_disconnect_vbus(chg);
+}
+
 irqreturn_t smblib_handle_aicl_done(int irq, void *data)
 {
 	struct smb_irq_data *irq_data = data;
@@ -7305,6 +7325,43 @@ static void op_otg_switch(struct work_struct *work)
 	pre_usb_pluged = usb_pluged;
 }
 
+static int get_usb_temp(struct smb_charger *chg)
+{
+	struct qpnp_vadc_chip *vadc_dev;
+	struct qpnp_vadc_result result;
+	int ret, i;
+
+	vadc_dev = qpnp_get_vadc(chg->dev, "usb-temp");
+	if (IS_ERR(vadc_dev)) {
+		ret = PTR_ERR(vadc_dev);
+			pr_err("vadc property missing, ret=%d\n", ret);
+		return ret;
+	}
+	ret = qpnp_vadc_read(vadc_dev, VADC_AMUX5_GPIO_PU1, &result);
+	chg->connecter_voltage = (int) result.physical/1000;
+	for (i = ARRAY_SIZE(con_volt_30k) - 1; i >= 0; i--) {
+		if (con_volt_30k[i] >= chg->connecter_voltage)
+			break;
+		else if (i == 0)
+			break;
+	}
+	pr_debug("connectter vol:%d,temp:%d\n",
+				chg->connecter_voltage, con_temp[i]);
+	return con_temp_30k[i];
+}
+
+static void op_disconnect_vbus(struct smb_charger *chg)
+{
+	pr_info("usb connecter hot,Vbus disconnected!");
+	chg->dash_on = get_prop_fast_chg_started(chg);
+	if (chg->dash_on) {
+		switch_mode_to_normal();
+		op_set_fast_chg_allow(chg, false);
+	}
+	gpio_set_value(chg->vbus_ctrl, 1);
+	chg->disconnect_vbus = true;
+}
+
 static void op_heartbeat_work(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
@@ -8387,8 +8444,13 @@ int smblib_init(struct smb_charger *chg)
 	INIT_WORK(&chg->get_aicl_work, op_get_aicl_work);
 	INIT_WORK(&chg->otg_switch_work, op_otg_switch);
 	INIT_DELAYED_WORK(&chg->dash_check_work, op_dash_check_work);
+	INIT_DELAYED_WORK(&chg->connecter_check_work,
+					op_connect_temp_check_work);
 	schedule_delayed_work(&chg->heartbeat_work,
 			msecs_to_jiffies(HEARTBEAT_INTERVAL_MS));
+	if (gpio_is_valid(chg->vbus_ctrl))
+		schedule_delayed_work(&chg->connecter_check_work,
+				msecs_to_jiffies(200));
 	notify_dash_unplug_register(&notify_unplug_event);
 	wakeup_source_init(&chg->chg_wake_lock, "chg_wake_lock");
 	g_chg = chg;
