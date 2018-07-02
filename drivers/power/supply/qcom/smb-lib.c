@@ -7346,12 +7346,21 @@ static int get_usb_temp(struct smb_charger *chg)
 			break;
 	}
 	pr_debug("connectter vol:%d,temp:%d\n",
-				chg->connecter_voltage, con_temp[i]);
+				chg->connecter_voltage, con_volt_30k[i]);
 	return con_temp_30k[i];
 }
 
 static void op_disconnect_vbus(struct smb_charger *chg)
 {
+
+#ifdef	CONFIG_OP_DEBUG_CHG
+	/* *#806# aging test not need Vbus disconnect feature*/
+	return;
+#else
+	if (chg->is_aging_test)
+		return;
+#endif
+
 	pr_info("usb connecter hot,Vbus disconnected!");
 	chg->dash_on = get_prop_fast_chg_started(chg);
 	if (chg->dash_on) {

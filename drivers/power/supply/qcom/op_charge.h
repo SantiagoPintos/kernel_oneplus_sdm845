@@ -688,4 +688,4 @@ int con_temp[] = {
 	124,
 	125,
 };
-#endif /* __OP_CHARGE_H */
+#endif /* __OP_CHARGE_H__ */
