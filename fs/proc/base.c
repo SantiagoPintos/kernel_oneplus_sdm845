@@ -88,6 +88,11 @@
 #include <linux/flex_array.h>
 #include <linux/posix-timers.h>
 #include <linux/cpufreq_times.h>
+
+#ifdef VENDOR_EDIT
+#include <linux/adj_chain.h>
+#endif
+
 #ifdef CONFIG_HARDWALL
 #include <asm/hardwall.h>
 #endif
@@ -1133,6 +1138,11 @@ static ssize_t oom_adj_write(struct file *file, const char __user *buf,
 		  task_pid_nr(task));
 
 	task->signal->oom_score_adj = oom_adj;
+
+#ifdef VENDOR_EDIT
+	adj_chain_update_oom_score_adj(task);
+#endif
+
 	trace_oom_score_adj_update(task);
 err_unlock:
 	mutex_unlock(&oom_adj_mutex);
@@ -1203,6 +1213,11 @@ static ssize_t oom_score_adj_write(struct file *file, const char __user *buf,
 	}
 
 	task->signal->oom_score_adj = (short)oom_score_adj;
+
+#ifdef VENDOR_EDIT
+	adj_chain_update_oom_score_adj(task);
+#endif
+
 	if (has_capability_noaudit(current, CAP_SYS_RESOURCE))
 		task->signal->oom_score_adj_min = (short)oom_score_adj;
 

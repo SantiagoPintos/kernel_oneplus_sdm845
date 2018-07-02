@@ -67,6 +67,10 @@
 
 #include <trace/events/sched.h>
 
+#ifdef VENDOR_EDIT
+#include <linux/adj_chain.h>
+#endif
+
 int suid_dumpable = 0;
 
 static LIST_HEAD(formats);
@@ -1160,7 +1164,16 @@ static int de_thread(struct task_struct *tsk)
 
 		list_replace_rcu(&leader->tasks, &tsk->tasks);
 		list_replace_init(&leader->sibling, &tsk->sibling);
-
+#ifdef VENDOR_EDIT
+#ifdef CONFIG_ADJ_CHAIN
+		tsk->adj_chain_status |= 1 << AC_PROM_LEADER;
+#endif
+		adj_chain_detach(tsk);
+		adj_chain_attach(tsk);
+#ifdef CONFIG_ADJ_CHAIN
+		tsk->adj_chain_status &= ~(1 << AC_PROM_LEADER);
+#endif
+#endif
 		tsk->group_leader = tsk;
 		leader->group_leader = tsk;
 

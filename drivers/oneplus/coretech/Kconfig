@@ -9,3 +9,9 @@ config DEFRAG_HELPER
 config CRPL_HELPER
 	default n
 	bool "Oneplus CoreTech helper, used for crpl module"
+
+config ADJ_CHAIN
+	default n
+	bool "Chain task adj for victim select"
+	help
+	 To chain task adj for any purpose
