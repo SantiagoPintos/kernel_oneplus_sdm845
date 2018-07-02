@@ -472,7 +472,6 @@ struct smb_charger {
 	int			OTG_NORMAL_BAT_ICL;
 #endif
 #ifdef VENDOR_EDIT
-	int			shipmode_en;
 	int			connecter_temp;
 	int			connecter_voltage;
 	int			disconnect_vbus;
