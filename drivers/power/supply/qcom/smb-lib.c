@@ -7308,7 +7308,7 @@ void aging_test_check_aicl(struct smb_charger *chg)
 static void op_otg_switch(struct work_struct *work)
 {
 	bool usb_pluged;
-	static int pre_usb_pluged = true;
+	static bool pre_usb_pluged;
 
 	if (!g_chg)
 		return;
