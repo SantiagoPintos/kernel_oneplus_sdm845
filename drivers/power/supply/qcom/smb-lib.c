@@ -7211,8 +7211,10 @@ static void check_non_standard_charger_work(struct work_struct *work)
 		chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_USB_DCP;
 		if (chg->is_aging_test)
 			op_usb_icl_set(chg, DEFAULT_AGAING_CHG_MA*1000);
+		else if (aicl_result >= 700*1000)
+			op_usb_icl_set(chg, aicl_result - 200*1000);
 		else
-			op_usb_icl_set(chg, DCP_CURRENT_UA);
+			op_usb_icl_set(chg, 1200*1000);
 		power_supply_changed(chg->batt_psy);
 		chg->is_power_changed = true;
 		chg->non_std_chg_present = true;
