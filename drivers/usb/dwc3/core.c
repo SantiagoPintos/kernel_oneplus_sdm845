@@ -1286,8 +1286,8 @@ static int dwc3_probe(struct platform_device *pdev)
 					"snps,usb2-l1-disable");
 #ifdef VENDOR_EDIT
 /*yangfb@bsp,20180228,enable usb3.1*/
-	dwc->enable_supper_speed = device_property_read_bool(dev,
-					"op,enable_supper_speed");
+	dwc->enable_super_speed = device_property_read_bool(dev,
+					"op,enable_super_speed");
 #endif
 	if (dwc->enable_bus_suspend) {
 		pm_runtime_set_autosuspend_delay(dev, 500);
@@ -1296,7 +1296,7 @@ static int dwc3_probe(struct platform_device *pdev)
 
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171113 USB patches porting */
-	if (!dwc->enable_supper_speed) {
+	if (!dwc->enable_super_speed) {
 		pr_info("Force USB running as High speed");
 		dwc->max_hw_supp_speed = USB_SPEED_HIGH;
 		dwc->maximum_speed = USB_SPEED_HIGH;

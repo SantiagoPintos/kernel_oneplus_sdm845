@@ -1143,7 +1143,7 @@ struct dwc3 {
 
 #ifdef VENDOR_EDIT
 	/*yangfb@bsp,20180228,enable usb3.1*/
-	unsigned		enable_supper_speed:1;
+	unsigned		enable_super_speed:1;
 #endif
 	atomic_t		in_lpm;
 	int			tx_fifo_size;
