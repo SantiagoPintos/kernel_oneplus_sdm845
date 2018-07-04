@@ -361,6 +361,9 @@ static int smb2_parse_dt(struct smb2 *chip)
 		chg->OTG_NORMAL_BAT_ICL);
 #endif
 #ifdef VENDOR_EDIT
+	/*yangfb@bsp, 20180302,enable stm6620 sheepmode */
+	chg->shipmode_en = of_get_named_gpio_flags(node, "op,stm-off-gpio", 0,
+							  &flags);
 	chg->plug_irq = of_get_named_gpio_flags(node,
 						"op,usb-check", 0, &flags);
 	chg->vbus_ctrl = of_get_named_gpio_flags(node,
@@ -2816,6 +2819,48 @@ static const struct file_operations proc_ship_mode_operations = {
 #endif
 #endif
 #ifdef VENDOR_EDIT
+/*yangfb@bsp, 20180302,enable stm6620 sheepmode */
+static int op_stm6620_off_ctrl(struct smb_charger *chip)
+{
+	int rc;
+
+	chip->pinctrl = devm_pinctrl_get(chip->dev);
+	if (IS_ERR_OR_NULL(chip->pinctrl)) {
+		dev_err(chip->dev,
+				"Unable to acquire pinctrl\n");
+		chip->pinctrl = NULL;
+		return -EINVAL;
+	}
+
+	chip->pinctrl_state_default =
+		pinctrl_lookup_state(chip->pinctrl, "default");
+	if (IS_ERR_OR_NULL(chip->pinctrl_state_default)) {
+		dev_err(chip->dev,
+				"Can not lookup pinctrl_state_default\n");
+		devm_pinctrl_put(chip->pinctrl);
+		chip->pinctrl = NULL;
+		return PTR_ERR(chip->pinctrl_state_default);
+	}
+
+	if (pinctrl_select_state(chip->pinctrl,
+				chip->pinctrl_state_default) < 0)
+		dev_err(chip->dev, "pinctrl set active fail\n");
+
+	if (gpio_is_valid(chip->shipmode_en)) {
+		rc = gpio_request(chip->shipmode_en, "stm6620_off");
+		if (rc)
+		pr_err("gpio_request failed for %d rc=%d\n",
+				chip->shipmode_en, rc);
+		else
+		gpio_direction_output(chip->shipmode_en, 0);
+
+		pr_info("stm6620_off gpio ctrl\n");
+	}
+
+	return 0;
+
+}
+
 static irqreturn_t op_usb_plugin_irq_handler(int irq, void *dev_id)
 {
 	schedule_work(&g_chip->otg_switch_work);
@@ -3060,6 +3105,10 @@ static int smb2_probe(struct platform_device *pdev)
 
 	device_init_wakeup(chg->dev, true);
 #ifdef VENDOR_EDIT
+	/*yangfb@bsp, 20180302,enable stm6620 sheepmode */
+	op_stm6620_off_ctrl(chg);
+#endif
+#ifdef VENDOR_EDIT
 	chg->probe_done = true;
 	request_plug_irq(chg);
 	requset_vbus_ctrl_gpio(chg);
@@ -3118,6 +3167,20 @@ static int smb2_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 	return 0;
 }
+#ifdef VENDOR_EDIT
+/*yangfb@bsp, 20180302,enable stm6620 sheepmode */
+static void stm6620_enter_sheepmode(struct smb_charger *chg)
+{
+	int i;
+
+	for (i = 0; i < 5; i++) {
+		gpio_set_value(chg->shipmode_en, 1);
+		usleep_range(4000, 4001);
+		gpio_set_value(chg->shipmode_en, 0);
+		usleep_range(4000, 4001);
+	}
+}
+#endif
 
 static void smb2_shutdown(struct platform_device *pdev)
 {
@@ -3129,8 +3192,20 @@ static void smb2_shutdown(struct platform_device *pdev)
 	pr_info("smbchg_shutdown\n");
 	if (chg->ship_mode) {
 		pr_info("smbchg_shutdown enter ship_mode\n");
-		smblib_masked_write(chg, SHIP_MODE_REG,
-			SHIP_MODE_EN_BIT, SHIP_MODE_EN_BIT);
+		#ifdef VENDOR_EDIT
+		/*yangfb@bsp, 20180302,enable stm6620 sheepmode */
+		if (gpio_is_valid(chg->shipmode_en)) {
+			vote(chg->usb_icl_votable,
+					DEFAULT_VOTER, true, 0);
+			stm6620_enter_sheepmode(chg);
+		} else {
+		#endif
+			smblib_masked_write(chg, SHIP_MODE_REG,
+				SHIP_MODE_EN_BIT, SHIP_MODE_EN_BIT);
+		#ifdef VENDOR_EDIT
+		/*yangfb@bsp, 20180302,enable stm6620 sheepmode */
+		}
+		#endif
 		msleep(1000);
 		pr_err("after 1s\n");
 		while (1)
