@@ -4129,6 +4129,9 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 		}
 		schedule_delayed_work(&chg->op_check_apsd_work,
 				msecs_to_jiffies(TIME_1000MS));
+		if (gpio_is_valid(chg->vbus_ctrl))
+			schedule_delayed_work(&chg->connecter_check_work,
+				msecs_to_jiffies(200));
 #endif
 		/* Schedule work to enable parallel charger */
 		vote(chg->awake_votable, PL_DELAY_VOTER, true, 0);
@@ -5544,6 +5547,8 @@ static void op_connect_temp_check_work(struct work_struct *work)
 	struct smb_charger *chg = container_of(dwork,
 				struct smb_charger, connecter_check_work);
 
+	if (!chg->vbus_present)
+		return;
 	chg->connecter_temp = get_usb_temp(chg);
 	if (chg->connecter_temp < 68)
 		schedule_delayed_work(&chg->connecter_check_work,
@@ -8459,9 +8464,6 @@ int smblib_init(struct smb_charger *chg)
 					op_connect_temp_check_work);
 	schedule_delayed_work(&chg->heartbeat_work,
 			msecs_to_jiffies(HEARTBEAT_INTERVAL_MS));
-	if (gpio_is_valid(chg->vbus_ctrl))
-		schedule_delayed_work(&chg->connecter_check_work,
-				msecs_to_jiffies(200));
 	notify_dash_unplug_register(&notify_unplug_event);
 	wakeup_source_init(&chg->chg_wake_lock, "chg_wake_lock");
 	g_chg = chg;

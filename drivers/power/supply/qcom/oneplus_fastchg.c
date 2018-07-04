@@ -1156,6 +1156,8 @@ static ssize_t dash_dev_write(struct file *filp, const char __user *buf,
 		kfree(dashchg_firmware_data);
 		return -EFAULT;
 	}
+	schedule_delayed_work(&di->update_fireware_version_work,
+			msecs_to_jiffies(SHOW_FW_VERSION_DELAY_MS));
 	pr_info("fw_ver_count=%d\n", di->dashchg_fw_ver_count);
 	return count;
 }
@@ -1398,8 +1400,6 @@ static int dash_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	mcu_init(di);
 	check_n76e_support(di);
 	fastcharge_information_register(&fastcharge_information);
-	schedule_delayed_work(&di->update_fireware_version_work,
-			msecs_to_jiffies(SHOW_FW_VERSION_DELAY_MS));
 	pr_info("dash_probe success\n");
 
 	return 0;
