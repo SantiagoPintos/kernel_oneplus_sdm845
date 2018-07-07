@@ -39,6 +39,9 @@ int (*opc_get_claim_on_cpu_t)(int cpu) = NULL;
 unsigned int (*opc_get_claims_t)(void) = NULL;
 int (*opc_select_path_t)(struct task_struct *cur, struct task_struct *t, int prev_cpu) = NULL;
 long (*opc_cpu_util_t)(long util, int cpu, struct task_struct *t, int op_path) = NULL;
+bool (*opc_fps_check_t)(int lvl) = NULL;
+unsigned int *opc_boost_tl;
+EXPORT_SYMBOL(opc_boost_tl);
 
 void opc_binder_pass(size_t data_size, uint32_t *data, int send)
 {
@@ -137,6 +140,20 @@ void opc_cpu_util_cb(long (*cb)(long util, int cpu, struct task_struct *t, int o
 }
 EXPORT_SYMBOL(opc_cpu_util_cb);
 
+bool opc_fps_check(int lvl)
+{
+	if (opc_fps_check_t)
+		return opc_fps_check_t(lvl);
+	return false;
+}
+EXPORT_SYMBOL(opc_fps_check);
+
+void opc_fps_check_cb(bool (*cb)(int i))
+{
+	opc_fps_check_t = cb;
+}
+EXPORT_SYMBOL(opc_fps_check_cb);
+
 struct rq *opc_task_rq(struct task_struct *t)
 {
 	return task_rq(t);
@@ -176,5 +193,7 @@ void __exit opc_exit_module(void)
 	opc_get_claims_t = NULL;
 	opc_select_path_t = NULL;
 	opc_cpu_util_t = NULL;
+	opc_fps_check_t = NULL;
+	opc_boost_tl = NULL;
 }
 EXPORT_SYMBOL(opc_exit_module);

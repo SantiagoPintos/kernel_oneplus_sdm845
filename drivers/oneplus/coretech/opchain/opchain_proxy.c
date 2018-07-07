@@ -35,12 +35,14 @@
 #include "opchain_define.h"
 #include "opchain_core.h"
 
-unsigned int __read_mostly boost = 0;
+unsigned int __read_mostly boost;
 unsigned int __read_mostly boost_tl = 1;
 unsigned int __read_mostly boost_sample_time = 1;
 unsigned int __read_mostly chain_on = 1;
+unsigned int __read_mostly fps = FPSVALUE;
 unsigned int __read_mostly latest_ms = 100;
 unsigned int __read_mostly latest_threshold = 100000000;
+unsigned int __read_mostly onefps_nano = ONESEC_NANO / FPSVALUE + 1;
 
 #if UX_DEBUG
 static int opchain_status_show(char *buf, const struct kernel_param *kp)
@@ -53,6 +55,12 @@ static const struct kernel_param_ops param_ops_opchain_status = {
 };
 module_param_cb(opchain_status, &param_ops_opchain_status, NULL, 0644);
 #endif
+
+void ctech_update_frame_time(int new_fps)
+{
+	onefps_nano = (ONESEC_NANO / new_fps) + 1;
+}
+
 static int latest_ms_show(char *buf, const struct kernel_param *kp)
 {
 	return snprintf(buf, PAGE_SIZE,	"%u", latest_ms);
@@ -73,11 +81,37 @@ static const struct kernel_param_ops param_ops_latest_ms = {
 	.get = latest_ms_show,
 	.set = latest_ms_store,
 };
-module_param_cb(latest_ms, &param_ops_latest_ms, NULL, 0644);
+
+static int fps_show(char *buf, const struct kernel_param *kp)
+{
+	return snprintf(buf, PAGE_SIZE,	"%u", fps);
+}
+
+static int fps_store(const char *buf, const struct kernel_param *kp)
+{
+	unsigned int val;
+
+	if (sscanf(buf, "%u\n", &val) <= 0)
+		return -EINVAL;
+	fps = val;
+	ctech_update_frame_time(val);
+	pr_info("new frame should be shorter than %u\n",
+	    (1000000000 / fps + 1));
+	return 0;
+}
+
+static const struct kernel_param_ops param_ops_fps = {
+	.get = fps_show,
+	.set = fps_store,
+};
+
 module_param(boost, uint, 0644);
-module_param(boost_tl, uint, 0644);
 module_param(boost_sample_time, uint, 0644);
+module_param(boost_tl, uint, 0644);
 module_param(chain_on, uint, 0644);
+module_param_cb(fps, &param_ops_fps, NULL, 0644);
+module_param_cb(latest_ms, &param_ops_latest_ms, NULL, 0644);
+
 static void __exit opchain_exit_module(void)
 {
 	opc_exit_module();

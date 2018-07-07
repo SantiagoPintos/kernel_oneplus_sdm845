@@ -27,6 +27,10 @@
 #define OP_PATH_NORMAL			-2
 #define OP_PATH_OCCUPIED		-1
 #define MIN_POWER_CPU			0
+#define FPSVALUE			60
+
+#define ONESEC_NANO 1000000000
+
 #if 1
 /* for MSM8998, SDM845*/
 #define FIRST_BIG_CORE			4
