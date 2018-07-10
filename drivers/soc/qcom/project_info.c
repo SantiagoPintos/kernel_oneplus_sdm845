@@ -175,7 +175,6 @@ static DEVICE_ATTR(Aboard, 0444, component_info_get, NULL);
 static DEVICE_ATTR(nfc, 0444, component_info_get, NULL);
 static DEVICE_ATTR(fast_charge, 0444, component_info_get, NULL);
 static DEVICE_ATTR(cpu, 0444, component_info_get, NULL);
-static DEVICE_ATTR(super_charge, 0444, component_info_get, NULL);
 static DEVICE_ATTR(rf_version, 0444, component_info_get, NULL);
 
 
@@ -244,7 +243,6 @@ static struct attribute *component_info_sysfs_entries[] = {
     &dev_attr_nfc.attr,
     &dev_attr_fast_charge.attr,
     &dev_attr_cpu.attr,
-    &dev_attr_super_charge.attr,
     &dev_attr_rf_version.attr,
     NULL,
 };
@@ -343,10 +341,6 @@ static ssize_t component_info_get(struct device *dev,
         return snprintf(buf, BUF_SIZE, "VER:\t%s\nMANU:\t%s\n",
         get_component_version(CPU),
         get_component_manufacture(CPU));
-    if (attr == &dev_attr_super_charge)
-        return snprintf(buf, BUF_SIZE, "VER:\t%s\nMANU:\t%s\n",
-        get_component_version(SUPER_CHARGE),
-        get_component_manufacture(SUPER_CHARGE));
     if (attr == &dev_attr_rf_version)
         return snprintf(buf, BUF_SIZE, "VER:\t%s\nMANU:\t%s\n",
         get_component_version(RF_VERSION),
