@@ -1346,6 +1346,28 @@ static int smblib_dc_suspend_vote_callback(struct votable *votable, void *data,
 	return smblib_set_dc_suspend(chg, (bool)suspend);
 }
 
+#ifdef VENDOR_EDIT
+/*infi@bsp, 2018/07/10 Add otg toggle vote optimize otg_switch set flow*/
+static int smblib_otg_toggle_vote_callback(struct votable *votable,
+			void *data, int value, const char *client)
+{
+	struct smb_charger *chg = data;
+	int rc = 0;
+
+	if (value < 0)
+		value = 0;
+
+	rc = op_set_prop_otg_switch(chg, (bool)value);
+	if (rc < 0) {
+		smblib_err(chg, "Can not set otg switch,value=%d, rc=%d\n",
+			value, rc);
+		return rc;
+	}
+
+	return rc;
+}
+#endif
+
 static int smblib_dc_icl_vote_callback(struct votable *votable, void *data,
 			int icl_ua, const char *client)
 {
@@ -2308,56 +2330,7 @@ int smblib_set_prop_input_suspend(struct smb_charger *chg,
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #define POWER_ROLE_BIT (DFP_EN_CMD_BIT | UFP_EN_CMD_BIT)
 int op_set_prop_otg_switch(struct smb_charger *chg,
-				  const union power_supply_propval *val)
-{
-	int rc = 0;
-	u8 power_role;
-	u8 ctrl = 0;
-	bool pre_otg_switch;
-	int i = 0;
-
-	pre_otg_switch = chg->otg_switch;
-	chg->otg_switch = val->intval;
-
-	if (chg->otg_switch == pre_otg_switch)
-		return rc;
-
-	pr_info("set otg_switch=%d\n", chg->otg_switch);
-	if (chg->otg_switch)
-		power_role = 0;
-	else
-		power_role = UFP_EN_CMD_BIT;
-
-	for (i = 0; i < 10; i++) {
-		rc = smblib_masked_write(chg,
-					TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
-					TYPEC_POWER_ROLE_CMD_MASK, power_role);
-		if (rc < 0) {
-			smblib_err(chg, "Couldn't write 0x%02x to 0x1368 rc=%d\n",
-				power_role, rc);
-			return rc;
-		}
-		usleep_range(30000, 31000);
-		ctrl = 0;
-		rc = smblib_read(chg,
-			TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG, &ctrl);
-		if (rc < 0) {
-			smblib_err(chg, "Couldn't read err=%d\n", rc);
-			return rc;
-		}
-		if ((power_role == 0) && ((ctrl & POWER_ROLE_BIT) == 0))
-			break;
-		if ((power_role == UFP_EN_CMD_BIT) && (ctrl & UFP_EN_CMD_BIT))
-			break;
-	}
-	pr_info("retry time = %d,ctrl = %d\n", i, ctrl);
-	if (i == 10)
-		pr_err("retry time over\n");
-
-	return rc;
-}
-
-int op_set_otg_switch(struct smb_charger *chg, bool enable)
+				  bool enable)
 {
 	int rc = 0;
 	u8 power_role;
@@ -7325,10 +7298,14 @@ static void op_otg_switch(struct work_struct *work)
 		return;
 	}
 	pr_info("%s,usb_present:%d\n", __func__, usb_pluged);
-	if (usb_pluged)
-		op_set_otg_switch(g_chg, true);
-	else
-		op_set_otg_switch(g_chg, false);
+	if (usb_pluged) {
+		vote(g_chg->otg_toggle_votable, HW_DETECT_VOTER, 1, 0);
+		g_chg->hw_detect = 1;
+	} else {
+		vote(g_chg->otg_toggle_votable, HW_DETECT_VOTER, 0, 0);
+		g_chg->hw_detect = 0;
+	}
+	pr_info("%s:hw_detect=%d\n", __func__, g_chg->hw_detect);
 	pre_usb_pluged = usb_pluged;
 }
 
@@ -8321,6 +8298,17 @@ static int smblib_create_votables(struct smb_charger *chg)
 		return rc;
 	}
 
+#ifdef VENDOR_EDIT
+/*infi@bsp, 2018/07/10 Add otg toggle vote optimize otg_switch set flow*/
+	chg->otg_toggle_votable = create_votable("OTG_TOGGLE", VOTE_SET_ANY,
+					smblib_otg_toggle_vote_callback,
+					chg);
+	if (IS_ERR(chg->otg_toggle_votable)) {
+		rc = PTR_ERR(chg->otg_toggle_votable);
+		return rc;
+	}
+#endif
+
 	chg->dc_icl_votable = create_votable("DC_ICL", VOTE_MIN,
 					smblib_dc_icl_vote_callback,
 					chg);
@@ -8433,6 +8421,11 @@ static void smblib_destroy_votables(struct smb_charger *chg)
 {
 	if (chg->dc_suspend_votable)
 		destroy_votable(chg->dc_suspend_votable);
+#ifdef VENDOR_EDIT
+/*infi@bsp, 2018/07/10 Add otg toggle vote optimize otg_switch set flow*/
+	if (chg->otg_toggle_votable)
+		destroy_votable(chg->otg_toggle_votable);
+#endif
 	if (chg->usb_icl_votable)
 		destroy_votable(chg->usb_icl_votable);
 	if (chg->dc_icl_votable)

@@ -56,6 +56,7 @@ enum print_reason {
 #endif
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
 #define USER_VOTER			"USER_VOTER"
+#define HW_DETECT_VOTER			"HW_DETECT_VOTER"
 #define PD_VOTER			"PD_VOTER"
 #define DCP_VOTER			"DCP_VOTER"
 #define QC_VOTER			"QC_VOTER"
@@ -325,6 +326,10 @@ struct smb_charger {
 
 	/* votables */
 	struct votable		*dc_suspend_votable;
+#ifdef VENDOR_EDIT
+/*infi@bsp, 2018/07/10 Add otg toggle vote optimize otg_switch set flow*/
+	struct votable		*otg_toggle_votable;
+#endif
 	struct votable		*fcc_votable;
 	struct votable		*fv_votable;
 	struct votable		*usb_icl_votable;
@@ -407,6 +412,7 @@ struct smb_charger {
 	int				op_icl_val;
 	int				plug_irq;
 	bool				otg_switch;
+	bool				hw_detect;
 	bool				use_fake_chgvol;
 	bool				use_fake_temp;
 	bool				use_fake_protect_sts;
@@ -624,7 +630,7 @@ int update_dash_unplug_status(void);
 int get_prop_batt_status(struct smb_charger *chg);
 int get_prop_chg_protect_status(struct smb_charger *chg);
 int op_set_prop_otg_switch(struct smb_charger *chg,
-				const union power_supply_propval *val);
+				bool enalbe);
 int check_allow_switch_dash(struct smb_charger *chg,
 				const union power_supply_propval *val);
 int smblib_set_prop_chg_voltage(struct smb_charger *chg,
@@ -729,7 +735,6 @@ int smblib_set_prop_pr_swap_in_progress(struct smb_charger *chg,
 int smblib_stat_sw_override_cfg(struct smb_charger *chg, bool override);
 void smblib_usb_typec_change(struct smb_charger *chg);
 int smblib_toggle_stat(struct smb_charger *chg, int reset);
-int op_set_otg_switch(struct smb_charger *chg, bool enable);
 
 int smblib_init(struct smb_charger *chg);
 int smblib_deinit(struct smb_charger *chg);

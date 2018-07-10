@@ -553,6 +553,7 @@ static enum power_supply_property smb2_usb_props[] = {
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	POWER_SUPPLY_PROP_OTG_SWITCH,
+	POWER_SUPPLY_PROP_HW_DETECT,
 	POWER_SUPPLY_PROP_OEM_TYPEC_CC_ORIENTATION,
 #endif
 	POWER_SUPPLY_PROP_PD_ALLOWED,
@@ -637,6 +638,9 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 /* david.liu@bsp, 20170414 Add otg switch */
 	case POWER_SUPPLY_PROP_OTG_SWITCH:
 		val->intval = chg->otg_switch;
+		break;
+	case POWER_SUPPLY_PROP_HW_DETECT:
+		val->intval = chg->hw_detect;
 		break;
 #endif
 	case POWER_SUPPLY_PROP_TYPEC_POWER_ROLE:
@@ -752,9 +756,8 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170414 Add otg switch */
 	case POWER_SUPPLY_PROP_OTG_SWITCH:
-		if (gpio_is_valid(chg->plug_irq))
-			break;
-		rc = op_set_prop_otg_switch(chg, val);
+		rc = vote(chg->otg_toggle_votable, USER_VOTER,
+						val->intval, 0);
 		break;
 #endif
 	case POWER_SUPPLY_PROP_TYPEC_POWER_ROLE:
@@ -2889,8 +2892,13 @@ static void request_plug_irq(struct smb_charger *chip)
 	}
 	enable_irq_wake(gpio_to_irq(chip->plug_irq));
 	pr_info("request usb_plug irq success\n");
-	if (!gpio_get_value(chip->plug_irq))
-		op_set_otg_switch(chip, true);
+	/*connect with usb cable when reboot, give a vote 1*/
+	if (!gpio_get_value(chip->plug_irq)) {
+		pr_info("%s:reboot time hw detect gpio low, vote 1\n",
+			__func__);
+		vote(chip->otg_toggle_votable, HW_DETECT_VOTER, 1, 0);
+		chip->hw_detect = 1;
+	}
 }
 
 void requset_vbus_ctrl_gpio(struct smb_charger *chg)
