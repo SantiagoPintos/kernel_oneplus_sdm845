@@ -290,67 +290,21 @@ static char * sid_name_strs[PARAM_SID_INVALID] = {
 "CRASH_RECORD",
 "SALEINFO",
 "MISC",
-"DOWNLOAD"
+"DOWNLOAD",
+"PHONE_HISTORY",
+"ENCRYPT"
 };
 #endif
-
-#define CHUNK_UNION(_name) \
- union { param_##_name##_t _name##_chunk; \
- unsigned char c[1024]; } _name##_chunk_u
-
-typedef struct
-{
-    //union { param_product_t  product_chunk; unsigned char c[1024]; } product_chunk_u;
-    CHUNK_UNION(product);
-    CHUNK_UNION(config);
-    CHUNK_UNION(lcd);
-    CHUNK_UNION(tp);
-    CHUNK_UNION(tp_kpd);
-    CHUNK_UNION(camera);
-    CHUNK_UNION(sensors);
-    CHUNK_UNION(battery);
-    CHUNK_UNION(rtc);
-    CHUNK_UNION(crash_record);
-    CHUNK_UNION(misc);
-	CHUNK_UNION(download);
-    CHUNK_UNION(phonehistory);
-}global_param_data_t;
-
-int get_param_camera_laser_sensor_offset(uint * laser_sensor_offset);
-int set_param_camera_laser_sensor_offset(uint * laser_sensor_offset);
-int get_param_camera_laser_sensor_cross_talk(uint * laser_sensor_cross_talk);
-int set_param_camera_laser_sensor_cross_talk(uint * laser_sensor_cross_talk);
-int get_param_gamma_select(uint * gamma_select);
-int get_param_pcba_number(char * pcbe_number);
-//#ifdef VENDOR_EDIT
-/* Only for wlan evm chip */
-int get_param_nvm_boarddata(uint * nvm_boarddata_select);
-//#endif /* VENDOR_EDIT */
-//yankelong add
-int set_param_lcm_srgb_mode(uint * lcm_srgb_mdoe);
-int get_param_lcm_srgb_mode(uint *lcm_srgb_mode);
-int set_param_lcm_adobe_rgb_mode(uint * lcm_adobe_rgb_mode);
-int get_param_lcm_adobe_rgb_mode(uint *lcm_adobe_rgb_mode);
-int set_param_lcm_dci_p3_mode(uint * lcm_dci_p3_mode);
-int get_param_lcm_dci_p3_mode(uint *lcm_dci_p3_mode);
-int set_param_lcm_night_mode(uint * lcm_night_mdoe);
-int get_param_lcm_night_mode(uint *lcm_night_mode);
-int set_param_lcm_reading_mode(uint * lcm_reading_mdoe);
-int get_param_lcm_reading_mode(uint *lcm_reading_mode);
 
 int get_param_download_info(param_download_t *download_info);
 /* liochen@BSP, 2016/07/26, store crash record in PARAM */
 int get_param_crash_record_count(uint *crash_record_count);
 int set_param_crash_record_count(uint *crash_record_count);
 int set_param_crash_record_value(uint offset, char *crash_record_value, uint size);
-int add_restart_08_count(void);
-int add_restart_other_count(void);
 
 /*  yangfb@BSP, 2016/09/14, store chager type record in PARAM  */
-int get_param_charger_type_count(uint *type_record_count);
-int set_param_charger_type_count(uint *type_record_count);
-int set_param_charger_type_value(uint offset, char *crash_record_value, uint size);
 int get_param_poweroff_count(uint *poweroff_count);
 int set_param_poweroff_count(uint *poweroff_count);
 //end
 #endif
+
