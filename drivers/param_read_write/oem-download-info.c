@@ -99,7 +99,7 @@ msm_get_intranet(struct device *dev,
 				char *buf)
 {
 	return snprintf(buf, PAGE_SIZE, "%d\n",
-		download_info.intranet);
+		(download_info.intranet==2)?1:0);
 }
 
 static struct device_attribute oem_attr_smt_download_time =
