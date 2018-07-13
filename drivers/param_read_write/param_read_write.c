@@ -68,7 +68,7 @@ out:
 	return ret;
 }
 
-static int get_param_by_index_and_offset(uint32 sid_index,
+int get_param_by_index_and_offset(uint32 sid_index,
             uint32 offset, void * buf, int length)
 {
     int ret = length;
@@ -91,8 +91,9 @@ static int get_param_by_index_and_offset(uint32 sid_index,
 	mutex_unlock(&param_ram_zone.mutex);
 	return ret;
 }
+EXPORT_SYMBOL(get_param_by_index_and_offset);
 
-static int set_param_by_index_and_offset(uint32 sid_index,
+int set_param_by_index_and_offset(uint32 sid_index,
         uint32 offset, void * buf, int length)
 {
     int ret;
@@ -122,6 +123,7 @@ out:
 	mutex_unlock(&param_ram_zone.mutex);
 	return ret;
 }
+EXPORT_SYMBOL(set_param_by_index_and_offset);
 
 static void *persistent_ram_vmap(phys_addr_t start, size_t size)
 {
@@ -781,39 +783,7 @@ int get_param_download_info(param_download_t *download_info)
 }
 EXPORT_SYMBOL(get_param_download_info);
 
-/* liochen@BSP, 2016/07/26, store crash record in PARAM */
-int get_param_crash_record_count(uint *crash_record_count)
-{
-    int ret;
-    uint32 sid_index = PARAM_SID_CRASH_RECORD;
-
-    uint32 offset = offsetof(param_crash_record_t, crash_count);
-
-    ret = get_param_by_index_and_offset(sid_index, offset, crash_record_count, sizeof(*crash_record_count));
-
-    if(ret < 0){
-        pr_info("%s[%d]  failed!\n",__func__, __LINE__);
-    }
-    return ret;
-}
-EXPORT_SYMBOL(get_param_crash_record_count);
-
-int set_param_crash_record_count(uint *crash_record_count)
-{
-    int ret;
-    uint32 sid_index = PARAM_SID_CRASH_RECORD;
-
-    uint32 offset = offsetof(param_crash_record_t, crash_count);
-
-    ret = set_param_by_index_and_offset(sid_index, offset, crash_record_count, sizeof(*crash_record_count));
-
-    if(ret < 0){
-        pr_info("%s[%d]  failed!\n",__func__, __LINE__);
-    }
-    return ret;
-}
-EXPORT_SYMBOL(set_param_crash_record_count);
-
+int restart_08_count;
 static int param_get_restart_08_count(char *val, const struct kernel_param *kp)
 {
 
@@ -846,49 +816,4 @@ static int param_get_restart_other_count(char *val, const struct kernel_param *k
 }
 module_param_call(restart_other_count, NULL, param_get_restart_other_count, &restart_other_count, 0644);
 
-int set_param_crash_record_value(uint offset, char *crash_record_value, uint size)
-{
-    int ret;
-    uint32 sid_index = PARAM_SID_CRASH_RECORD;
-
-    ret = set_param_by_index_and_offset(sid_index, offset, crash_record_value, size);
-
-    if(ret < 0){
-        pr_info("%s[%d]  failed!\n",__func__, __LINE__);
-    }
-    return ret;
-}
-EXPORT_SYMBOL(set_param_crash_record_value);
-/*  store long press key record in PARAM */
-int get_param_poweroff_count(uint *poweroff_count)
-{
-    int ret;
-    uint32 sid_index = PARAM_SID_PHONE_HISTORY;
-
-    uint32 offset = offsetof(param_phonehistory_t, poweroff_count);
-
-    ret = get_param_by_index_and_offset(sid_index, offset, poweroff_count, sizeof(*poweroff_count));
-
-    if(ret < 0){
-        pr_info("%s[%d]  failed!\n",__func__, __LINE__);
-    }
-    return ret;
-}
-EXPORT_SYMBOL(get_param_poweroff_count);
-
-int set_param_poweroff_count(uint *poweroff_count)
-{
-    int ret;
-    uint32 sid_index = PARAM_SID_PHONE_HISTORY;
-
-    uint32 offset = offsetof(param_phonehistory_t, poweroff_count);
-
-    ret = set_param_by_index_and_offset(sid_index, offset, poweroff_count, sizeof(*poweroff_count));
-
-    if(ret < 0){
-        pr_info("%s[%d]  failed!\n",__func__, __LINE__);
-    }
-    return ret;
-}
-EXPORT_SYMBOL(set_param_poweroff_count);
 //end

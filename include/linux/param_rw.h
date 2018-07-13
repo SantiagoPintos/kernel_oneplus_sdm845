@@ -209,6 +209,23 @@ typedef struct
     int use_special_boarddata;
     //#endif /* VENDOR_EDIT */
     //Add value must below here
+    char reserve[4];
+    //Time about pw created:0x20
+    int index_time_create;
+    char time_create_1[48];
+    char time_create_2[48];
+    char time_create_3[48];
+    char time_create_4[48];
+    int index_time_pass;
+    char time_pass_1[48];
+    char time_pass_2[48];
+    char time_pass_3[48];
+    char time_pass_4[48];
+    int index_time_fail;
+    char time_fail_1[48];
+    char time_fail_2[48];
+    char time_fail_3[48];
+    char time_fail_4[48];
 }param_misc_t;
 
 typedef struct
@@ -251,6 +268,11 @@ typedef struct
 	int boottype;
 }param_download_t;
 
+typedef struct {
+	param_product_desc_head_t sid_head;
+
+} param_encrypt_t;
+
 typedef enum {
 	PARAM_SID_PRODUCT = 0,
 	PARAM_SID_CONFIG,
@@ -266,6 +288,7 @@ typedef enum {
 	PARAM_SID_MISC,
 	PARAM_SID_DOWNLOAD,
 	PARAM_SID_PHONE_HISTORY,
+	PARAM_SID_ENCRYPT,
 	PARAM_SID_INVALID
 } param_sid_index_t;
 
@@ -297,14 +320,9 @@ static char * sid_name_strs[PARAM_SID_INVALID] = {
 #endif
 
 int get_param_download_info(param_download_t *download_info);
-/* liochen@BSP, 2016/07/26, store crash record in PARAM */
-int get_param_crash_record_count(uint *crash_record_count);
-int set_param_crash_record_count(uint *crash_record_count);
-int set_param_crash_record_value(uint offset, char *crash_record_value, uint size);
 
-/*  yangfb@BSP, 2016/09/14, store chager type record in PARAM  */
-int get_param_poweroff_count(uint *poweroff_count);
-int set_param_poweroff_count(uint *poweroff_count);
+int get_param_by_index_and_offset(uint32 sid_index, uint32 offset, void * buf, int length);
+int set_param_by_index_and_offset(uint32 sid_index, uint32 offset, void * buf, int length);
 //end
 #endif
 
