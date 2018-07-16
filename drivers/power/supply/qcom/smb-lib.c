@@ -6489,6 +6489,20 @@ void set_chg_ibat_vbat_max(
 	set_property_on_fg(chg, POWER_SUPPLY_PROP_CC_TO_CV_POINT, vfloat - 100);
 }
 
+static void op_temp_region_charging_en(struct smb_charger *chg, int vbatmax)
+{
+	int vbat_mv = 0;
+	union power_supply_propval pval;
+
+	smblib_get_prop_batt_voltage_now(chg, &pval);
+	vbat_mv = pval.intval;
+	pr_info("%s vbat_mv =%d\n",__func__, vbat_mv);
+	if (vbat_mv < vbatmax)
+		return;
+	op_charging_en(chg, false);
+	chg->chg_done = true;
+}
+
 /* Tbatt < -3C */
 static int handle_batt_temp_cold(struct smb_charger *chg)
 {
@@ -6534,7 +6548,8 @@ static int handle_batt_temp_little_cold(struct smb_charger *chg)
 		if (temp_region == BATT_TEMP_HOT ||
 				temp_region == BATT_TEMP_COLD)
 			op_charging_en(chg, true);
-
+		op_temp_region_charging_en(chg,
+				chg->vbatmax[BATT_TEMP_LITTLE_COLD]);
 		set_chg_ibat_vbat_max(chg,
 				chg->ibatmax[BATT_TEMP_LITTLE_COLD],
 				chg->vbatmax[BATT_TEMP_LITTLE_COLD]);
@@ -6731,7 +6746,8 @@ static int handle_batt_temp_warm(struct smb_charger *chg)
 		if (temp_region == BATT_TEMP_HOT ||
 				temp_region == BATT_TEMP_COLD)
 			op_charging_en(chg, true);
-
+		op_temp_region_charging_en(chg,
+				chg->vbatmax[BATT_TEMP_WARM]);
 		set_chg_ibat_vbat_max(chg,
 				chg->ibatmax[BATT_TEMP_WARM],
 				chg->vbatmax[BATT_TEMP_WARM]);
