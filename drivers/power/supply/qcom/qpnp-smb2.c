@@ -1225,6 +1225,7 @@ static enum power_supply_property smb2_batt_props[] = {
 	POWER_SUPPLY_PROP_CHARGING_ENABLED,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_MAX,
 	POWER_SUPPLY_PROP_IS_AGING_TEST,
+	POWER_SUPPLY_PROP_CONNECT_DISABLE,
 	POWER_SUPPLY_PROP_CONNECTER_TEMP,
 #endif
 	POWER_SUPPLY_PROP_CHARGER_TEMP,
@@ -1312,6 +1313,9 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_IS_AGING_TEST:
 		val->intval = chg->is_aging_test;
+		break;
+	case POWER_SUPPLY_PROP_CONNECT_DISABLE:
+		val->intval = chg->disconnect_vbus;
 		break;
 	case POWER_SUPPLY_PROP_CONNECTER_TEMP:
 		val->intval = chg->connecter_temp;
@@ -1484,6 +1488,9 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 		chg->is_aging_test = (bool)val->intval;
 		__debug_mask = PR_OP_DEBUG;
 		break;
+	case POWER_SUPPLY_PROP_CONNECT_DISABLE:
+		op_disconnect_vbus(chg, (bool)val->intval);
+		break;
 #endif
 	case POWER_SUPPLY_PROP_CAPACITY:
 		rc = smblib_set_prop_batt_capacity(chg, val);
@@ -1579,6 +1586,7 @@ static int smb2_batt_prop_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_MAX:
 	case POWER_SUPPLY_PROP_IS_AGING_TEST:
+	case POWER_SUPPLY_PROP_CONNECT_DISABLE:
 #endif
 	case POWER_SUPPLY_PROP_PARALLEL_DISABLE:
 	case POWER_SUPPLY_PROP_DP_DM:

@@ -643,6 +643,7 @@ bool op_get_fastchg_ing(struct smb_charger *chg);
 bool get_prop_fastchg_status(struct smb_charger *chg);
 int op_usb_icl_set(struct smb_charger *chg, int icl_ua);
 int op_get_aicl_result(struct smb_charger *chg);
+void op_disconnect_vbus(struct smb_charger *chg, bool enable);
 #endif
 int smblib_set_prop_input_current_limited(struct smb_charger *chg,
 				const union power_supply_propval *val);

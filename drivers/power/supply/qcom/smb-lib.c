@@ -5512,7 +5512,6 @@ static void op_dash_check_work(struct work_struct *work)
 }
 
 static int get_usb_temp(struct smb_charger *chg);
-static void op_disconnect_vbus(struct smb_charger *chg);
 
 static void op_connect_temp_check_work(struct work_struct *work)
 {
@@ -5527,7 +5526,7 @@ static void op_connect_temp_check_work(struct work_struct *work)
 		schedule_delayed_work(&chg->connecter_check_work,
 				msecs_to_jiffies(200));
 	else
-		op_disconnect_vbus(chg);
+		op_disconnect_vbus(chg, true);
 }
 
 irqreturn_t smblib_handle_aicl_done(int irq, void *data)
@@ -7350,7 +7349,7 @@ static int get_usb_temp(struct smb_charger *chg)
 	return con_temp_30k[i];
 }
 
-static void op_disconnect_vbus(struct smb_charger *chg)
+void op_disconnect_vbus(struct smb_charger *chg, bool enable)
 {
 
 #ifdef	CONFIG_OP_DEBUG_CHG
@@ -7360,7 +7359,14 @@ static void op_disconnect_vbus(struct smb_charger *chg)
 	if (chg->is_aging_test)
 		return;
 #endif
-
+	if (!gpio_is_valid(chg->vbus_ctrl))
+		return;
+	if (!enable) {
+		gpio_set_value(chg->vbus_ctrl, 0);
+		chg->disconnect_vbus = false;
+		pr_info("usb connecter connectd!");
+		return;
+	}
 	pr_info("usb connecter hot,Vbus disconnected!");
 	chg->dash_on = get_prop_fast_chg_started(chg);
 	if (chg->dash_on) {
