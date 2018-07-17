@@ -411,6 +411,7 @@ struct smb_charger {
 	int				recovery_boost_count;
 	int				op_icl_val;
 	int				plug_irq;
+	int				sw_iterm_ma;
 	bool				otg_switch;
 	bool				hw_detect;
 	bool				use_fake_chgvol;
@@ -441,6 +442,7 @@ struct smb_charger {
 	bool				boot_usb_present;
 	bool				is_aging_test;
 	bool				revert_boost_trigger;
+	bool				check_batt_full_by_sw;
 	enum temp_region_type		mBattTempRegion;
 	enum batt_status_type		battery_status;
 	short				mBattTempBoundT0;

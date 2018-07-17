@@ -3808,7 +3808,7 @@ irqreturn_t smblib_handle_chg_state_change(int irq, void *data)
 	if (stat == TERMINATE_CHARGE) {
 		/* charge done, disable charge in software also */
 		chg->chg_done = true;
-		pr_err("TERMINATE_CHARGE: chg_done: CAP=%d (Q:%d), VBAT=%d (Q:%d), IBAT=%d (Q:%d), BAT_TEMP=%d\n",
+		pr_info("TERMINATE_CHARGE: chg_done: CAP=%d (Q:%d), VBAT=%d (Q:%d), IBAT=%d (Q:%d), BAT_TEMP=%d\n",
 			get_prop_batt_capacity(chg),
 			get_prop_fg_capacity(chg),
 			get_prop_batt_voltage_now(chg) / 1000,
@@ -6325,7 +6325,7 @@ static int get_prop_batt_present(struct smb_charger *chg)
 #define DEFAULT_BATT_CAPACITY	50
 static int get_prop_batt_capacity(struct smb_charger *chg)
 {
-	int capacity, rc;
+	int capacity = 0, rc;
 
 	if (chg->fake_capacity >= 0)
 		return chg->fake_capacity;
@@ -6342,7 +6342,7 @@ static int get_prop_batt_capacity(struct smb_charger *chg)
 #define DEFAULT_BATT_TEMP		200
 static int get_prop_batt_temp(struct smb_charger *chg)
 {
-	int temp, rc;
+	int temp = 0, rc;
 
 	if (chg->use_fake_temp)
 		return chg->fake_temp;
@@ -6359,7 +6359,7 @@ static int get_prop_batt_temp(struct smb_charger *chg)
 #define DEFAULT_BATT_CURRENT_NOW	0
 static int get_prop_batt_current_now(struct smb_charger *chg)
 {
-	int ua, rc;
+	int ua = 0, rc;
 
 	rc = get_property_from_fg(chg, POWER_SUPPLY_PROP_CURRENT_NOW, &ua);
 	if (rc) {
@@ -6373,7 +6373,7 @@ static int get_prop_batt_current_now(struct smb_charger *chg)
 #define DEFAULT_BATT_VOLTAGE_NOW	0
 static int get_prop_batt_voltage_now(struct smb_charger *chg)
 {
-	int uv, rc;
+	int uv = 0, rc;
 
 	rc = get_property_from_fg(chg, POWER_SUPPLY_PROP_VOLTAGE_NOW, &uv);
 	if (rc) {
@@ -6416,7 +6416,7 @@ static int get_prop_fg_current_now(struct smb_charger *chg)
 
 static int get_prop_fg_voltage_now(struct smb_charger *chg)
 {
-	int uv, rc;
+	int uv = 0, rc;
 
 	rc = get_property_from_fg(chg, POWER_SUPPLY_PROP_FG_VOLTAGE_NOW, &uv);
 	if (rc) {
@@ -7078,38 +7078,109 @@ static int msm_drm_notifier_callback(struct notifier_block *self,
 	return 0;
 }
 #endif
-
-#define SOFT_CHG_TERM_CURRENT 100 /* 100MA */
-void checkout_term_current(struct smb_charger *chg, int batt_temp)
+#define FULL_COUNTS_SW		5
+#define FULL_COUNTS_HW		3
+static bool op_check_vbat_is_full_by_sw(struct smb_charger *chg)
 {
-	static int term_current_reached;
-	int current_ma = 0, voltage_mv = 0, temp_region = 0, batt_status = 0;
+	static bool ret_sw = false;
+	static bool ret_hw = false;
+	static int vbat_counts_sw = 0;
+	static int vbat_counts_hw = 0;
+	int vbatt_full_vol_sw;
+	int vbatt_full_vol_hw;
+	int tbatt_status, icharging, batt_volt;
 
-	batt_status = get_prop_batt_status(chg);
-	if (batt_status != POWER_SUPPLY_STATUS_CHARGING)
-		return;
+	if (!chg->check_batt_full_by_sw)
+		return false;
 
-	current_ma = get_prop_batt_current_now(chg) / 1000;
-	if (!(current_ma >= -SOFT_CHG_TERM_CURRENT
-			&& current_ma <= SOFT_CHG_TERM_CURRENT)) {
-		/* soft charge term set to 100mA */
-		term_current_reached = 0;
-		return;
+	if (!chg->vbus_present) {
+		vbat_counts_sw = 0;
+		vbat_counts_hw = 0;
+		ret_sw = false;
+		ret_hw = false;
+		return false;
 	}
 
-	voltage_mv = get_prop_batt_voltage_now(chg) / 1000;
-	temp_region = op_battery_temp_region_get(chg);
-	if (voltage_mv >= chg->vbatmax[temp_region]) {
-		term_current_reached++;
+	tbatt_status = op_battery_temp_region_get(chg);
+	vbatt_full_vol_hw = chg->vbatmax[tbatt_status];
+	if (tbatt_status == BATT_TEMP_LITTLE_COLD)
+		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 50;
+	else if (tbatt_status == BATT_TEMP_COOL)
+		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 50;
+	else if (tbatt_status == BATT_TEMP_LITTLE_COOL)
+		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 50;
+	else if (tbatt_status == BATT_TEMP_PRE_NORMAL)
+		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 50;
+	else if (tbatt_status == BATT_TEMP_NORMAL)
+		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 50;
+	else if (tbatt_status == BATT_TEMP_WARM)
+		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 50;
+	else {
+		vbat_counts_sw = 0;
+		vbat_counts_hw = 0;
+		ret_sw = 0;
+		ret_hw = 0;
+		return false;
+	}
+
+	batt_volt = get_prop_batt_voltage_now(chg) / 1000;
+	icharging = get_prop_batt_current_now(chg) / 1000;
+	/* use SW Vfloat to check */
+	if (batt_volt > vbatt_full_vol_sw) {
+		if (icharging < 0 && (icharging * -1) <= chg->sw_iterm_ma) {
+			vbat_counts_sw++;
+			if (vbat_counts_sw > FULL_COUNTS_SW) {
+				vbat_counts_sw = 0;
+				ret_sw = true;
+			}
+		} else if (icharging >= 0) {
+			vbat_counts_sw++;
+			if (vbat_counts_sw > FULL_COUNTS_SW * 2) {
+				vbat_counts_sw = 0;
+				ret_sw = true;
+				pr_info("[BATTERY] Battery full by sw when icharging>=0!!\n");
+			}
+		} else {
+			vbat_counts_sw = 0;
+			ret_sw = false;
+		}
 	} else {
-		term_current_reached = 0;
-		return;
+		vbat_counts_sw = 0;
+		ret_sw = false;
 	}
 
-	if (term_current_reached >= 5) {
+	/* use HW Vfloat to check */
+	if (batt_volt >= vbatt_full_vol_hw + 18) {
+		vbat_counts_hw++;
+		if (vbat_counts_hw >= FULL_COUNTS_HW) {
+			vbat_counts_hw = 0;
+			ret_hw = true;
+		}
+	} else {
+		vbat_counts_hw = 0;
+		ret_hw = false;
+	}
+
+	if (ret_sw == true || ret_hw == true) {
+		pr_info("[BATTERY] Battery full by sw[%s] !!\n", (ret_sw == true) ? "S" : "H");
+		ret_sw = ret_hw = false;
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void checkout_term_current(struct smb_charger *chg)
+{
+	bool chg_full;
+
+	if (chg->chg_done)
+		return;
+	chg_full = op_check_vbat_is_full_by_sw(chg);
+	if (chg_full) {
 		chg->chg_done = true;
-		term_current_reached = 0;
-		pr_err("chg_done: CAP=%d (Q:%d), VBAT=%d (Q:%d), IBAT=%d (Q:%d), BAT_TEMP=%d\n",
+		op_charging_en(chg, false);
+		pr_info("chg_done:CAP=%d (Q:%d),VBAT=%d (Q:%d),IBAT=%d (Q:%d),BAT_TEMP=%d\n",
 				get_prop_batt_capacity(chg),
 				get_prop_fg_capacity(chg),
 				get_prop_batt_voltage_now(chg) / 1000,
@@ -7117,7 +7188,6 @@ void checkout_term_current(struct smb_charger *chg, int batt_temp)
 				get_prop_batt_current_now(chg) / 1000,
 				get_prop_fg_current_now(chg) / 1000,
 				get_prop_batt_temp(chg));
-		op_charging_en(chg, false);
 	}
 }
 
@@ -7428,7 +7498,7 @@ static void op_heartbeat_work(struct work_struct *work)
 	enum temp_region_type temp_region;
 	bool charger_present = 0;
 	bool fast_charging = 0;
-	static int batt_temp, vbat_mv;
+	static int vbat_mv;
 	union power_supply_propval vbus_val;
 	int rc;
 
@@ -7496,8 +7566,7 @@ static void op_heartbeat_work(struct work_struct *work)
 		}
 	}
 
-	batt_temp = get_prop_batt_temp(chg);
-	checkout_term_current(chg, batt_temp);
+	checkout_term_current(chg);
 	if (!chg->chg_ovp && chg->chg_done
 			&& temp_region > BATT_TEMP_COLD
 			&& temp_region < BATT_TEMP_HOT

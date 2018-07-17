@@ -405,6 +405,15 @@ static int smb2_parse_dt(struct smb2 *chip)
 	pr_info("cutoff_volt_with_charger=%d, disable-pd=%d\n",
 		smbchg_cutoff_volt_with_charger, chg->pd_disabled);
 
+	chg->check_batt_full_by_sw = of_property_read_bool(node,
+				"op,sw-check-full-enable");
+	rc = of_property_read_u32(node,
+					"op,sw-iterm-ma",
+					&chg->sw_iterm_ma);
+	if (rc < 0)
+		chg->sw_iterm_ma = 150;
+	pr_info("sw_iterm_ma=%d,check_batt_full_by_sw=%d",
+				chg->sw_iterm_ma, chg->check_batt_full_by_sw);
 	/* disable step_chg */
 	chg->step_chg_enabled = false;
 #else
