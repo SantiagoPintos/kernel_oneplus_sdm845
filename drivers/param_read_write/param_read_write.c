@@ -784,36 +784,77 @@ int get_param_download_info(param_download_t *download_info)
 EXPORT_SYMBOL(get_param_download_info);
 
 int restart_08_count;
+int add_restart_08_count(void)
+{
+	int ret;
+
+	ret = get_param_by_index_and_offset(9, 0x15c,
+		&restart_08_count, sizeof(restart_08_count));
+
+	restart_08_count = restart_08_count + 1;
+
+	ret = set_param_by_index_and_offset(9, 0x15c,
+		&restart_08_count, sizeof(restart_08_count));
+
+	if (ret < 0)
+		pr_info("%s[%d]  failed!\n", __func__, __LINE__);
+
+	return ret;
+}
+EXPORT_SYMBOL(add_restart_08_count);
+
 static int param_get_restart_08_count(char *val, const struct kernel_param *kp)
 {
 
-        int cnt = 0;
-        uint32 sid_index= PARAM_SID_CRASH_RECORD;
+	int cnt = 0;
+	int ret;
 
-        uint32 offset = offsetof(param_crash_record_t, restart_08_count);
+	ret = get_param_by_index_and_offset(9, 0x15c,
+		&restart_08_count, sizeof(restart_08_count));
 
-        get_param_by_index_and_offset(sid_index,offset, &restart_08_count, sizeof(restart_08_count));
-        cnt = sprintf(val, "%d", restart_08_count);
+	if (ret < 0)
+		pr_info("%s[%d]  failed!\n", __func__, __LINE__);
 
-        return cnt;
+	cnt = snprintf(val, 4, "%d", restart_08_count);
+
+	return cnt;
 }
 module_param_call(restart_08_count, NULL, param_get_restart_08_count, &restart_08_count, 0644);
 
 int restart_other_count=0;
+int add_restart_other_count(void)
+{
+	int ret;
 
+	ret = get_param_by_index_and_offset(9, 0x160,
+		&restart_other_count, sizeof(restart_other_count));
+
+	restart_other_count = restart_other_count + 1;
+
+	ret = set_param_by_index_and_offset(9, 0x160,
+		&restart_other_count, sizeof(restart_other_count));
+
+	if (ret < 0)
+		pr_info("%s[%d]  failed!\n", __func__, __LINE__);
+
+	return ret;
+}
+EXPORT_SYMBOL(add_restart_other_count);
 static int param_get_restart_other_count(char *val, const struct kernel_param *kp)
 {
 
-        int cnt = 0;
-        uint32 sid_index= PARAM_SID_CRASH_RECORD;
+	int cnt = 0;
+	int ret;
 
-        uint32 offset = offsetof(param_crash_record_t, restart_other_count);
+	ret = get_param_by_index_and_offset(9, 0x160,
+		&restart_other_count, sizeof(restart_other_count));
 
-        get_param_by_index_and_offset(sid_index,offset, &restart_other_count, sizeof(restart_other_count));
-        cnt = sprintf(val, "%d", restart_other_count);
+	if (ret < 0)
+		pr_info("%s[%d]  failed!\n", __func__, __LINE__);
 
-        return cnt;
+	cnt = snprintf(val, 4, "%d", restart_other_count);
+
+	return cnt;
 }
 module_param_call(restart_other_count, NULL, param_get_restart_other_count, &restart_other_count, 0644);
-
 //end

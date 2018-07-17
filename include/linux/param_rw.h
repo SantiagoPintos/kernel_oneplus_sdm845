@@ -323,6 +323,9 @@ int get_param_download_info(param_download_t *download_info);
 
 int get_param_by_index_and_offset(uint32 sid_index, uint32 offset, void * buf, int length);
 int set_param_by_index_and_offset(uint32 sid_index, uint32 offset, void * buf, int length);
+
+int add_restart_08_count(void);
+int add_restart_other_count(void);
 //end
 #endif
 
