@@ -1,3 +1,5 @@
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/adj_chain.h>
@@ -10,12 +12,6 @@ EXPORT_SYMBOL(adj_chain_ready);
 
 int adj_chain_hist_high = 0;
 EXPORT_SYMBOL(adj_chain_hist_high);
-
-static inline bool __adj_is_list_valid(struct task_struct *p)
-{
-	return p->adj_chain_tasks.prev != LIST_POISON2 &&
-			p->adj_chain_tasks.next != LIST_POISON1;
-}
 
 static void __adj_chain_detach(struct task_struct *p)
 {
@@ -37,16 +33,22 @@ void adj_chain_update_oom_score_adj(struct task_struct *p)
 {
 	if (likely(adj_chain_ready)) {
 		/* sync with system task_list */
-		p->adj_chain_status |= 1 << AC_UPDATE_ADJ;
 		write_lock_irq(&tasklist_lock);
 		spin_lock(&current->sighand->siglock);
-		if (likely(__adj_is_list_valid(p))) {
-			__adj_chain_detach(p);
-			__adj_chain_attach(p);
+		if (!thread_group_leader(p)) {
+			pr_warn("not update from group leader: %s '%d', leader: %s '%d'\n",
+				p->comm, p->pid, p->group_leader->comm, p->group_leader->pid);
+			p = p->group_leader;
 		}
+		if (unlikely(p->flags & PF_EXITING))
+			goto done;
+		p->adj_chain_status |= 1 << AC_UPDATE_ADJ;
+		__adj_chain_detach(p);
+		__adj_chain_attach(p);
+		p->adj_chain_status &= ~(1 << AC_UPDATE_ADJ);
+done:
 		spin_unlock(&current->sighand->siglock);
 		write_unlock_irq(&tasklist_lock);
-		p->adj_chain_status &= ~(1 << AC_UPDATE_ADJ);
 	}
 }
 EXPORT_SYMBOL(adj_chain_update_oom_score_adj);

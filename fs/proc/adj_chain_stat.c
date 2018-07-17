@@ -7,30 +7,28 @@
 
 static int adj_chain_proc_show(struct seq_file *m, void *v)
 {
-	struct list_head *h;
 	struct task_struct *tsk, *p;
 	int i = 0;
 	int tasksize = 0;
 	rcu_read_lock();
-	while (i <= ADJ_CHAIN_MAX) {
+	read_lock_irq(&tasklist_lock);
+	while (i <= adj_chain_hist_high) {
 		if (!list_empty(&adj_chain[i])) {
-			list_for_each(h, &adj_chain[i]) {
-				tsk = get_task_struct_adj_chain_rcu(h);
-				if (tsk) {
-					tasksize = 0;
-					p = find_lock_task_mm(tsk);
-					if (!p)
-						goto just_print;
-					tasksize = get_mm_rss(p->mm);
-					task_unlock(p);
+			list_for_each_entry_rcu(tsk, &adj_chain[i], adj_chain_tasks) {
+				tasksize = 0;
+				p = find_lock_task_mm(tsk);
+				if (!p)
+					goto just_print;
+				tasksize = get_mm_rss(p->mm);
+				task_unlock(p);
 just_print:
-					seq_printf(m, "%d tsk: %s, %d, adj %d, size %d\n",
+				seq_printf(m, "%d tsk: %s, %d, adj %d, size %d\n",
 						__adjr(i), tsk->comm, tsk->pid, tsk->signal->oom_score_adj, tasksize);
-				}
 			}
 		}
 		++i;
 	}
+	read_unlock_irq(&tasklist_lock);
 	rcu_read_unlock();
 	seq_printf(m, "adj chain hist high: %d\n", __adjr(adj_chain_hist_high));
 	return 0;
