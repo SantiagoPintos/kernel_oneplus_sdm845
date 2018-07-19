@@ -6494,7 +6494,7 @@ static void op_temp_region_charging_en(struct smb_charger *chg, int vbatmax)
 	union power_supply_propval pval;
 
 	smblib_get_prop_batt_voltage_now(chg, &pval);
-	vbat_mv = pval.intval;
+	vbat_mv = pval.intval/1000;
 	pr_info("%s vbat_mv =%d\n",__func__, vbat_mv);
 	if (vbat_mv < vbatmax)
 		return;
