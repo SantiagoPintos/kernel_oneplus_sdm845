@@ -479,7 +479,7 @@ struct a_borad_version a_borad_version_string_arry[]={
 struct a_borad_version a_borad_version_string_arry_gpio[]={
 
     {0,   "TMO"},
-    {1,   "US/EU" },
+    {1,   "US/EU/TMO" },
     {2,   "CN/IN"},
     {3,   "Unknown"},
     {4,   "Unknown" },
