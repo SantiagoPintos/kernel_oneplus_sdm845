@@ -586,17 +586,9 @@ int __init init_project_info(void)
         break;
     case 34:
         snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
-        project_info_desc->project_name, "EVT2");
-        break;
-    case 35:
-        snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
-        project_info_desc->project_name, "EVT3");
-        break;
-    case 41:
-        snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
         project_info_desc->project_name, "DVT");
         break;
-    case 42:
+    case 35:
         snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
         project_info_desc->project_name, "PVT");
         break;
