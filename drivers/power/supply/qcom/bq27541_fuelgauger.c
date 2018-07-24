@@ -1124,6 +1124,8 @@ static void update_battery_soc_work(struct work_struct *work)
 	bq27541_get_battery_temperature();
 	bq27541_get_battery_soc();
 	bq27541_get_batt_remaining_capacity();
+	pr_debug("battery remain capacity:%d\n",
+				bq27541_get_batt_health());
 	bq27541_set_allow_reading(false);
 	if (!bq27541_di->already_modify_smooth)
 		schedule_delayed_work(
