@@ -7104,17 +7104,17 @@ static bool op_check_vbat_is_full_by_sw(struct smb_charger *chg)
 	tbatt_status = op_battery_temp_region_get(chg);
 	vbatt_full_vol_hw = chg->vbatmax[tbatt_status];
 	if (tbatt_status == BATT_TEMP_LITTLE_COLD)
-		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 50;
+		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 70;
 	else if (tbatt_status == BATT_TEMP_COOL)
-		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 50;
+		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 70;
 	else if (tbatt_status == BATT_TEMP_LITTLE_COOL)
-		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 50;
+		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 70;
 	else if (tbatt_status == BATT_TEMP_PRE_NORMAL)
-		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 50;
+		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 70;
 	else if (tbatt_status == BATT_TEMP_NORMAL)
-		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 50;
+		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 70;
 	else if (tbatt_status == BATT_TEMP_WARM)
-		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 50;
+		vbatt_full_vol_sw = chg->vbatmax[tbatt_status] - 70;
 	else {
 		vbat_counts_sw = 0;
 		vbat_counts_hw = 0;
