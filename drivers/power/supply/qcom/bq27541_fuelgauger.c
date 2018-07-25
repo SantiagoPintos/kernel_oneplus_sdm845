@@ -441,7 +441,7 @@ static struct i2c_client *new_client;
 
 #ifdef VENDOR_EDIT
 #define TEN_PERCENT                            10
-#define SOC_SHUTDOWN_VALID_LIMITS              20
+#define SOC_SHUTDOWN_VALID_LIMITS              30
 #define TEN_MINUTES                            600
 #define FIVE_MINUTES                           300
 #define TWO_POINT_FIVE_MINUTES                 150
@@ -525,7 +525,9 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 				/* get last soc error */
 				di->soc_pre = soc;
 			} else if (soc_load > 0 && soc_load < 100) {
-				if (soc_load > soc)
+				if (abs(soc_load - soc) > SOC_SHUTDOWN_VALID_LIMITS)
+					di->soc_pre = soc;
+				else if (soc_load > soc)
 					di->soc_pre = soc_load - 1;
 				else
 					di->soc_pre = soc_load;
