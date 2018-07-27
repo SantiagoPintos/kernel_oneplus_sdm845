@@ -287,6 +287,18 @@ static int __init param_core_init(void)
 }
 pure_initcall(param_core_init);
 
+static int __init param_device_init(void)
+{
+    int ret;
+    ret = misc_register(&param_misc);
+    if(ret){
+        pr_err("misc_register failure %d\n",ret);
+        return -1;
+    }
+    return ret;
+}
+device_initcall(param_device_init);
+
 void init_param_mem_base_size(phys_addr_t base, unsigned long size)
 {
 	param_ram_zone.paddr = base;
