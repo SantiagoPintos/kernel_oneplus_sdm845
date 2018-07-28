@@ -1432,6 +1432,18 @@ static struct ctl_table vm_table[] = {
 		.extra1		= &zero,
 		.extra2		= &two,
 	},
+#ifdef VENDOR_EDIT
+	{
+		.procname	= "page_cache_reside_switch",
+		.data		= &sysctl_page_cache_reside_switch,
+		.maxlen		= sizeof(sysctl_page_cache_reside_switch),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &zero,
+		.extra2		= &two,
+	},
+#endif
+
 	{
 		.procname	= "oom_kill_allocating_task",
 		.data		= &sysctl_oom_kill_allocating_task,

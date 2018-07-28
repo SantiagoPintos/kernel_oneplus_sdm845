@@ -2568,6 +2568,67 @@ static const struct file_operations proc_pid_set_timerslack_ns_operations = {
 	.release	= single_release,
 };
 
+#ifdef VENDOR_EDIT
+static ssize_t page_hot_count_read(struct file *file, char __user *buf,
+				size_t count, loff_t *ppos)
+{
+	struct task_struct *task = get_proc_task(file_inode(file));
+	char buffer[PROC_NUMBUF];
+	size_t len;
+	int page_hot_count;
+
+	if (!task)
+		return -ESRCH;
+
+	page_hot_count = task->hot_count;
+
+	put_task_struct(task);
+
+	len = snprintf(buffer, sizeof(buffer), "%d\n", page_hot_count);
+	return simple_read_from_buffer(buf, count, ppos, buffer, len);
+}
+
+static ssize_t page_hot_count_write(struct file *file, const char __user *buf,
+				size_t count, loff_t *ppos)
+{
+	struct task_struct *task;
+	char buffer[PROC_NUMBUF];
+	int page_hot_count;
+	int err;
+
+	memset(buffer, 0, sizeof(buffer));
+
+	if (count > sizeof(buffer) - 1)
+		count = sizeof(buffer) - 1;
+	if (copy_from_user(buffer, buf, count)) {
+		err = -EFAULT;
+		goto out;
+	}
+
+	err = kstrtoint(strstrip(buffer), 0, &page_hot_count);
+	if (err)
+		goto out;
+
+	task = get_proc_task(file_inode(file));
+	if (!task) {
+		err = -ESRCH;
+		goto out;
+	}
+
+	task->hot_count = page_hot_count;
+
+	put_task_struct(task);
+
+out:
+	return err < 0 ? err : count;
+}
+
+static const struct file_operations proc_page_hot_count_operations = {
+	.read		= page_hot_count_read,
+	.write		= page_hot_count_write,
+};
+#endif
+
 static int proc_pident_instantiate(struct inode *dir,
 	struct dentry *dentry, struct task_struct *task, const void *ptr)
 {

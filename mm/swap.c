@@ -389,6 +389,17 @@ void mark_page_accessed(struct page *page)
 }
 EXPORT_SYMBOL(mark_page_accessed);
 
+#ifdef VENDOR_EDIT
+static void __uid_lru_cache_add(struct page *page)
+{
+	struct pglist_data *pagepgdat = page_pgdat(page);
+	struct lruvec *lruvec;
+
+	lruvec = mem_cgroup_page_lruvec(page, pagepgdat);
+	_uid_lru_add_fn(page, lruvec);
+}
+
+#endif
 static void __lru_cache_add(struct page *page)
 {
 	struct pagevec *pvec = &get_cpu_var(lru_add_pvec);
@@ -427,6 +438,15 @@ EXPORT_SYMBOL(lru_cache_add_file);
  * pagevec is drained. This gives a chance for the caller of lru_cache_add()
  * have the page added to the active list using mark_page_accessed().
  */
+#ifdef VENDOR_EDIT
+void uid_lru_cache_add(struct page *page)
+{
+	VM_BUG_ON_PAGE(PageActive(page) && PageUnevictable(page), page);
+	VM_BUG_ON_PAGE(PageLRU(page), page);
+	__uid_lru_cache_add(page);
+}
+
+#endif
 void lru_cache_add(struct page *page)
 {
 	VM_BUG_ON_PAGE(PageActive(page) && PageUnevictable(page), page);
@@ -855,6 +875,28 @@ void lru_add_page_tail(struct page *page, struct page *page_tail,
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
 
+#ifdef VENDOR_EDIT
+unsigned long total_uid_lru_nr;
+void _uid_lru_add_fn(struct page *page, struct lruvec *lruvec)
+{
+	struct uid_node *uid_nd;
+	uid_t uid = __task_cred(current)->user->uid.val;
+
+	spin_lock_irq(&uid_hash_lock);
+	VM_BUG_ON_PAGE(PageLRU(page), page);
+	get_page(page);
+	uid_nd = find_uid_node(uid, lruvec);
+	if (uid_nd == NULL) {
+		if (lruvec->uid_hash == NULL)
+			lruvec->uid_hash = alloc_uid_hash_table();
+		uid_nd = insert_uid_node(lruvec->uid_hash, uid);
+	}
+	list_add(&page->lru, &uid_nd->page_cache_list);
+	total_uid_lru_nr++;
+	spin_unlock_irq(&uid_hash_lock);
+}
+
+#endif
 static void __pagevec_lru_add_fn(struct page *page, struct lruvec *lruvec,
 				 void *arg)
 {

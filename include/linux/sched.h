@@ -2262,6 +2262,9 @@ struct task_struct {
 	int claim_cpu;
 	bool utask_slave;
 #endif
+#ifdef VENDOR_EDIT
+	int hot_count;
+#endif
 /* CPU-specific state of this task */
 	struct thread_struct thread;
 /*

@@ -231,8 +231,21 @@ struct zone_reclaim_stat {
 	unsigned long		recent_scanned[2];
 };
 
+#ifdef VENDOR_EDIT
+struct uid_node {
+	struct uid_node __rcu *next;
+	uid_t uid;
+	unsigned int hot_count;
+	struct list_head  page_cache_list;
+	struct rcu_head rcu;
+};
+#endif
+
 struct lruvec {
 	struct list_head		lists[NR_LRU_LISTS];
+#ifdef VENDOR_EDIT
+	struct uid_node **uid_hash;
+#endif
 	struct zone_reclaim_stat	reclaim_stat;
 	/* Evictions & activations on the inactive file list */
 	atomic_long_t			inactive_age;

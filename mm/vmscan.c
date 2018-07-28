@@ -59,6 +59,9 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/vmscan.h>
 
+#ifdef VENDOR_EDIT
+int sysctl_page_cache_reside_switch = 1;
+#endif
 struct scan_control {
 	/* How many pages shrink_list() should reclaim */
 	unsigned long nr_to_reclaim;
@@ -158,6 +161,94 @@ unsigned long vm_total_pages;
 
 static LIST_HEAD(shrinker_list);
 static DECLARE_RWSEM(shrinker_rwsem);
+#ifdef VENDOR_EDIT
+DEFINE_SPINLOCK(uid_hash_lock);
+
+#define UID_HASH_ORDER 5
+#define uid_hashfn(nr)	hash_long((unsigned long)nr, UID_HASH_ORDER)
+
+struct uid_node **alloc_uid_hash_table(void)
+{
+	struct uid_node **hash_table;
+	int size = (1 << UID_HASH_ORDER) * sizeof(struct uid_node *);
+
+	if (size <= PAGE_SIZE)
+		hash_table = kzalloc(size, GFP_ATOMIC);
+	else
+		hash_table = (struct uid_node **)__get_free_pages(
+				GFP_ATOMIC | __GFP_ZERO, get_order(size));
+	if (!hash_table)
+		return NULL;
+	return hash_table;
+}
+
+struct uid_node *alloc_uid_node(uid_t uid)
+{
+	struct uid_node *uid_nd;
+
+	uid_nd = kzalloc(sizeof(struct uid_node), GFP_ATOMIC);
+	if (!uid_nd)
+		return NULL;
+	uid_nd->uid = uid;
+	uid_nd->hot_count = 0; /* initialize a new UID's count */
+	uid_nd->next = NULL;
+	INIT_LIST_HEAD(&uid_nd->page_cache_list);
+	return uid_nd;
+}
+
+struct uid_node *insert_uid_node(struct uid_node **hash_table, uid_t uid)
+{
+	struct uid_node *puid;
+	unsigned int index, sise = 1 << UID_HASH_ORDER;
+
+	index = uid_hashfn((unsigned long)uid);
+	if (index >= sise)
+		return NULL;
+	puid = alloc_uid_node(uid);
+	if (!puid)
+		return NULL;
+
+	rcu_assign_pointer(puid->next, hash_table[index]);
+	rcu_assign_pointer(hash_table[index], puid);
+	return puid;
+}
+
+struct uid_node *find_uid_node(uid_t uid, struct lruvec *lruvec)
+{
+	struct uid_node *uid_nd, *ret = NULL;
+	unsigned int index;
+
+	index = uid_hashfn((unsigned int)uid);
+	if (lruvec->uid_hash == NULL)
+		return NULL;
+	if (index >= (1 << UID_HASH_ORDER))
+		return NULL;
+	for (uid_nd = rcu_dereference(lruvec->uid_hash[index]);
+		uid_nd != NULL; uid_nd = rcu_dereference(uid_nd->next)) {
+		if (uid_nd->uid == uid) {
+			ret = uid_nd;
+			break;
+		}
+	}
+	return ret;
+}
+void free_hash_table(struct lruvec *lruvec)
+{
+	int i, table_num;
+	struct uid_node *puid, **np;
+
+	table_num = 1 << UID_HASH_ORDER;
+	for (i = 0; i < table_num; i++) {
+		np = &lruvec->uid_hash[i];
+		while ((puid = rcu_dereference(*np)) != NULL) {
+			rcu_assign_pointer(*np, rcu_dereference(puid->next));
+			kfree_rcu(puid, rcu);
+		}
+	}
+}
+
+#endif
+
 
 #ifdef CONFIG_MEMCG
 static bool global_reclaim(struct scan_control *sc)
@@ -2022,6 +2113,51 @@ static void move_active_pages_to_lru(struct lruvec *lruvec,
 		__count_vm_events(PGDEACTIVATE, pgmoved);
 }
 
+#ifdef VENDOR_EDIT
+static int active_list_is_low(struct lruvec *lruvec)
+{
+	unsigned long active = lruvec_lru_size(lruvec, LRU_ACTIVE_FILE, 0);
+
+	return active < total_uid_lru_nr >> 5;
+}
+
+static void shrink_uid_lru_list(struct lruvec *lruvec,
+				struct pglist_data *pgdat)
+{
+	long nr_to_shrink = total_uid_lru_nr >> 2;
+	int i = 0;
+
+	if (total_uid_lru_nr <= 0)
+		return;
+	spin_lock_irq(&uid_hash_lock);
+	while (i < (1 << UID_HASH_ORDER)) {
+		struct uid_node *tmp_uid_list = lruvec->uid_hash[i];
+
+		if (tmp_uid_list == NULL) {
+			i++;
+			continue;
+		}
+		do {
+			while (tmp_uid_list->page_cache_list.next !=
+						&tmp_uid_list->page_cache_list) {
+				struct page *page = list_entry(
+					tmp_uid_list->page_cache_list.next, struct page, lru);
+				__list_del_entry(&page->lru);
+				lru_cache_add(page);
+				put_page(page);
+				nr_to_shrink--;
+				total_uid_lru_nr--;
+				if (nr_to_shrink <= 0)
+					goto OUT;
+			}
+			tmp_uid_list = tmp_uid_list->next;
+		} while (tmp_uid_list != NULL);
+		i++;
+	}
+OUT:
+	spin_unlock_irq(&uid_hash_lock);
+}
+#endif
 static void shrink_active_list(unsigned long nr_to_scan,
 			       struct lruvec *lruvec,
 			       struct scan_control *sc,
@@ -2116,6 +2252,11 @@ static void shrink_active_list(unsigned long nr_to_scan,
 
 	mem_cgroup_uncharge_list(&l_hold);
 	free_hot_cold_page_list(&l_hold, true);
+#ifdef VENDOR_EDIT
+	if (active_list_is_low(lruvec) && sysctl_page_cache_reside_switch)
+		shrink_uid_lru_list(lruvec, pgdat);
+#endif
+
 }
 
 /*
