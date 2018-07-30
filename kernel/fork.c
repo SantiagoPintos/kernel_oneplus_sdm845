@@ -2030,6 +2030,11 @@ long _do_fork(unsigned long clone_flags,
 
 		trace_sched_process_fork(current, p);
 
+#ifdef VENDOR_EDIT
+		if (!(clone_flags & CLONE_VM))
+			p->hot_count = 0;
+#endif
+
 		pid = get_task_pid(p, PIDTYPE_PID);
 		nr = pid_vnr(pid);
 
