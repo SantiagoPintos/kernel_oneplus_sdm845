@@ -41,6 +41,7 @@ unsigned int __read_mostly boost_sample_time = 1;
 unsigned int __read_mostly chain_on = 1;
 unsigned int __read_mostly latest_ms = 100;
 unsigned int __read_mostly latest_threshold = 100000000;
+
 #if UX_DEBUG
 static int opchain_status_show(char *buf, const struct kernel_param *kp)
 {
@@ -77,3 +78,9 @@ module_param(boost, uint, 0644);
 module_param(boost_tl, uint, 0644);
 module_param(boost_sample_time, uint, 0644);
 module_param(chain_on, uint, 0644);
+static void __exit opchain_exit_module(void)
+{
+	opc_exit_module();
+}
+
+module_exit(opchain_exit_module);

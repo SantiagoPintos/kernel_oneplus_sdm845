@@ -166,3 +166,15 @@ int opc_cpu_isolated(int cpu)
 	return cpu_isolated(cpu);
 }
 EXPORT_SYMBOL(opc_cpu_isolated);
+
+void __exit opc_exit_module(void)
+{
+	opc_binder_pass_t = NULL;
+	is_opc_task_t = NULL;
+	opc_task_switch_t = NULL;
+	opc_get_claim_on_cpu_t = NULL;
+	opc_get_claims_t = NULL;
+	opc_select_path_t = NULL;
+	opc_cpu_util_t = NULL;
+}
+EXPORT_SYMBOL(opc_exit_module);
