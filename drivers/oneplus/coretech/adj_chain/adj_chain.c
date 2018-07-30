@@ -36,7 +36,8 @@ void adj_chain_update_oom_score_adj(struct task_struct *p)
 		write_lock_irq(&tasklist_lock);
 		spin_lock(&current->sighand->siglock);
 		if (!thread_group_leader(p)) {
-			pr_warn("not update from group leader: %s '%d', leader: %s '%d'\n",
+			pr_warn("%s '%d' not update from group leader: %s '%d', leader: %s '%d'\n",
+				current->comm, current->pid,
 				p->comm, p->pid, p->group_leader->comm, p->group_leader->pid);
 			p = p->group_leader;
 		}
