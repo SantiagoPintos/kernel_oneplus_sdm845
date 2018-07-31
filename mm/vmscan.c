@@ -2116,9 +2116,9 @@ static void move_active_pages_to_lru(struct lruvec *lruvec,
 #ifdef VENDOR_EDIT
 static int active_list_is_low(struct lruvec *lruvec)
 {
-	unsigned long active = lruvec_lru_size(lruvec, LRU_ACTIVE_FILE, 0);
+	unsigned long active = lruvec_lru_size(lruvec, LRU_ACTIVE_FILE, MAX_NR_ZONES);
 
-	return active < total_uid_lru_nr >> 5;
+	return active < total_uid_lru_nr >> 4;
 }
 
 static void shrink_uid_lru_list(struct lruvec *lruvec,
