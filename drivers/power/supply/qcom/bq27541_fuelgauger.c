@@ -45,8 +45,8 @@
 #define CONFIG_GAUGE_BQ27411		1
 #define DEVICE_TYPE_BQ27541		0x0541
 #define DEVICE_TYPE_BQ27411		0x0421
-#define DEVICE_BQ27541			1
-#define DEVICE_BQ27411			2
+#define DEVICE_BQ27541			0
+#define DEVICE_BQ27411			1
 
 #define DRIVER_VERSION			"1.1.0"
 /* Bq27541 standard data commands */
@@ -1259,17 +1259,20 @@ static void bq27541_hw_config(struct work_struct *work)
 	bq27541_cntl_cmd(di, BQ27541_SUBCMD_FW_VER);
 	udelay(66);
 	bq27541_read(BQ27541_REG_CNTL, &fw_ver, 0, di);
-	if (!di->device_type){
-		if (type == DEVICE_TYPE_BQ27411) {
-			di->device_type = DEVICE_BQ27411;
-			pr_info("DEVICE_BQ27411\n");
-		} else {
-			di->device_type = DEVICE_BQ27541;
-			pr_info("DEVICE_BQ27541\n");
-		}
+
+#ifdef CONFIG_GAUGE_BQ27411
+	/* david.liu@bsp, 20161004 Add BQ27411 support */
+	if (type == DEVICE_TYPE_BQ27411) {
+		di->device_type = DEVICE_BQ27411;
+		pr_info("DEVICE_BQ27411\n");
+	} else {
+		di->device_type = DEVICE_BQ27541;
+		pr_info("DEVICE_BQ27541\n");
 	}
 	gauge_set_cmd_addr(di->device_type);
 	di->allow_reading = true;
+#endif
+
 	bq27541_registered = true;
 	pr_info("DEVICE_TYPE is 0x%02X, FIRMWARE_VERSION is 0x%02X\n",
 			type, fw_ver);
@@ -1478,10 +1481,7 @@ static void bq27541_parse_dt(struct bq27541_device_info *di)
 
 	di->modify_soc_smooth = of_property_read_bool(node,
 				"qcom,modify-soc-smooth");
-	of_property_read_u32(node,
-				"op,fuelgauge", &di->device_type);
-	pr_info("di->modify_soc_smooth=%d,device_type=%d\n",
-				di->modify_soc_smooth, di->device_type);
+	pr_err("di->modify_soc_smooth=%d\n", di->modify_soc_smooth);
 }
 static int sealed(void)
 {
