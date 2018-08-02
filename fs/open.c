@@ -1074,13 +1074,6 @@ long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
 			put_unused_fd(fd);
 			fd = PTR_ERR(f);
 		} else {
-			struct file *lower_file = NULL;
-
-			if (f->f_op->get_lower_file)
-				lower_file = f->f_op->get_lower_file(f);
-			if (lower_file)
-				fsnotify_open(lower_file);
-
 			fsnotify_open(f);
 			fd_install(fd, f);
 		}
