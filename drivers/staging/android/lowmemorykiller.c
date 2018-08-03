@@ -87,6 +87,9 @@ static int lowmem_minfree_size = 4;
 static int lmk_fast_run = 1;
 
 static unsigned long lowmem_deathpending_timeout;
+#ifdef VENDOR_EDIT
+unsigned long killed_num;
+#endif
 
 #define lowmem_print(level, x...)			\
 	do {						\
@@ -1279,6 +1282,9 @@ quick_select_fast:
 			return 0;
 		}
 
+#ifdef VENDOR_EDIT
+		killed_num++;
+#endif
 		task_lock(selected);
 		send_sig(SIGKILL, selected, 0);
 		if (selected->mm) {

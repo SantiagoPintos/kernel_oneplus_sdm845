@@ -61,6 +61,9 @@
 
 #ifdef VENDOR_EDIT
 int sysctl_page_cache_reside_switch = 1;
+unsigned long inactive_nr, active_nr;
+unsigned long vmpress[5];
+unsigned long priority_nr[3];
 #endif
 struct scan_control {
 	/* How many pages shrink_list() should reclaim */
@@ -1925,6 +1928,9 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 	if (!inactive_reclaimable_pages(lruvec, sc, lru))
 		return 0;
 
+#ifdef VENDOR_EDIT
+	inactive_nr++;
+#endif
 	while (unlikely(too_many_isolated(pgdat, file, sc, safe))) {
 		congestion_wait(BLK_RW_ASYNC, HZ/10);
 
@@ -2176,6 +2182,9 @@ static void shrink_active_list(unsigned long nr_to_scan,
 	int file = is_file_lru(lru);
 	struct pglist_data *pgdat = lruvec_pgdat(lruvec);
 
+#ifdef VENDOR_EDIT
+	active_nr++;
+#endif
 	lru_add_drain();
 
 	if (!sc->may_unmap)
@@ -2779,7 +2788,31 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 			vmpressure(sc->gfp_mask, memcg, false,
 				   sc->nr_scanned - scanned,
 				   sc->nr_reclaimed - reclaimed);
-
+#ifdef VENDOR_EDIT
+			if ((sc->nr_reclaimed - reclaimed) <
+				((sc->nr_scanned - scanned) >> 2))
+				vmpress[0]++;
+			else if ((sc->nr_reclaimed - reclaimed) >
+						((sc->nr_scanned - scanned) >> 2) &&
+						(sc->nr_reclaimed - reclaimed) <
+						((sc->nr_scanned - scanned) >> 1))
+				vmpress[1]++;
+			else if ((sc->nr_reclaimed - reclaimed) >
+					((sc->nr_scanned - scanned) >> 1) &&
+					(sc->nr_reclaimed - reclaimed) <
+					(((sc->nr_scanned - scanned) >> 1) +
+					((sc->nr_scanned - scanned) >> 2)))
+				vmpress[2]++;
+			else if ((sc->nr_reclaimed - reclaimed) >
+					(((sc->nr_scanned - scanned) >> 1) +
+					((sc->nr_scanned - scanned) >> 2)) &&
+					(sc->nr_reclaimed - reclaimed) <
+					(sc->nr_scanned - scanned))
+				vmpress[3]++;
+			else if ((sc->nr_reclaimed - reclaimed) ==
+					(sc->nr_scanned - scanned))
+				vmpress[4]++;
+#endif
 			/*
 			 * Direct reclaim and kswapd have to scan all memory
 			 * cgroups to fulfill the overall scan target for the
@@ -3538,6 +3571,15 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 			sc.priority--;
 	} while (sc.priority >= 1);
 
+#ifdef VENDOR_EDIT
+	if (sc.priority < 5)
+		priority_nr[0]++;
+	else if (sc.priority > 5 && sc.priority < 10)
+		priority_nr[1]++;
+	else
+		priority_nr[2]++;
+#endif
+
 	if (!sc.nr_reclaimed)
 		pgdat->kswapd_failures++;
 
@@ -4003,6 +4045,14 @@ static int __node_reclaim(struct pglist_data *pgdat, gfp_t gfp_mask, unsigned in
 		do {
 			shrink_node(pgdat, &sc);
 		} while (sc.nr_reclaimed < nr_pages && --sc.priority >= 0);
+#ifdef VENDOR_EDIT
+		if (sc.priority < 5)
+			priority_nr[0]++;
+		else if (sc.priority > 5 && sc.priority < 10)
+			priority_nr[1]++;
+		else
+			priority_nr[2]++;
+#endif
 	}
 
 	p->reclaim_state = NULL;

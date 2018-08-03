@@ -97,6 +97,9 @@ volatile unsigned long latent_entropy __latent_entropy;
 EXPORT_SYMBOL(latent_entropy);
 #endif
 
+#ifdef VENDOR_EDIT
+unsigned long alloc_slow_nr;
+#endif
 /*
  * Array of node states.
  */
@@ -3906,6 +3909,10 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 		.nodemask = nodemask,
 		.migratetype = gfpflags_to_migratetype(gfp_mask),
 	};
+#ifdef VENDOR_EDIT
+	int clock = sched_clock();
+	int delta;
+#endif
 
 	if (cpusets_enabled()) {
 		alloc_mask |= __GFP_HARDWALL;
@@ -3988,6 +3995,11 @@ out:
 
 	trace_mm_page_alloc(page, order, alloc_mask, ac.migratetype);
 
+#ifdef VENDOR_EDIT
+	delta = sched_clock() - clock;
+	if (delta > 5000000)
+		alloc_slow_nr++;
+#endif
 	return page;
 }
 EXPORT_SYMBOL(__alloc_pages_nodemask);
