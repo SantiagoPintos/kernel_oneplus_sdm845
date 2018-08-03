@@ -1470,6 +1470,67 @@ static const struct file_operations proc_zoneinfo_file_operations = {
 	.release	= seq_release,
 };
 
+#ifdef VENDOR_EDIT
+static void uid_lru_info_show_print(struct seq_file *m, pg_data_t *pgdat)
+{
+	int i;
+	struct lruvec *lruvec = &pgdat->lruvec;
+	struct uid_node **table;
+
+	seq_printf(m, "Node %d\n", pgdat->node_id);
+	seq_puts(m, "uid\thot_count\tpages\n");
+
+
+	table = lruvec->uid_hash;
+
+	for (i = 0; i < (1 << 5); i++) {
+
+		struct uid_node *node = rcu_dereference(table[i]);
+
+		if (!node)
+			continue;
+		do {
+			seq_printf(m, "%d\t%d\t%lu\n",
+				node->uid,
+				node->hot_count,
+				node->nr_pages);
+		} while ((node = rcu_dereference(node->next)) != NULL);
+	}
+	seq_putc(m, '\n');
+}
+
+/*
+ * Output information about zones in @pgdat.
+ */
+static int uid_lru_info_show(struct seq_file *m, void *arg)
+{
+	pg_data_t *pgdat = (pg_data_t *)arg;
+
+	uid_lru_info_show_print(m, pgdat);
+
+	return 0;
+}
+
+static const struct seq_operations uid_lru_info_op = {
+	.start	= frag_start,
+	.next	= frag_next,
+	.stop	= frag_stop,
+	.show	= uid_lru_info_show,
+};
+
+static int uid_lru_info_open(struct inode *inode, struct file *file)
+{
+	return seq_open(file, &uid_lru_info_op);
+}
+
+static const struct file_operations proc_uid_lru_info_file_operations = {
+	.open		= uid_lru_info_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= seq_release,
+};
+#endif
+
 enum writeback_stat_item {
 	NR_DIRTY_THRESHOLD,
 	NR_DIRTY_BG_THRESHOLD,
@@ -1797,6 +1858,10 @@ static int __init setup_vmstat(void)
 	proc_create("pagetypeinfo", S_IRUGO, NULL, &pagetypeinfo_file_ops);
 	proc_create("vmstat", S_IRUGO, NULL, &proc_vmstat_file_operations);
 	proc_create("zoneinfo", S_IRUGO, NULL, &proc_zoneinfo_file_operations);
+#ifdef VENDOR_EDIT
+	proc_create("uid_lru_info", 0444, NULL,
+				&proc_uid_lru_info_file_operations);
+#endif
 #endif
 	return 0;
 }

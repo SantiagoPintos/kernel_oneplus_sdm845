@@ -395,7 +395,7 @@ static void __uid_lru_cache_add(struct page *page)
 	struct pglist_data *pagepgdat = page_pgdat(page);
 	struct lruvec *lruvec;
 
-	lruvec = mem_cgroup_page_lruvec(page, pagepgdat);
+	lruvec = &pagepgdat->lruvec;
 	_uid_lru_add_fn(page, lruvec);
 }
 
@@ -880,9 +880,10 @@ unsigned long total_uid_lru_nr;
 void _uid_lru_add_fn(struct page *page, struct lruvec *lruvec)
 {
 	struct uid_node *uid_nd;
+	unsigned long flag;
 	uid_t uid = __task_cred(current)->user->uid.val;
 
-	spin_lock_irq(&uid_hash_lock);
+	spin_lock_irqsave(&lruvec->ulru_lock, flag);
 	VM_BUG_ON_PAGE(PageLRU(page), page);
 	get_page(page);
 	uid_nd = find_uid_node(uid, lruvec);
@@ -892,8 +893,9 @@ void _uid_lru_add_fn(struct page *page, struct lruvec *lruvec)
 		uid_nd = insert_uid_node(lruvec->uid_hash, uid);
 	}
 	list_add(&page->lru, &uid_nd->page_cache_list);
+	uid_nd->nr_pages += hpage_nr_pages(page);
 	total_uid_lru_nr++;
-	spin_unlock_irq(&uid_hash_lock);
+	spin_unlock_irqrestore(&lruvec->ulru_lock, flag);
 }
 
 #endif

@@ -88,6 +88,7 @@
 #include <linux/flex_array.h>
 #include <linux/posix-timers.h>
 #include <linux/cpufreq_times.h>
+#include <linux/rmap.h>
 
 #ifdef VENDOR_EDIT
 #include <linux/adj_chain.h>
@@ -2631,6 +2632,24 @@ static ssize_t page_hot_count_write(struct file *file, const char __user *buf,
 	}
 
 	task->hot_count = page_hot_count;
+
+	if (!page_hot_count) {
+		struct cgroup_subsys_state *pos;
+		struct css_task_iter it;
+		struct task_struct *tsk;
+		struct cgroup_subsys_state *parent;
+
+		parent = task_get_css(task, cpuacct_cgrp_id)->parent;
+		rcu_read_lock();
+		css_for_each_child(pos, parent) {
+			css_task_iter_start(&pos->cgroup->self, &it);
+			while ((tsk = css_task_iter_next(&it)))
+				tsk->hot_count = 0;
+			css_task_iter_end(&it);
+		}
+		rcu_read_unlock();
+		reclaim_pages_from_uid_list(__task_cred(task)->user->uid.val);
+	}
 
 	put_task_struct(task);
 

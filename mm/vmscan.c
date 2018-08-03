@@ -165,7 +165,6 @@ unsigned long vm_total_pages;
 static LIST_HEAD(shrinker_list);
 static DECLARE_RWSEM(shrinker_rwsem);
 #ifdef VENDOR_EDIT
-DEFINE_SPINLOCK(uid_hash_lock);
 
 #define UID_HASH_ORDER 5
 #define uid_hashfn(nr)	hash_long((unsigned long)nr, UID_HASH_ORDER)
@@ -249,7 +248,6 @@ void free_hash_table(struct lruvec *lruvec)
 		}
 	}
 }
-
 #endif
 
 
@@ -1429,6 +1427,84 @@ keep:
 	return nr_reclaimed;
 }
 
+#ifdef VENDOR_EDIT
+static unsigned long isolate_uid_lru_pages(
+						struct list_head *dst,
+						struct list_head *src)
+{
+	struct page *page;
+	unsigned long nr_isolate = 0;
+
+	while (!list_empty(src)) {
+		page = lru_to_page(src);
+		VM_BUG_ON_PAGE(PageLRU(page), page);
+		ClearPageActive(page);
+		list_move(&page->lru, dst);
+		nr_isolate++;
+	}
+	return nr_isolate;
+}
+
+unsigned long reclaim_pages_from_uid_list(uid_t uid)
+{
+	LIST_HEAD(page_list);
+	struct pglist_data *pgdat;
+	struct uid_node *node;
+	struct lruvec *lruvec;
+	unsigned long node_size;
+	struct scan_control sc = {
+		.gfp_mask = GFP_KERNEL,
+		.priority = DEF_PRIORITY,
+		.may_writepage = 1,
+		.may_unmap = 1,
+		.may_swap = 1,
+	};
+
+	unsigned long nr_reclaimed = 0, nr_uid_lru_list;
+	struct page *page;
+	unsigned long dummy1, dummy2, dummy3, dummy4, dummy5;
+
+	for_each_online_pgdat(pgdat) {
+		lruvec = &pgdat->lruvec;
+
+		spin_lock_irq(&lruvec->ulru_lock);
+		node = find_uid_node(uid, lruvec);
+		if (unlikely(!node)) {
+			spin_unlock_irq(&lruvec->ulru_lock);
+			continue;
+		}
+
+		nr_uid_lru_list = isolate_uid_lru_pages(&page_list,
+				&node->page_cache_list);
+
+		node_size = node->nr_pages;
+		node->hot_count = 0;
+		node->nr_pages = 0;
+		spin_unlock_irq(&lruvec->ulru_lock);
+
+		nr_reclaimed = shrink_page_list(&page_list, NULL, &sc,
+				TTU_UNMAP|TTU_IGNORE_ACCESS,
+				&dummy1, &dummy2, &dummy3,
+				&dummy4, &dummy5, true);
+
+		pr_err("%s: reclaimed:%lu isolate:%lu node:%lu ",
+			__func__, nr_reclaimed,
+			nr_uid_lru_list, node_size);
+
+		node_size = 0;
+		while (!list_empty(&page_list)) {
+			page = lru_to_page(&page_list);
+			list_del(&page->lru);
+			node_size++;
+			putback_lru_page(page);
+		}
+		pr_err("putback:%lu\n", node_size);
+
+	}
+	return nr_reclaimed;
+}
+#endif
+
 unsigned long reclaim_clean_pages_from_list(struct zone *zone,
 					    struct list_head *page_list)
 {
@@ -2135,7 +2211,7 @@ static void shrink_uid_lru_list(struct lruvec *lruvec,
 
 	if (total_uid_lru_nr <= 0)
 		return;
-	spin_lock_irq(&uid_hash_lock);
+	spin_lock_irq(&lruvec->ulru_lock);
 	while (i < (1 << UID_HASH_ORDER)) {
 		struct uid_node *tmp_uid_list = lruvec->uid_hash[i];
 
@@ -2149,6 +2225,7 @@ static void shrink_uid_lru_list(struct lruvec *lruvec,
 				struct page *page = list_entry(
 					tmp_uid_list->page_cache_list.next, struct page, lru);
 				__list_del_entry(&page->lru);
+				tmp_uid_list->nr_pages -= hpage_nr_pages(page);
 				lru_cache_add(page);
 				put_page(page);
 				nr_to_shrink--;
@@ -2161,7 +2238,7 @@ static void shrink_uid_lru_list(struct lruvec *lruvec,
 		i++;
 	}
 OUT:
-	spin_unlock_irq(&uid_hash_lock);
+	spin_unlock_irq(&lruvec->ulru_lock);
 }
 #endif
 static void shrink_active_list(unsigned long nr_to_scan,

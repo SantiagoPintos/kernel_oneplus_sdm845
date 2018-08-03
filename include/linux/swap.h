@@ -430,7 +430,6 @@ extern struct uid_node *find_uid_node(uid_t uid, struct lruvec *lruvec);
 extern struct uid_node *insert_uid_node(struct uid_node **hash_table,
 							uid_t uid);
 extern struct uid_node **alloc_uid_hash_table(void);
-extern spinlock_t uid_hash_lock;
 extern unsigned long killed_num;
 extern unsigned long inactive_nr;
 extern unsigned long active_nr;
