@@ -165,6 +165,117 @@ unsigned long vm_total_pages;
 static LIST_HEAD(shrinker_list);
 static DECLARE_RWSEM(shrinker_rwsem);
 #ifdef VENDOR_EDIT
+static LIST_HEAD(hotcount_prio_list);
+static DEFINE_RWLOCK(prio_list_lock);
+
+struct hotcount_prio_node {
+	unsigned int hotcount;
+	uid_t uid;
+	struct list_head list;
+};
+
+static unsigned int find_node_uid_prio(struct hotcount_prio_node **node,
+		struct list_head **prio_pos,
+		uid_t uid,
+		unsigned int hotcount)
+{
+	struct hotcount_prio_node *pos;
+	unsigned int ret_hotcount = 0;
+
+	read_lock(&prio_list_lock);
+	list_for_each_entry(pos, &hotcount_prio_list, list) {
+
+		if (*node && *prio_pos)
+			break;
+
+		if (pos->uid == uid) {
+			*node = pos;
+			ret_hotcount = pos->hotcount;
+		}
+		if ((!(*prio_pos)) &&
+			(pos->hotcount > hotcount))
+			*prio_pos = &pos->list;
+	}
+
+	if (!(*prio_pos))
+		*prio_pos = &hotcount_prio_list;
+
+	read_unlock(&prio_list_lock);
+
+	return ret_hotcount;
+}
+
+
+void insert_prio_node(unsigned int new_hotcount, uid_t uid)
+{
+	struct hotcount_prio_node *node = NULL;
+	struct list_head *prio_pos = NULL;
+	unsigned int old_hotcount;
+
+	old_hotcount = find_node_uid_prio(&node, &prio_pos, uid, new_hotcount);
+
+	if (node) {
+		if (old_hotcount == new_hotcount)
+			return;
+
+		write_lock(&prio_list_lock);
+		if (&node->list == prio_pos) {
+			node->hotcount = new_hotcount;
+			goto unlock;
+		}
+		list_del(&node->list);
+	} else {
+		node = (struct hotcount_prio_node *)
+			kmalloc(sizeof(struct hotcount_prio_node), GFP_KERNEL);
+		if (!node) {
+			pr_err("no memory to insert prio_node!\n");
+			return;
+		}
+		node->uid = uid;
+		write_lock(&prio_list_lock);
+	}
+
+	node->hotcount = new_hotcount;
+	list_add_tail(&node->list, prio_pos);
+unlock:
+	write_unlock(&prio_list_lock);
+}
+EXPORT_SYMBOL(insert_prio_node);
+
+void delete_prio_node(uid_t uid)
+{
+	struct hotcount_prio_node *pos;
+	int found = 0;
+
+	read_lock(&prio_list_lock);
+	list_for_each_entry(pos, &hotcount_prio_list, list)
+		if (pos->uid == uid) {
+			found = 1;
+			break;
+		}
+	read_unlock(&prio_list_lock);
+
+	if (found) {
+		write_lock(&prio_list_lock);
+		list_del(&pos->list);
+		write_unlock(&prio_list_lock);
+		kfree(pos);
+	}
+}
+EXPORT_SYMBOL(delete_prio_node);
+
+void print_prio_chain(struct seq_file *m)
+{
+	struct hotcount_prio_node *pos;
+
+	read_lock(&prio_list_lock);
+	list_for_each_entry(pos, &hotcount_prio_list, list)
+		seq_printf(m, "%d(%d)\t", pos->uid, pos->hotcount);
+	read_unlock(&prio_list_lock);
+
+	seq_putc(m, '\n');
+}
+EXPORT_SYMBOL(print_prio_chain);
 
 #define UID_HASH_ORDER 5
 #define uid_hashfn(nr)	hash_long((unsigned long)nr, UID_HASH_ORDER)
@@ -2207,38 +2318,36 @@ static void shrink_uid_lru_list(struct lruvec *lruvec,
 				struct pglist_data *pgdat)
 {
 	long nr_to_shrink = total_uid_lru_nr >> 2;
-	int i = 0;
+	struct hotcount_prio_node *pos;
 
 	if (total_uid_lru_nr <= 0)
 		return;
-	spin_lock_irq(&lruvec->ulru_lock);
-	while (i < (1 << UID_HASH_ORDER)) {
-		struct uid_node *tmp_uid_list = lruvec->uid_hash[i];
 
-		if (tmp_uid_list == NULL) {
-			i++;
+	read_lock(&prio_list_lock);
+	spin_lock_irq(&lruvec->ulru_lock);
+	list_for_each_entry(pos, &hotcount_prio_list, list) {
+		struct uid_node *tmp_uid_list = find_uid_node(pos->uid, lruvec);
+
+		if (tmp_uid_list == NULL || tmp_uid_list->nr_pages == 0)
 			continue;
+
+		while (tmp_uid_list->page_cache_list.next !=
+					&tmp_uid_list->page_cache_list) {
+			struct page *page = list_entry(
+				tmp_uid_list->page_cache_list.next, struct page, lru);
+			__list_del_entry(&page->lru);
+			tmp_uid_list->nr_pages -= hpage_nr_pages(page);
+			lru_cache_add(page);
+			put_page(page);
+			nr_to_shrink--;
+			total_uid_lru_nr--;
+			if (nr_to_shrink <= 0)
+				goto OUT;
 		}
-		do {
-			while (tmp_uid_list->page_cache_list.next !=
-						&tmp_uid_list->page_cache_list) {
-				struct page *page = list_entry(
-					tmp_uid_list->page_cache_list.next, struct page, lru);
-				__list_del_entry(&page->lru);
-				tmp_uid_list->nr_pages -= hpage_nr_pages(page);
-				lru_cache_add(page);
-				put_page(page);
-				nr_to_shrink--;
-				total_uid_lru_nr--;
-				if (nr_to_shrink <= 0)
-					goto OUT;
-			}
-			tmp_uid_list = tmp_uid_list->next;
-		} while (tmp_uid_list != NULL);
-		i++;
 	}
 OUT:
 	spin_unlock_irq(&lruvec->ulru_lock);
+	read_unlock(&prio_list_lock);
 }
 #endif
 static void shrink_active_list(unsigned long nr_to_scan,

@@ -88,7 +88,11 @@
 #include <linux/flex_array.h>
 #include <linux/posix-timers.h>
 #include <linux/cpufreq_times.h>
+
+#ifdef VENDOR_EDIT
+#include <linux/hotcount.h>
 #include <linux/rmap.h>
+#endif
 
 #ifdef VENDOR_EDIT
 #include <linux/adj_chain.h>
@@ -2611,6 +2615,7 @@ static ssize_t page_hot_count_write(struct file *file, const char __user *buf,
 	char buffer[PROC_NUMBUF];
 	int page_hot_count;
 	int err;
+	uid_t uid;
 
 	memset(buffer, 0, sizeof(buffer));
 
@@ -2632,6 +2637,7 @@ static ssize_t page_hot_count_write(struct file *file, const char __user *buf,
 	}
 
 	task->hot_count = page_hot_count;
+	uid = __task_cred(task)->user->uid.val;
 
 	if (!page_hot_count) {
 		struct cgroup_subsys_state *pos;
@@ -2648,7 +2654,10 @@ static ssize_t page_hot_count_write(struct file *file, const char __user *buf,
 			css_task_iter_end(&it);
 		}
 		rcu_read_unlock();
-		reclaim_pages_from_uid_list(__task_cred(task)->user->uid.val);
+		reclaim_pages_from_uid_list(uid);
+		delete_prio_node(uid);
+	} else {
+		insert_prio_node(page_hot_count, uid);
 	}
 
 	put_task_struct(task);

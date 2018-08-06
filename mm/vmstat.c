@@ -1478,8 +1478,9 @@ static void uid_lru_info_show_print(struct seq_file *m, pg_data_t *pgdat)
 	struct uid_node **table;
 
 	seq_printf(m, "Node %d\n", pgdat->node_id);
+	seq_puts(m, "uid_lru_list priority:\n");
+	print_prio_chain(m);
 	seq_puts(m, "uid\thot_count\tpages\n");
-
 
 	table = lruvec->uid_hash;
 
