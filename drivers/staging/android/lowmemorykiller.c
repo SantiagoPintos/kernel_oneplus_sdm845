@@ -917,6 +917,9 @@ static unsigned long lowmem_batch_kill(
 				continue;
 			}
 
+#ifdef VENDOR_EDIT
+			killed_num++;
+#endif
 			task_lock(selected);
 			send_sig(SIGKILL, selected, 0);
 			signaled = true;
@@ -1282,9 +1285,6 @@ quick_select_fast:
 			return 0;
 		}
 
-#ifdef VENDOR_EDIT
-		killed_num++;
-#endif
 		task_lock(selected);
 		send_sig(SIGKILL, selected, 0);
 		if (selected->mm) {
