@@ -876,7 +876,6 @@ void lru_add_page_tail(struct page *page, struct page *page_tail,
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
 
 #ifdef VENDOR_EDIT
-unsigned long total_uid_lru_nr;
 void _uid_lru_add_fn(struct page *page, struct lruvec *lruvec)
 {
 	struct uid_node *uid_nd;
@@ -894,7 +893,7 @@ void _uid_lru_add_fn(struct page *page, struct lruvec *lruvec)
 	}
 	list_add(&page->lru, &uid_nd->page_cache_list);
 	uid_nd->nr_pages += hpage_nr_pages(page);
-	total_uid_lru_nr++;
+	mod_zone_page_state(page_zone(page), NR_ZONE_UID_LRU, hpage_nr_pages(page));
 	spin_unlock_irqrestore(&lruvec->ulru_lock, flag);
 }
 

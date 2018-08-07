@@ -422,7 +422,6 @@ static inline long get_nr_swap_pages(void)
 }
 
 #ifdef VENDOR_EDIT
-extern unsigned long total_uid_lru_nr;
 extern int sysctl_page_cache_reside_switch;
 extern void uid_lru_cache_add(struct page *page);
 extern void _uid_lru_add_fn(struct page *page, struct lruvec *lruvec);

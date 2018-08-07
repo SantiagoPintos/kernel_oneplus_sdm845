@@ -2307,20 +2307,40 @@ static void move_active_pages_to_lru(struct lruvec *lruvec,
 }
 
 #ifdef VENDOR_EDIT
+unsigned long uid_lru_size(struct lruvec *lruvec)
+{
+	unsigned long lru_size = 0;
+	int zid;
+
+	for (zid = 1; zid < MAX_NR_ZONES; zid++) {
+		struct zone *zone = &lruvec_pgdat(lruvec)->node_zones[zid];
+
+		if (!managed_zone(zone))
+			continue;
+
+		lru_size = zone_page_state(&lruvec_pgdat(lruvec)->node_zones[zid],
+				       NR_ZONE_UID_LRU);
+	}
+
+	return lru_size;
+}
+
 static int active_list_is_low(struct lruvec *lruvec)
 {
 	unsigned long active = lruvec_lru_size(lruvec, LRU_ACTIVE_FILE, MAX_NR_ZONES);
+	unsigned long total_uid_lru_nr = uid_lru_size(lruvec);
 
-	return active < total_uid_lru_nr >> 4;
+	return active < (total_uid_lru_nr >> 4);
 }
 
 static void shrink_uid_lru_list(struct lruvec *lruvec,
 				struct pglist_data *pgdat)
 {
-	long nr_to_shrink = total_uid_lru_nr >> 2;
+	unsigned long uid_size = uid_lru_size(lruvec);
+	long nr_to_shrink = uid_size >> 2;
 	struct hotcount_prio_node *pos;
 
-	if (total_uid_lru_nr <= 0)
+	if (uid_size <= 0)
 		return;
 
 	read_lock(&prio_list_lock);
@@ -2340,7 +2360,7 @@ static void shrink_uid_lru_list(struct lruvec *lruvec,
 			lru_cache_add(page);
 			put_page(page);
 			nr_to_shrink--;
-			total_uid_lru_nr--;
+			mod_zone_page_state(page_zone(page), NR_ZONE_UID_LRU, -hpage_nr_pages(page));
 			if (nr_to_shrink <= 0)
 				goto OUT;
 		}
