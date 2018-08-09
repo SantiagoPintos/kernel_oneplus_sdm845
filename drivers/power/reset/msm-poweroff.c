@@ -110,7 +110,7 @@ module_param_call(download_mode, dload_set, param_get_int,
 #ifdef VENDOR_EDIT
 int oem_get_download_mode(void)
 {
-	return download_mode;
+	return download_mode && (dload_type & SCM_DLOAD_FULLDUMP);
 }
 #endif
 
