@@ -60,7 +60,7 @@
 #include <trace/events/vmscan.h>
 
 #ifdef VENDOR_EDIT
-int sysctl_page_cache_reside_switch = 1;
+int sysctl_page_cache_reside_switch;
 unsigned long inactive_nr, active_nr;
 unsigned long vmpress[5];
 unsigned long priority_nr[3];
