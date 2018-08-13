@@ -21,8 +21,9 @@ typedef enum {
 	PARAM_SID_MISC,
 	PARAM_SID_DOWNLOAD,
 	PARAM_SID_PHONE_HISTORY,
-	PARAM_SID_ENCRYPT,
-	PARAM_SID_INVALID
+	NUM_PARAM_PLAINTEXT_SEGMENT,
+
+	PARAM_SID_INVALID = -1
 } param_sid_index_t;
 
 int get_param_by_index_and_offset(uint32 sid_index, uint32 offset, void * buf, int length);

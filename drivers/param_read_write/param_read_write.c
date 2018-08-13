@@ -79,12 +79,12 @@ int get_param_by_index_and_offset(uint32 sid_index,
 
     file_offset = PARAM_SID_LENGTH*sid_index+ offset;
 
-	if(buf && (sid_index < PARAM_SID_INVALID) && ((offset + length)
-	                <= PARAM_SID_LENGTH))
+	if (buf && ((offset + length) <= PARAM_SID_LENGTH) &&
+			(file_offset + length) <=  param_ram_zone.size)
 		memcpy(buf,(param_ram_zone.buffer +file_offset), length);
 	else{
-		pr_info("%s:invaild argument,sid_index=%d offset=%d buf=%p length=%d\n",
-		      __func__,sid_index,offset,buf,length);
+		pr_info("%s:invaild argument, sid_index=%d offset=%d buf=%p length=%d\n",
+				__func__, sid_index, offset, buf, length);
 		ret = -EINVAL;
 	}
 
@@ -104,8 +104,8 @@ int set_param_by_index_and_offset(uint32 sid_index,
 
     file_offset = PARAM_SID_LENGTH*sid_index + offset;
 
-	if(buf && (sid_index < PARAM_SID_INVALID) &&
-            ((offset + length) <= PARAM_SID_LENGTH))
+	if (buf && ((offset + length) <= PARAM_SID_LENGTH) &&
+			(file_offset + length) <=  param_ram_zone.size)
 		memcpy((param_ram_zone.buffer+file_offset),buf,length);
 	else{
 		pr_info("%s:invaild argument,sid_index=%d offset=%d buf=%p length=%d\n",
@@ -275,7 +275,7 @@ static int __init param_core_init(void)
 		return -1;
 	}
 	mutex_init(&param_ram_zone.mutex);
-	for(i = 0 ; i < PARAM_SID_INVALID; i ++){
+	for (i = 0; i < NUM_PARAM_PLAINTEXT_SEGMENT; i++) {
 		break;//do not dump param
 		printk("===dump chunk %d===\n", i);
 		print_hex_dump (KERN_ERR, "",DUMP_PREFIX_OFFSET,16, 4,
