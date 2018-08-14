@@ -590,6 +590,10 @@ int __init init_project_info(void)
         break;
     case 35:
         snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
+        project_info_desc->project_name, "2ND");
+        break;
+    case 41:
+        snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
         project_info_desc->project_name, "PVT");
         break;
     case 55:
