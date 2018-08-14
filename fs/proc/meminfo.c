@@ -157,14 +157,14 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 		    global_page_state(NR_FREE_CMA_PAGES));
 #endif
 #ifdef VENDOR_EDIT
-	show_val_kb(m, "killed num:       ", killed_num);
-	show_val_kb(m, "active shrink num:       ", active_nr);
-	show_val_kb(m, "inactive shrink num:       ", inactive_nr);
+	show_val_kb(m, "killed_num:     ", killed_num);
+	show_val_kb(m, "a_shrink_num:   ", active_nr);
+	show_val_kb(m, "ina_shrink_num: ", inactive_nr);
 	for (iter = 0; iter < 5; iter++)
-		show_val_kb(m, "vmpress:       ", vmpress[iter]);
+		show_val_kb(m, "vmpress:        ", vmpress[iter]);
 	for (iter = 0; iter < 3; iter++)
 		show_val_kb(m, "priority:       ", priority_nr[iter]);
-	show_val_kb(m, "alloc_slow_nr:       ", alloc_slow_nr);
+	show_val_kb(m, "alloc_slow_nr:  ", alloc_slow_nr);
 #endif
 	hugetlb_report_meminfo(m);
 
