@@ -108,10 +108,16 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 				unsigned int next_freq)
 {
 	struct cpufreq_policy *policy = sg_policy->policy;
-
+	#ifdef VENDOR_EDIT
+	/*yankelong add ,modify judging condition*/
+	if (policy->cur == next_freq) {
+		sg_policy->next_freq = next_freq;
+		return;
+	}
+	#else
 	if (sg_policy->next_freq == next_freq)
 		return;
-
+	#endif
 	sg_policy->next_freq = next_freq;
 	sg_policy->last_freq_update_time = time;
 
