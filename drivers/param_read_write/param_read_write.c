@@ -22,7 +22,8 @@
 
 
 #define PARAM_PARTITION "/dev/block/bootdevice/by-name/param"
-#define READ_CHUNK_MAX_SIZE (128)
+#define READ_CHUNK_MAX_SIZE (1024)
+#define WRITE_CHUNK_MAX_SIZE (1024)
 static uint default_param_data_dump_size= DEFAULT_PARAM_DUMP_SIZE;
 
 typedef struct{
@@ -185,7 +186,8 @@ static ssize_t param_read(struct file *file, char __user *buff,
 	if (mutex_lock_interruptible(&param_lock))
 		return -ERESTARTSYS;
 
-	temp_buffer = kzalloc(READ_CHUNK_MAX_SIZE, GFP_KERNEL);
+	chunk_sz = count < READ_CHUNK_MAX_SIZE ? count : READ_CHUNK_MAX_SIZE;
+	temp_buffer = kzalloc(chunk_sz, GFP_KERNEL);
 
 	if (temp_buffer == NULL)
 		return -ENOMEM;
@@ -222,34 +224,52 @@ out:
 }
 
 static ssize_t param_write(struct file *file, const char __user *buff,
-        size_t count, loff_t *pos)
+		size_t count, loff_t *pos)
 {
+
 	void * temp_buffer;
+	int chunk_sz;
+	int written;
+	int left;
 	int ret;
 	if (mutex_lock_interruptible(&param_lock))
 		return -ERESTARTSYS;
 
-	temp_buffer = kzalloc(count, GFP_KERNEL);
+	chunk_sz = count < WRITE_CHUNK_MAX_SIZE ? count : WRITE_CHUNK_MAX_SIZE;
+	temp_buffer = kzalloc(chunk_sz, GFP_KERNEL);
 
-	ret =copy_from_user(temp_buffer, buff, count);
-	if (ret < 0) {
-		pr_info("copy_from_user failure %d\n", ret);
-		goto out;
+	if (temp_buffer == NULL)
+		return -ENOMEM;
+
+	left = count;
+	written = 0;
+
+	while (left > 0) {
+		chunk_sz = (left <= WRITE_CHUNK_MAX_SIZE) ?
+					left : WRITE_CHUNK_MAX_SIZE;
+		ret = copy_from_user(temp_buffer, buff + written, chunk_sz);
+		if (ret < 0) {
+			pr_info("copy_from_user failure %d\n", ret);
+			goto out;
+		}
+
+		ret = set_param_by_index_and_offset(*pos / PARAM_SID_LENGTH,
+				*pos % PARAM_SID_LENGTH, temp_buffer, chunk_sz);
+
+		if (ret < 0) {
+			pr_err("set_param_by_index_and_offset failure %d\n",
+					ret);
+			goto out;
+		}
+
+		*pos += chunk_sz;
+		left -= chunk_sz;
+		written += chunk_sz;
 	}
-
-	ret = set_param_by_index_and_offset(*pos/PARAM_SID_LENGTH,
-	        *pos%PARAM_SID_LENGTH, temp_buffer, count);
-	if(ret < 0){
-		pr_err("set_param_by_index_and_offset failure %d\n",ret);
-		goto out;
-	}
-
-	*pos += ret;
 out:
 	kfree(temp_buffer);
 	mutex_unlock(&param_lock);
-	return ret;
-
+	return written;
 }
 
 static const struct file_operations param_fops = {
