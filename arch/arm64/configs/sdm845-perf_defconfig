@@ -686,6 +686,7 @@ CONFIG_INPUT_KEYCHORD=y
 #ifdef VENDOR_EDIT
 # Curtis, 20180115, opchain
 CONFIG_OPCHAIN=y
+CONFIG_HOUSTON=y
 #endif
 #add, for PPT test
 # CONFIG_SCHED_DEBUG is not set
