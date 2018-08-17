@@ -66,7 +66,11 @@ static void __page_cache_release(struct page *page)
 		lruvec = mem_cgroup_page_lruvec(page, zone->zone_pgdat);
 		VM_BUG_ON_PAGE(!PageLRU(page), page);
 		__ClearPageLRU(page);
+#ifdef VENDOR_EDIT
+		del_page_from_lru_list(page, lruvec, page_off_lru(page), PageUIDLRU(page)? true:false);
+#else
 		del_page_from_lru_list(page, lruvec, page_off_lru(page));
+#endif
 		spin_unlock_irqrestore(zone_lru_lock(zone), flags);
 	}
 	mem_cgroup_uncharge(page);
@@ -209,7 +213,11 @@ static void pagevec_move_tail_fn(struct page *page, struct lruvec *lruvec,
 	int *pgmoved = arg;
 
 	if (PageLRU(page) && !PageUnevictable(page)) {
+#ifdef VENDOR_EDIT
+		del_page_from_lru_list(page, lruvec, page_lru(page), PageUIDLRU(page)? true:false);
+#else
 		del_page_from_lru_list(page, lruvec, page_lru(page));
+#endif
 		ClearPageActive(page);
 		add_page_to_lru_list_tail(page, lruvec, page_lru(page));
 		(*pgmoved)++;
@@ -265,8 +273,11 @@ static void __activate_page(struct page *page, struct lruvec *lruvec,
 	if (PageLRU(page) && !PageActive(page) && !PageUnevictable(page)) {
 		int file = page_is_file_cache(page);
 		int lru = page_lru_base_type(page);
-
+#ifdef VENDOR_EDIT
+		del_page_from_lru_list(page, lruvec, lru, PageUIDLRU(page)? true:false);
+#else
 		del_page_from_lru_list(page, lruvec, lru);
+#endif
 		SetPageActive(page);
 		lru += LRU_ACTIVE;
 		add_page_to_lru_list(page, lruvec, lru);
@@ -552,8 +563,11 @@ static void lru_deactivate_file_fn(struct page *page, struct lruvec *lruvec,
 	active = PageActive(page);
 	file = page_is_file_cache(page);
 	lru = page_lru_base_type(page);
-
+#ifdef VENDOR_EDIT
+	del_page_from_lru_list(page, lruvec, lru + active, PageUIDLRU(page)? true:false);
+#else
 	del_page_from_lru_list(page, lruvec, lru + active);
+#endif
 	ClearPageActive(page);
 	ClearPageReferenced(page);
 	add_page_to_lru_list(page, lruvec, lru);
@@ -586,8 +600,11 @@ static void lru_deactivate_fn(struct page *page, struct lruvec *lruvec,
 	if (PageLRU(page) && PageActive(page) && !PageUnevictable(page)) {
 		int file = page_is_file_cache(page);
 		int lru = page_lru_base_type(page);
-
+#ifdef VENDOR_EDIT
+		del_page_from_lru_list(page, lruvec, lru + LRU_ACTIVE, PageUIDLRU(page)? true:false);
+#else
 		del_page_from_lru_list(page, lruvec, lru + LRU_ACTIVE);
+#endif
 		ClearPageActive(page);
 		ClearPageReferenced(page);
 		add_page_to_lru_list(page, lruvec, lru);
@@ -800,7 +817,11 @@ void release_pages(struct page **pages, int nr, bool cold)
 			lruvec = mem_cgroup_page_lruvec(page, locked_pgdat);
 			VM_BUG_ON_PAGE(!PageLRU(page), page);
 			__ClearPageLRU(page);
+#ifdef VENDOR_EDIT
+			del_page_from_lru_list(page, lruvec, page_off_lru(page), PageUIDLRU(page)? true:false);
+#else
 			del_page_from_lru_list(page, lruvec, page_off_lru(page));
+#endif
 		}
 
 		/* Clear Active bit in case of parallel mark_page_accessed */
@@ -880,11 +901,15 @@ void _uid_lru_add_fn(struct page *page, struct lruvec *lruvec)
 {
 	struct uid_node *uid_nd;
 	unsigned long flag;
+	struct pglist_data *pgdat = lruvec_pgdat(lruvec);
 	uid_t uid = __task_cred(current)->user->uid.val;
 
-	spin_lock_irqsave(&lruvec->ulru_lock, flag);
-	VM_BUG_ON_PAGE(PageLRU(page), page);
 	get_page(page);
+	spin_lock_irqsave(&pgdat->lru_lock, flag);
+	VM_BUG_ON_PAGE(PageLRU(page), page);
+	VM_BUG_ON_PAGE(PageUIDLRU(page), page);
+	SetPageLRU(page);
+	SetPageUIDLRU(page);
 	uid_nd = find_uid_node(uid, lruvec);
 	if (uid_nd == NULL) {
 		if (lruvec->uid_hash == NULL)
@@ -892,9 +917,9 @@ void _uid_lru_add_fn(struct page *page, struct lruvec *lruvec)
 		uid_nd = insert_uid_node(lruvec->uid_hash, uid);
 	}
 	list_add(&page->lru, &uid_nd->page_cache_list);
-	uid_nd->nr_pages += hpage_nr_pages(page);
 	mod_zone_page_state(page_zone(page), NR_ZONE_UID_LRU, hpage_nr_pages(page));
-	spin_unlock_irqrestore(&lruvec->ulru_lock, flag);
+	spin_unlock_irqrestore(&pgdat->lru_lock, flag);
+	put_page(page);
 }
 
 #endif

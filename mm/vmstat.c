@@ -1479,6 +1479,8 @@ static void uid_lru_info_show_print(struct seq_file *m, pg_data_t *pgdat)
 	int i;
 	struct lruvec *lruvec = &pgdat->lruvec;
 	struct uid_node **table;
+	struct list_head *pos;
+	unsigned long nr_pages;
 
 	seq_printf(m, "Node %d\n", pgdat->node_id);
 	seq_puts(m, "uid_lru_list priority:\n");
@@ -1487,6 +1489,9 @@ static void uid_lru_info_show_print(struct seq_file *m, pg_data_t *pgdat)
 
 	table = lruvec->uid_hash;
 
+	if (!table)
+		return;
+
 	for (i = 0; i < (1 << 5); i++) {
 
 		struct uid_node *node = rcu_dereference(table[i]);
@@ -1494,10 +1499,13 @@ static void uid_lru_info_show_print(struct seq_file *m, pg_data_t *pgdat)
 		if (!node)
 			continue;
 		do {
+			nr_pages = 0;
+			list_for_each(pos, &node->page_cache_list)
+				nr_pages++;
 			seq_printf(m, "%d\t%d\t%lu\n",
 				node->uid,
 				node->hot_count,
-				node->nr_pages);
+				nr_pages);
 		} while ((node = rcu_dereference(node->next)) != NULL);
 	}
 	seq_putc(m, '\n');

@@ -1001,6 +1001,9 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free;
 	int other_file;
+#ifdef VENDOR_EDIT
+	unsigned long uid_lru_total;
+#endif
 
 #ifdef VENDOR_EDIT
 	bool quick_select_enable = quick_select;
@@ -1011,6 +1014,11 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 #endif
 
 	batch_kill_init(bkws);
+#endif
+
+#ifdef VENDOR_EDIT
+	uid_lru_total =
+		uid_lru_size(mem_cgroup_lruvec(NODE_DATA(0), sc->memcg));
 #endif
 
 	if (!mutex_trylock(&scan_mutex))
@@ -1034,6 +1042,16 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		array_size = lowmem_adj_size;
 	if (lowmem_minfree_size < array_size)
 		array_size = lowmem_minfree_size;
+#ifdef VENDOR_EDIT
+	for (i = 0; i < array_size; i++) {
+		minfree = lowmem_minfree[i];
+		if (other_free < minfree &&
+		    other_file < minfree + uid_lru_total) {
+			min_score_adj = lowmem_adj[i];
+			break;
+		}
+	}
+#else
 	for (i = 0; i < array_size; i++) {
 		minfree = lowmem_minfree[i];
 		if (other_free < minfree && other_file < minfree) {
@@ -1041,6 +1059,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 			break;
 		}
 	}
+#endif
 
 	ret = adjust_minadj(&min_score_adj);
 
