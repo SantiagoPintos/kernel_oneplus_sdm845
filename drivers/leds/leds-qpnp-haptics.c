@@ -651,6 +651,9 @@ static bool is_haptics_idle(struct hap_chip *chip)
 	}
 
 	if (i >= MAX_RETRIES && (val & HAP_BUSY_BIT)) {
+#ifdef VENDOR_EDIT
+		pr_info("Haptics Busy after %d retries\n", i);
+#endif
 		pr_debug("Haptics Busy after %d retries\n", i);
 		return false;
 	}
@@ -2641,7 +2644,9 @@ static int qpnp_haptics_probe(struct platform_device *pdev)
 			goto sysfs_fail;
 		}
 	}
-
+#ifdef VENDOR_EDIT
+		pr_info("qpnp_haptics_probe done\n");
+#endif
 	return 0;
 
 sysfs_fail:
