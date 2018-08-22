@@ -158,7 +158,7 @@ static int adjust_minadj(short *min_score_adj)
 }
 
 #ifdef VENDOR_EDIT
-static int batch_kill;
+static int batch_kill = 1;
 module_param(batch_kill, int, 0644);
 MODULE_PARM_DESC(batch_kill, "lowmemorykiller kill more strategy");
 
@@ -478,7 +478,7 @@ static void mark_lmk_victim(struct task_struct *tsk)
 static bool selftest_running = false;
 static int selftest_min_score_adj = 906;
 
-static int quick_select;
+static int quick_select = 1;
 module_param(quick_select, int, 0644);
 MODULE_PARM_DESC(quick_select, "lowmemorykiller quick select task from adj chain");
 
