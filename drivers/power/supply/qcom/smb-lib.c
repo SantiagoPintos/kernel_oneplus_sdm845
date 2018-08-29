@@ -4442,9 +4442,9 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 		 */
 		if (!is_client_vote_enabled(chg->usb_icl_votable,
 								USB_PSY_VOTER))
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20171023 Battery & Charging porting */
-			vote(chg->usb_icl_votable, USB_PSY_VOTER, true, 500000);
+#ifdef VENDOR_EDIT /* david.liu@bsp, 20171023 Battery & Charging porting */
+			vote(chg->usb_icl_votable, USB_PSY_VOTER,
+					true, USBIN_500MA + USBIN_25MA);
 #else
 			vote(chg->usb_icl_votable, USB_PSY_VOTER, true, 100000);
 #endif
