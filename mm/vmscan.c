@@ -2538,7 +2538,9 @@ static void shrink_active_list(unsigned long nr_to_scan,
 	mem_cgroup_uncharge_list(&l_hold);
 	free_hot_cold_page_list(&l_hold, true);
 #ifdef VENDOR_EDIT
-	if (active_list_is_low(lruvec) && sysctl_page_cache_reside_switch)
+	if (sysctl_page_cache_reside_switch &&
+		((active_list_is_low(lruvec)) ||
+		(!current_is_kswapd() && sc->priority <= 11 && (sc->nr_reclaimed < sc->nr_to_reclaim))))
 		shrink_uid_lru_list(lruvec, pgdat, sc);
 #endif
 
@@ -3322,6 +3324,18 @@ retry:
 	} while (--sc->priority >= 0);
 
 	delayacct_freepages_end();
+#ifdef VENDOR_EDIT
+	if (global_reclaim(sc)) {
+		if (sc->priority <= 12 && sc->priority > 10)
+			__count_zid_vm_events(ALLOCSTALL_PRI1, sc->reclaim_idx, 1);
+		else if (sc->priority <= 10 && sc->priority > 5)
+			__count_zid_vm_events(ALLOCSTALL_PRI2, sc->reclaim_idx, 1);
+		else if (sc->priority <= 5 && sc->priority > 1)
+			__count_zid_vm_events(ALLOCSTALL_PRI3, sc->reclaim_idx, 1);
+		else
+			__count_zid_vm_events(ALLOCSTALL_PRI4, sc->reclaim_idx, 1);
+	}
+#endif
 
 	if (sc->nr_reclaimed)
 		return sc->nr_reclaimed;
@@ -4322,12 +4336,10 @@ static int __node_reclaim(struct pglist_data *pgdat, gfp_t gfp_mask, unsigned in
 			shrink_node(pgdat, &sc);
 		} while (sc.nr_reclaimed < nr_pages && --sc.priority >= 0);
 #ifdef VENDOR_EDIT
-		if (sc.priority < 5)
-			priority_nr[0]++;
-		else if (sc.priority > 5 && sc.priority < 10)
-			priority_nr[1]++;
+		if (sc.priority >= 0 && sc.priority <= 2)
+			__count_zid_vm_events(ALLOCSTALL_PRI2, sc->reclaim_idx, 1);
 		else
-			priority_nr[2]++;
+			__count_zid_vm_events(ALLOCSTALL_PRI1, sc->reclaim_idx, 1);
 #endif
 	}
 
