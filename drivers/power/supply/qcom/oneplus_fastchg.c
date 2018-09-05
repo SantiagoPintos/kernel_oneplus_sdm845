@@ -129,8 +129,17 @@ void set_mcu_en_gpio_value(int value)
 
 void mcu_en_reset(void)
 {
-	if (gpio_is_valid(fastchg_di->mcu_en_gpio))
+	if (gpio_is_valid(fastchg_di->mcu_en_gpio)) {
 		gpio_direction_output(fastchg_di->mcu_en_gpio, 1);
+		/* @bsp 2018/09/05 FAT-4556 fix the audio heaset pop
+		 * issue when shutdown
+		 */
+		if (audio_adapter_flag) {
+			usleep_range(10000, 10001);
+			gpio_direction_output(fastchg_di->mcu_en_gpio, 0);
+			pr_info("mcu reset ahead when audio adaptor present!\n");
+		}
+	}
 }
 
 void mcu_en_gpio_set(int value)
