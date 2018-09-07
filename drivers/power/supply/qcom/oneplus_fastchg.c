@@ -19,6 +19,7 @@
 #include <linux/power/oem_external_fg.h>
 #include <linux/pm_qos.h>
 #include <linux/proc_fs.h>
+#include <linux/moduleparam.h>
 
 #define BYTE_OFFSET			2
 #define BYTES_TO_WRITE		16
@@ -50,6 +51,7 @@ struct fastchg_device_info {
 	bool fast_chg_allow;
 	bool firmware_already_updated;
 	bool n76e_present;
+	int mcu_reset_ahead;
 	int erase_count;
 	int addr_low;
 	int addr_high;
@@ -1343,6 +1345,53 @@ static void check_n76e_support(struct fastchg_device_info *di)
 	}
 
 }
+
+/* @bsp 2018/09/05 FAT-4556 fix the audio heaset pop issue when shutdown*/
+static int set_mcu_reset_ahead(const char *val, const struct kernel_param *kp)
+{
+	unsigned long reset_value = 0;
+	int ret = 0;
+
+	if (!audio_adapter_flag) {
+		pr_info("audio_adapter_flag = %d,return!\n",
+				audio_adapter_flag);
+		return 0;
+	}
+
+	ret = kstrtoul(val, 10, &reset_value);
+	if (ret)
+		return ret;
+
+	if (!reset_value) {
+		fastchg_di->mcu_reset_ahead = 0;
+		return 0;
+	}
+
+	if (reset_value) {
+		pr_info("reset_value:%lu\n",
+				reset_value);
+		mcu_en_reset();
+		fastchg_di->mcu_reset_ahead = reset_value;
+	}
+
+	return 0;
+}
+
+static int get_mcu_reset_status(char *buffer, const struct kernel_param *kp)
+{
+	int cnt = 0;
+
+	cnt = snprintf(buffer, sizeof(char), "%d",
+				fastchg_di->mcu_reset_ahead);
+	pr_debug("mcu reset ahead status:%d\n",
+				fastchg_di->mcu_reset_ahead);
+
+	return cnt;
+}
+
+module_param_call(mcu_reset, set_mcu_reset_ahead,
+				get_mcu_reset_status, NULL, 0644);
+
 static int dash_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct fastchg_device_info *di;
@@ -1444,6 +1493,11 @@ static int dash_remove(struct i2c_client *client)
 static void dash_shutdown(struct i2c_client *client)
 {
 	usb_sw_gpio_set(0);
+	/* @bsp 2018/09/05 FAT-4556 fix the audio heaset pop
+	 * issue when shutdown
+	 */
+	if (audio_adapter_flag && fastchg_di->mcu_reset_ahead)
+		return;
 	mcu_en_reset();
 }
 
