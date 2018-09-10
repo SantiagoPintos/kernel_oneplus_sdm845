@@ -2435,9 +2435,9 @@ static void shrink_uid_lru_list(struct lruvec *lruvec,
 	}
 
 	sc->nr_reclaimed += nr_reclaimed;
-	pr_err("%s: reclaimed:%lu isolate:%lu isolate_failed:%lu ",
+	/*pr_err("%s: reclaimed:%lu isolate:%lu isolate_failed:%lu ",
 			__func__, nr_reclaimed,
-			sc->nr_to_reclaim << 1, nr_isolate_failed);
+			sc->nr_to_reclaim << 1, nr_isolate_failed);*/
 }
 #endif
 static void shrink_active_list(unsigned long nr_to_scan,
