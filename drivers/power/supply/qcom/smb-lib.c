@@ -6464,7 +6464,9 @@ int get_prop_batt_status(struct smb_charger *chg)
 		batt_status = 0;
 	else
 		batt_status = pval.intval;
-
+	if (batt_status == POWER_SUPPLY_STATUS_FULL
+		&& !(chg->chg_done || chg->recharge_status))
+		return POWER_SUPPLY_STATUS_CHARGING;
 	return batt_status;
 }
 
