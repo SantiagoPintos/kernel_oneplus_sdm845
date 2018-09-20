@@ -125,4 +125,6 @@ extern bool dash_adapter_update_is_rx_gpio(unsigned  int gpio_num);
 extern int is_hw_support_n76e(void);
 /* @bsp 2018/09/05 FAT-4556 fix the audio heaset pop issue when shutdown*/
 extern bool audio_adapter_flag;
+
+void op_switch_normal_set(void);
 #endif

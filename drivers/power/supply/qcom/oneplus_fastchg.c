@@ -111,6 +111,31 @@ static void init_n76e_exist_node(void)
 	}
 }
 
+static ssize_t enhance_exist_read(struct file *p_file,
+	char __user *puser_buf, size_t count, loff_t *p_offset)
+{
+	return 0;
+}
+
+static ssize_t enhance_exist_write(struct file *p_file,
+	const char __user *puser_buf,
+	size_t count, loff_t *p_offset)
+{
+	return 0;
+}
+
+static const struct file_operations enhance_exist_operations = {
+	.read = enhance_exist_read,
+	.write = enhance_exist_write,
+};
+
+static void init_enhance_dash_exist_node(void)
+{
+	if (!proc_create("enhance_dash", 0644, NULL,
+			 &enhance_exist_operations))
+		pr_err("Failed to register enhance dash node\n");
+}
+
 //for mcu_data irq delay issue 2017.10.14@Infi
 extern void msm_cpuidle_set_sleep_disable(bool disable);
 
@@ -1072,6 +1097,7 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				di->fast_chg_ing = false;
 				notify_check_usb_suspend(true, false);
 				oneplus_notify_pmic_check_charger_present();
+				op_switch_normal_set();
 				__pm_relax(&di->fastchg_wake_lock);
 			}
 			break;
@@ -1346,6 +1372,18 @@ static void check_n76e_support(struct fastchg_device_info *di)
 
 }
 
+static void check_enhance_support(struct fastchg_device_info *di)
+{
+	if (true) {
+		init_enhance_dash_exist_node();
+		pr_info("enhance dash exist\n");
+	} else {
+		pr_info("enhance dash not exist\n");
+	}
+
+}
+
+
 /* @bsp 2018/09/05 FAT-4556 fix the audio heaset pop issue when shutdown*/
 static int set_mcu_reset_ahead(const char *val, const struct kernel_param *kp)
 {
@@ -1457,6 +1495,7 @@ static int dash_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	mcu_init(di);
 	check_n76e_support(di);
+	check_enhance_support(di);
 	fastcharge_information_register(&fastcharge_information);
 	pr_info("dash_probe success\n");
 

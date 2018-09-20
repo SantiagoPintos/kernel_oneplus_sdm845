@@ -46,7 +46,7 @@ enum print_reason {
 #define TIME_1000MS 1000
 #define REDET_COUTNT 1
 #define APSD_CHECK_COUTNT 15
-#define DASH_CHECK_COUNT 4
+#define DASH_CHECK_COUNT 40
 #define BOOST_BACK_COUNT 2
 #define TIME_200MS 200
 #define TIME_100MS 100
@@ -279,6 +279,7 @@ struct smb_charger {
 	int			smb_version;
 	int			otg_delay_ms;
 	int			*weak_chg_icl_ua;
+	int			ffc_count;
 
 	/* locks */
 	struct mutex		lock;
@@ -739,6 +740,9 @@ int smblib_set_prop_pr_swap_in_progress(struct smb_charger *chg,
 int smblib_stat_sw_override_cfg(struct smb_charger *chg, bool override);
 void smblib_usb_typec_change(struct smb_charger *chg);
 int smblib_toggle_stat(struct smb_charger *chg, int reset);
+int smblib_get_prop_batt_temp(struct smb_charger *chg,
+			      union power_supply_propval *val);
+
 
 int smblib_init(struct smb_charger *chg);
 int smblib_deinit(struct smb_charger *chg);

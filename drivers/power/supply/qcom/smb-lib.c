@@ -5698,7 +5698,18 @@ bool is_fastchg_allowed(struct smb_charger *chg)
 
 	return true;
 }
-
+void op_switch_normal_set(void)
+{
+	if (!g_chg)
+		return;
+	pr_info("op_switch_normal_set\n");
+	vote(g_chg->usb_icl_votable,
+		DCP_VOTER, true, 2000 * 1000);
+	vote(g_chg->fv_votable,
+		DEFAULT_VOTER, true, 4600 * 1000);
+	vote(g_chg->fcc_votable,
+		DEFAULT_VOTER, true, 1000 * 1000);
+}
 bool get_oem_charge_done_status(void)
 {
 #ifdef	CONFIG_OP_DEBUG_CHG
@@ -5739,6 +5750,7 @@ static void op_handle_usb_removal(struct smb_charger *chg)
 	chg->re_trigr_dash_done = 0;
 	chg->recovery_boost_count = 0;
 	chg->dash_check_count = 0;
+	chg->ffc_count = 0;
 	vote(chg->fcc_votable,
 	DEFAULT_VOTER, true, SDP_CURRENT_UA);
 	op_battery_temp_region_set(chg, BATT_TEMP_INVALID);
@@ -6491,6 +6503,8 @@ void set_chg_ibat_vbat_max(
 	pr_err("set ibatmax=%d and set vbatmax=%d\n",
 			ibat, vfloat);
 
+	if (get_prop_fast_switch_to_normal(chg))
+		return;
 	vote(chg->fcc_votable,
 		DEFAULT_VOTER, true, ibat * 1000);
 	vote(chg->fv_votable,
@@ -7137,6 +7151,18 @@ static bool op_check_vbat_is_full_by_sw(struct smb_charger *chg)
 
 	batt_volt = get_prop_batt_voltage_now(chg) / 1000;
 	icharging = get_prop_batt_current_now(chg) / 1000;
+
+	if (get_prop_fast_switch_to_normal(chg)) {
+		if (icharging > -600 && icharging < 0 && batt_volt > 4400)
+			vbat_counts_sw++;
+		else
+			vbat_counts_sw = 0;
+		if (vbat_counts_sw >= 3) {
+			vbat_counts_sw = 0;
+			return true;
+		}
+		return false;
+	}
 	/* use SW Vfloat to check */
 	if (batt_volt > vbatt_full_vol_sw) {
 		if (icharging < 0 && (icharging * -1) <= chg->sw_iterm_ma) {
@@ -7590,6 +7616,19 @@ static void op_heartbeat_work(struct work_struct *work)
 		} else if (vbat_mv < 4180 - 10
 		&& !chg->temp_littel_cool_set_current) {
 			chg->is_power_changed = true;
+		}
+	}
+	if (get_prop_fast_switch_to_normal(chg)) {
+		if (vbat_mv >= 4430)
+			chg->ffc_count++;
+		else
+			chg->ffc_count = 0;
+		if (chg->ffc_count > 2) {
+			chg->ffc_count = 0;
+			vote(g_chg->fv_votable,
+				DEFAULT_VOTER, true, 4430 * 1000);
+			vote(g_chg->fcc_votable,
+				DEFAULT_VOTER, true, 700 * 1000);
 		}
 	}
 
