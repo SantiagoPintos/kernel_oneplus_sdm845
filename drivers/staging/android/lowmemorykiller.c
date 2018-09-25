@@ -486,7 +486,7 @@ static int time_measure = 1;
 module_param(time_measure, int, 0644);
 MODULE_PARM_DESC(time_measure, "lowmemorykiller select task time measurement");
 
-static bool trust_adj_chain = true;
+static bool trust_adj_chain = false;
 module_param(trust_adj_chain, bool, 0644);
 MODULE_PARM_DESC(trust_adj_chain, "lowmemorykiller trust adj chain to select task only from adj chain");
 
@@ -526,6 +526,7 @@ struct batch_kill_wrapper {
 	struct task_struct* selected;
 	int selected_tasksize;
 	short selected_oom_score_adj;
+	short min_score_adj;
 	u32 bklv;
 	u32 missed;
 	u32 scan;
@@ -646,8 +647,8 @@ static inline void lmk_stat_analysis(ktime_t begin, ktime_t end, s64 t,
 {
 	int i;
 
-	lowmem_print(1, "measure: analysis group: %s, begin: %lld, end: %lld, cost: %lldus, scan: %d\n",
-		lmk_tags[g], ktime_to_us(begin), ktime_to_us(end), t, bkws[0].scan);
+	lowmem_print(1, "measure: analysis group: %s, begin: %lld, end: %lld, cost: %lldus, scan: %d, min_adj: %hd\n",
+		lmk_tags[g], ktime_to_us(begin), ktime_to_us(end), t, bkws[0].scan, bkws[0].min_score_adj);
 
 	if (!quick_select) {
 		/* original selection measure */
@@ -729,8 +730,8 @@ static void time_measure_marker(enum measure_marker m, struct task_struct *tsk, 
 		}
 
 		/* record searching time longer than 1.6 ms or 12.8 ms depends on quick select enable or not */
-		if (t >= lmk_t_delim[LMK_STAT_TIME_LV - (quick_select? 5: 2)])
-			lmk_stat_analysis(begin, end, t, g, tsk, bkws);
+		//if (t >= lmk_t_delim[LMK_STAT_TIME_LV - (quick_select? 5: 2)])
+		lmk_stat_analysis(begin, end, t, g, tsk, bkws);
 
 		lmk_stat_update(t, g, bkws);
 		lmk_stat_update(t, LMK_TOTAL, bkws);
@@ -1090,6 +1091,9 @@ selftest_bypass:
 	rcu_read_lock();
 
 #ifdef VENDOR_EDIT
+	/* record for each time lmk scan's min_score_adj */
+	bkws[0].min_score_adj = min_score_adj;
+
 	/* marker for select begin */
 	time_measure_marker(MEASURE_START_MARKER, NULL, NULL);
 
