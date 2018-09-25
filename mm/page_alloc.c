@@ -4470,6 +4470,9 @@ void show_free_areas(unsigned int filter)
 		global_page_state(NR_FREE_PAGES),
 		free_pcp,
 		global_page_state(NR_FREE_CMA_PAGES));
+#ifdef VENDOR_EDIT
+	printk(" ramboost:%lu\n", global_page_state(NR_ZONE_UID_LRU));
+#endif
 
 	for_each_online_pgdat(pgdat) {
 		printk("Node %d"
@@ -4538,6 +4541,9 @@ void show_free_areas(unsigned int filter)
 			" inactive_anon:%lukB"
 			" active_file:%lukB"
 			" inactive_file:%lukB"
+#ifdef VENDOR_EDIT
+			" ramboost:%lukB"
+#endif
 			" unevictable:%lukB"
 			" writepending:%lukB"
 			" present:%lukB"
@@ -4561,6 +4567,9 @@ void show_free_areas(unsigned int filter)
 			K(zone_page_state(zone, NR_ZONE_INACTIVE_ANON)),
 			K(zone_page_state(zone, NR_ZONE_ACTIVE_FILE)),
 			K(zone_page_state(zone, NR_ZONE_INACTIVE_FILE)),
+#ifdef VENDOR_EDIT
+			K(zone_page_state(zone, NR_ZONE_UID_LRU)),
+#endif
 			K(zone_page_state(zone, NR_ZONE_UNEVICTABLE)),
 			K(zone_page_state(zone, NR_ZONE_WRITE_PENDING)),
 			K(zone->present_pages),
