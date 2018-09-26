@@ -5667,6 +5667,13 @@ static bool get_prop_fast_switch_to_normal(struct smb_charger *chg)
 	pr_err("no fast_charger register found\n");
 	return false;
 }
+static bool get_prop_is_enhance_dash(void)
+{
+	if (fast_charger && fast_charger->is_enhance_dash)
+		return fast_charger->is_enhance_dash();
+	pr_err("no fast_charger register found\n");
+	return false;
+}
 
 bool is_fastchg_allowed(struct smb_charger *chg)
 {
@@ -6503,7 +6510,8 @@ void set_chg_ibat_vbat_max(
 	pr_err("set ibatmax=%d and set vbatmax=%d\n",
 			ibat, vfloat);
 
-	if (get_prop_fast_switch_to_normal(chg))
+	if (get_prop_fast_switch_to_normal(chg)
+		&& get_prop_is_enhance_dash())
 		return;
 	vote(chg->fcc_votable,
 		DEFAULT_VOTER, true, ibat * 1000);
@@ -7152,13 +7160,15 @@ static bool op_check_vbat_is_full_by_sw(struct smb_charger *chg)
 	batt_volt = get_prop_batt_voltage_now(chg) / 1000;
 	icharging = get_prop_batt_current_now(chg) / 1000;
 
-	if (get_prop_fast_switch_to_normal(chg)) {
-		if (icharging > -600 && icharging < 0 && batt_volt > 4400)
+	if (get_prop_fast_switch_to_normal(chg)
+		&& get_prop_is_enhance_dash()) {
+		if (batt_volt > 4430)
 			vbat_counts_sw++;
 		else
 			vbat_counts_sw = 0;
 		if (vbat_counts_sw >= 3) {
 			vbat_counts_sw = 0;
+			pr_info("ffc chg done\n");
 			return true;
 		}
 		return false;
@@ -7553,7 +7563,7 @@ static void op_heartbeat_work(struct work_struct *work)
 	bool fast_charging = 0;
 	static int vbat_mv;
 	union power_supply_propval vbus_val;
-	int rc;
+	int rc, temp;
 
 #ifdef VENDOR_EDIT
 /*yangfb@bsp, 20181023 icl set 1A if battery lower than 15%*/
@@ -7618,7 +7628,8 @@ static void op_heartbeat_work(struct work_struct *work)
 			chg->is_power_changed = true;
 		}
 	}
-	if (get_prop_fast_switch_to_normal(chg)) {
+	if (get_prop_fast_switch_to_normal(chg)
+		&& get_prop_is_enhance_dash()) {
 		if (vbat_mv >= 4430)
 			chg->ffc_count++;
 		else
@@ -7626,9 +7637,14 @@ static void op_heartbeat_work(struct work_struct *work)
 		if (chg->ffc_count > 2) {
 			chg->ffc_count = 0;
 			vote(g_chg->fv_votable,
-				DEFAULT_VOTER, true, 4430 * 1000);
-			vote(g_chg->fcc_votable,
-				DEFAULT_VOTER, true, 700 * 1000);
+				DEFAULT_VOTER, true, 4500 * 1000);
+				temp = get_prop_batt_temp(chg);
+			if (temp < 350)
+				vote(g_chg->fcc_votable,
+					DEFAULT_VOTER, true, 650 * 1000);
+			else
+				vote(g_chg->fcc_votable,
+					DEFAULT_VOTER, true, 750 * 1000);
 		}
 	}
 

@@ -55,6 +55,7 @@ struct external_battery_gauge {
 	int (*fast_normal_to_warm)(void);
 	int (*set_normal_to_warm_false)(void);
 	int (*get_adapter_update)(void);
+	bool (*is_enhance_dash)(void);
 	bool (*get_fast_chg_ing)(void);
 	bool (*get_fast_low_temp_full)(void);
 	int (*set_low_temp_full_false)(void);
