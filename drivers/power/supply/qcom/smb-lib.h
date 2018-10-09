@@ -394,6 +394,12 @@ struct smb_charger {
 	int				BATT_TEMP_T4;
 	int				BATT_TEMP_T5;
 	int				BATT_TEMP_T6;
+	int				FFC_TEMP_T1;
+	int				FFC_TEMP_T2;
+	int				FFC_TEMP_T3;
+	int				FFC_NORMAL_CUTOFF;
+	int				FFC_WARM_CUTOFF;
+	int				FFC_VBAT_FULL;
 	int				batt_health;
 	int				ibatmax[TEMP_REGION_MAX];
 	int				vbatmax[TEMP_REGION_MAX];
@@ -445,6 +451,7 @@ struct smb_charger {
 	bool				is_aging_test;
 	bool				revert_boost_trigger;
 	bool				check_batt_full_by_sw;
+	bool				ffc_status;
 	enum temp_region_type		mBattTempRegion;
 	enum batt_status_type		battery_status;
 	short				mBattTempBoundT0;

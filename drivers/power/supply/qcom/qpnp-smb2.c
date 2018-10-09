@@ -337,7 +337,19 @@ static int smb2_parse_dt(struct smb2 *chip)
 			chg->BATT_TEMP_T5, rc, 1);
 	OF_PROP_READ(node, "hot-bat-decidegc",
 			chg->BATT_TEMP_T6, rc, 1);
-
+	/*read ffc param*/
+	OF_PROP_READ(node, "ffc-pre-normal-decidegc",
+			chg->FFC_TEMP_T1, rc, 1);
+	OF_PROP_READ(node, "ffc-normal-decidegc",
+		chg->FFC_TEMP_T2, rc, 1);
+	OF_PROP_READ(node, "ffc-warm-decidegc",
+		chg->FFC_TEMP_T3, rc, 1);
+	OF_PROP_READ(node, "ffc-normal-cutoff-ma",
+		chg->FFC_NORMAL_CUTOFF, rc, 1);
+	OF_PROP_READ(node, "ffc-warm-cutoff-ma",
+		chg->FFC_WARM_CUTOFF, rc, 1);
+	OF_PROP_READ(node, "ffc-full-vbat-mv",
+		chg->FFC_VBAT_FULL, rc, 1);
 #ifdef VENDOR_EDIT
 /*yangfb@bsp, 20181023 icl set 1A if battery lower than 15%*/
 	chg->OTG_ICL_CTRL = of_property_read_bool(node,
@@ -359,6 +371,13 @@ static int smb2_parse_dt(struct smb2 *chip)
 		chg->OTG_LOW_BAT,
 		chg->OTG_LOW_BAT_ICL,
 		chg->OTG_NORMAL_BAT_ICL);
+	pr_info("q1:%d,q2:%d,q3:%d,NORMAL_CUTOFF:%d,warm:%d,FULL=%d\n",
+		chg->FFC_TEMP_T1,
+		chg->FFC_TEMP_T2,
+		chg->FFC_TEMP_T3,
+		chg->FFC_NORMAL_CUTOFF,
+		chg->FFC_WARM_CUTOFF,
+		chg->FFC_VBAT_FULL);
 #endif
 #ifdef VENDOR_EDIT
 	chg->plug_irq = of_get_named_gpio_flags(node,

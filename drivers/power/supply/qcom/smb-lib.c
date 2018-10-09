@@ -5705,17 +5705,29 @@ bool is_fastchg_allowed(struct smb_charger *chg)
 
 	return true;
 }
+
 void op_switch_normal_set(void)
 {
+	int temp;
+
 	if (!g_chg)
 		return;
 	pr_info("op_switch_normal_set\n");
 	vote(g_chg->usb_icl_votable,
 		DCP_VOTER, true, 2000 * 1000);
 	vote(g_chg->fv_votable,
-		DEFAULT_VOTER, true, 4600 * 1000);
-	vote(g_chg->fcc_votable,
-		DEFAULT_VOTER, true, 1000 * 1000);
+		DEFAULT_VOTER, true, 4500 * 1000);
+
+	temp = get_prop_batt_temp(g_chg);
+	if (temp > g_chg->FFC_TEMP_T1 && temp < g_chg->FFC_TEMP_T2) {
+		g_chg->ffc_status = true;
+		vote(g_chg->fcc_votable,
+			DEFAULT_VOTER, true, 650 * 1000);
+	} else if (temp >= g_chg->FFC_TEMP_T2 && temp < g_chg->FFC_TEMP_T3) {
+		g_chg->ffc_status = true;
+		vote(g_chg->fcc_votable,
+			DEFAULT_VOTER, true, 750 * 1000);
+	}
 }
 bool get_oem_charge_done_status(void)
 {
@@ -5748,6 +5760,7 @@ static void op_handle_usb_removal(struct smb_charger *chg)
 	chg->usb_type_redet_done = false;
 	chg->boot_usb_present = false;
 	chg->revert_boost_trigger = false;
+	chg->ffc_status = false;
 	chg->non_stand_chg_current = 0;
 	chg->non_stand_chg_count = 0;
 	chg->redet_count = 0;
@@ -7122,7 +7135,7 @@ static bool op_check_vbat_is_full_by_sw(struct smb_charger *chg)
 	static int vbat_counts_hw = 0;
 	int vbatt_full_vol_sw;
 	int vbatt_full_vol_hw;
-	int tbatt_status, icharging, batt_volt;
+	int tbatt_status, icharging, batt_volt, temp;
 
 	if (!chg->check_batt_full_by_sw)
 		return false;
@@ -7159,14 +7172,30 @@ static bool op_check_vbat_is_full_by_sw(struct smb_charger *chg)
 
 	batt_volt = get_prop_batt_voltage_now(chg) / 1000;
 	icharging = get_prop_batt_current_now(chg) / 1000;
+	temp = get_prop_batt_temp(chg);
 
 	if (get_prop_fast_switch_to_normal(chg)
-		&& get_prop_is_enhance_dash()) {
-		if (batt_volt > 4430)
-			vbat_counts_sw++;
-		else
-			vbat_counts_sw = 0;
-		if (vbat_counts_sw >= 3) {
+		&& get_prop_is_enhance_dash()
+		&& chg->ffc_status) {
+			if (temp > chg->FFC_TEMP_T1
+				&& temp < chg->FFC_TEMP_T2 && batt_volt >= chg->FFC_VBAT_FULL) {
+				if ((icharging <= (-1)*chg->FFC_NORMAL_CUTOFF))
+					return true;
+				else if (icharging > (-1)*chg->FFC_NORMAL_CUTOFF)
+					vbat_counts_sw++;
+				else
+					vbat_counts_sw = 0;
+			} else if (temp >= chg->FFC_TEMP_T2
+				&& temp < chg->FFC_TEMP_T3 && batt_volt >= chg->FFC_VBAT_FULL) {
+				if (icharging <= (-1)*chg->FFC_WARM_CUTOFF)
+					return true;
+				else if (icharging > (-1)*chg->FFC_WARM_CUTOFF)
+					vbat_counts_sw++;
+				else
+					vbat_counts_sw = 0;
+			} else
+				vbat_counts_sw = 0;
+		if (vbat_counts_sw >= 2) {
 			vbat_counts_sw = 0;
 			pr_info("ffc chg done\n");
 			return true;
