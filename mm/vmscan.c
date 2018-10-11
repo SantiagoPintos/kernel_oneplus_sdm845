@@ -61,6 +61,7 @@
 
 #ifdef VENDOR_EDIT
 int sysctl_page_cache_reside_switch;
+int sysctl_page_cache_reside_max = 153600; //600M
 unsigned long inactive_nr, active_nr;
 unsigned long vmpress[5];
 unsigned long priority_nr[3];

@@ -937,6 +937,9 @@ static unsigned long lowmem_batch_kill(
 			lowmem_print(1, "batch Killing '%s' (%d) (tgid %d), adj %hd,\n"
 					"to free %ldkB on behalf of '%s' (%d) because\n"
 					"cache %ldkB is below limit %ldkB for oom score %hd\n"
+#ifdef VENDOR_EDIT
+					"uid_lru_list size %ld pages\n"
+#endif
 					"Free memory is %ldkB above reserved.\n"
 					"Free CMA is %ldkB\n"
 					"Total reserve is %ldkB\n"
@@ -951,6 +954,9 @@ static unsigned long lowmem_batch_kill(
 					current->comm, current->pid,
 					cache_size, cache_limit,
 					min_score_adj,
+#ifdef VENDOR_EDIT
+					uid_lru_size(),
+#endif
 					free,
 					global_page_state(NR_FREE_CMA_PAGES) *
 					(long)(PAGE_SIZE / 1024),
@@ -1322,6 +1328,9 @@ quick_select_fast:
 		lowmem_print(1, "Killing '%s' (%d) (tgid %d), adj %hd,\n"
 			"to free %ldkB on behalf of '%s' (%d) because\n"
 			"cache %ldkB is below limit %ldkB for oom score %hd\n"
+#ifdef VENDOR_EDIT
+			"uid_lru_list size %ld pages\n"
+#endif
 			"Free memory is %ldkB above reserved.\n"
 			"Free CMA is %ldkB\n"
 			"Total reserve is %ldkB\n"
@@ -1336,6 +1345,9 @@ quick_select_fast:
 			current->comm, current->pid,
 			cache_size, cache_limit,
 			min_score_adj,
+#ifdef VENDOR_EDIT
+			uid_lru_size(),
+#endif
 			free,
 			global_page_state(NR_FREE_CMA_PAGES) *
 			(long)(PAGE_SIZE / 1024),
