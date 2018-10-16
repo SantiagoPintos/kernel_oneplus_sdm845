@@ -618,6 +618,22 @@ int __init init_project_info(void)
         snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
         project_info_desc->project_name, "PVT");
         break;
+    case 42:
+        snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
+        project_info_desc->project_name, "PVT2nd");
+        break;
+    case 43:
+        snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
+        project_info_desc->project_name, "PVT-1");
+        break;
+    case 44:
+        snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
+        project_info_desc->project_name, "PVTSpec");
+        break;
+    case 45:
+        snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
+        project_info_desc->project_name, "MPSpec");
+        break;
     case 55:
         snprintf(mainboard_version, sizeof(mainboard_version), "%s %s",
         project_info_desc->project_name, "DVTUSB30");
