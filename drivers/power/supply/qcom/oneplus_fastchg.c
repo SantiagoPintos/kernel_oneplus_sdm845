@@ -51,6 +51,7 @@ struct fastchg_device_info {
 	bool fast_chg_allow;
 	bool firmware_already_updated;
 	bool n76e_present;
+	bool is_mcl_verion;
 	int mcu_reset_ahead;
 	int erase_count;
 	int addr_low;
@@ -1284,6 +1285,8 @@ static int dash_parse_dt(struct fastchg_device_info *di)
 			"microchip,mcu-en-gpio", 0, &flags);
 	di->n76e_present = of_property_read_bool(dev_node,
 			"op,n76e_support");
+	di->is_mcl_verion = of_property_read_bool(dev_node,
+		"op,mcl_verion");
 	rc = of_property_read_u32(dev_node,
 			"op,fw-erase-count", &di->erase_count);
 	if (rc < 0)
@@ -1427,7 +1430,7 @@ static void check_n76e_support(struct fastchg_device_info *di)
 
 static void check_enhance_support(struct fastchg_device_info *di)
 {
-	if (true) {
+	if (di->is_mcl_verion) {
 		init_enhance_dash_exist_node();
 		pr_info("enhance dash exist\n");
 	} else {
