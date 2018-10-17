@@ -1701,11 +1701,8 @@ static struct msm_dir_conn sdm845_dir_conn[] = {
 	{39, 526},
 	{40, 527},
 	{41, 630},
-#ifndef VENDOR_EDIT
-/* david.liu@bsp, 20171215 Fix dash charging */
 	{43, 529},
 	{44, 530},
-#endif
 	{46, 531},
 	{48, 532},
 	{49, 633 },
