@@ -88,6 +88,13 @@ enum temp_region_type {
 	BATT_TEMP_HOT,
 	BATT_TEMP_INVALID,
 };
+enum ffc_step {
+	FFC_DEFAULT = 0,
+	FFC_FAST,
+	FFC_TAPER,
+	FFC_NOR_TAPER,
+	FFC_WARM_TAPER,
+};
 
 enum batt_status_type {
 	BATT_STATUS_GOOD,

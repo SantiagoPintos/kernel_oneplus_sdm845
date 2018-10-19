@@ -344,12 +344,20 @@ static int smb2_parse_dt(struct smb2 *chip)
 		chg->FFC_TEMP_T2, rc, 1);
 	OF_PROP_READ(node, "ffc-warm-decidegc",
 		chg->FFC_TEMP_T3, rc, 1);
+	OF_PROP_READ(node, "ffc-normal-fcc-ma",
+		chg->FFC_NOR_FCC, rc, 1);
+	OF_PROP_READ(node, "ffc-warm-fcc-ma",
+		chg->FFC_WARM_FCC, rc, 1);
 	OF_PROP_READ(node, "ffc-normal-cutoff-ma",
 		chg->FFC_NORMAL_CUTOFF, rc, 1);
 	OF_PROP_READ(node, "ffc-warm-cutoff-ma",
 		chg->FFC_WARM_CUTOFF, rc, 1);
 	OF_PROP_READ(node, "ffc-full-vbat-mv",
 		chg->FFC_VBAT_FULL, rc, 1);
+	pr_info("T1:%d, T2:%d, T3:%d, fcc1:%d, fcc1:%d, cut1:%d, cut2:%d,full:%d\n",
+		chg->FFC_TEMP_T1, chg->FFC_TEMP_T2, chg->FFC_TEMP_T3,
+		chg->FFC_NOR_FCC, chg->FFC_WARM_FCC, chg->FFC_NORMAL_CUTOFF,
+		chg->FFC_WARM_CUTOFF, chg->FFC_VBAT_FULL);
 #ifdef VENDOR_EDIT
 /*yangfb@bsp, 20181023 icl set 1A if battery lower than 15%*/
 	chg->OTG_ICL_CTRL = of_property_read_bool(node,
