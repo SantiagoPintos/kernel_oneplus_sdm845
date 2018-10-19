@@ -1775,6 +1775,12 @@ struct task_struct {
 	int compensate_time;
 	int compensate_need;
 #endif
+	unsigned int inode_index_disabled;
+
+#ifdef VENDOR_EDIT //xiaoxiaohuan add for fd leak debug
+	bool dump_fd_leak;
+#endif
+
 #ifdef CONFIG_SMP
 	struct llist_node wake_entry;
 	int on_cpu;

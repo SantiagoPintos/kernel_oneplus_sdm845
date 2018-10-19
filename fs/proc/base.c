@@ -1785,6 +1785,66 @@ static int proc_exe_link(struct dentry *dentry, struct path *exe_path)
 		return -ENOENT;
 }
 
+
+static ssize_t inode_index_disabled_read(struct file *file, char __user *buf,
+				size_t count, loff_t *ppos)
+{
+	struct task_struct *task = get_proc_task(file_inode(file));
+	char buffer[PROC_NUMBUF];
+	size_t len;
+	int page_hot_count;
+
+	if (!task)
+		return -ESRCH;
+
+	page_hot_count = task->inode_index_disabled;
+
+	put_task_struct(task);
+
+	len = snprintf(buffer, sizeof(buffer), "%d\n", page_hot_count);
+	return simple_read_from_buffer(buf, count, ppos, buffer, len);
+}
+
+static ssize_t inode_index_disabled_write(struct file *file,
+	const char __user *buf, size_t count, loff_t *ppos)
+{
+	struct task_struct *task;
+	char buffer[PROC_NUMBUF];
+	int inode_index_disabled;
+	int err;
+
+	memset(buffer, 0, sizeof(buffer));
+
+	if (count > sizeof(buffer) - 1)
+		count = sizeof(buffer) - 1;
+	if (copy_from_user(buffer, buf, count)) {
+		err = -EFAULT;
+		goto out;
+	}
+
+	err = kstrtoint(strstrip(buffer), 0, &inode_index_disabled);
+	if (err)
+		goto out;
+
+	task = get_proc_task(file_inode(file));
+	if (!task) {
+		err = -ESRCH;
+		goto out;
+	}
+
+	task->inode_index_disabled = inode_index_disabled;
+
+	put_task_struct(task);
+
+out:
+	return err < 0 ? err : count;
+}
+
+static const struct file_operations proc_inode_index_disabled_operations = {
+	.read		= inode_index_disabled_read,
+	.write		= inode_index_disabled_write,
+};
+
 static const char *proc_pid_get_link(struct dentry *dentry,
 				     struct inode *inode,
 				     struct delayed_call *done)
@@ -3311,6 +3371,7 @@ static const struct pid_entry tgid_base_stuff[] = {
 #ifdef VENDOR_EDIT
 	REG("page_hot_count", 0666, proc_page_hot_count_operations),
 #endif
+	REG("inode_index_disabled", 0666, proc_inode_index_disabled_operations),
 #ifdef CONFIG_CPU_FREQ_TIMES
 	ONE("time_in_state", 0444, proc_time_in_state_show),
 #endif
