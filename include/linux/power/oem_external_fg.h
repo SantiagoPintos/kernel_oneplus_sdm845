@@ -94,6 +94,7 @@ enum ffc_step {
 	FFC_TAPER,
 	FFC_NOR_TAPER,
 	FFC_WARM_TAPER,
+	FFC_IDLE,
 };
 
 enum batt_status_type {

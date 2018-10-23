@@ -7132,8 +7132,10 @@ static void ffc_exit(struct smb_charger *chg) {
 			chg->ffc_status = FFC_WARM_TAPER;
 			vote(g_chg->fcc_votable,
 				DEFAULT_VOTER, true, chg->FFC_WARM_FCC * 1000);
-		} else
-			chg->ffc_status = FFC_DEFAULT;
+		} else {
+			chg->ffc_count = 0;
+			chg->ffc_status = FFC_IDLE;
+		}
 	}
 
 	if (chg->ffc_status == FFC_FAST) {
@@ -7157,37 +7159,48 @@ static void ffc_exit(struct smb_charger *chg) {
 				chg->ffc_status = FFC_WARM_TAPER;
 				vote(g_chg->fcc_votable,
 					DEFAULT_VOTER, true, chg->FFC_WARM_FCC * 1000);
-			} else
-				chg->ffc_status = FFC_DEFAULT;
+			} else {
+				chg->ffc_count = 0;
+				chg->ffc_status = FFC_IDLE;
+			}
 	} else if (chg->ffc_status == FFC_NOR_TAPER) {
 			if (icharging <= (-1)*chg->FFC_NORMAL_CUTOFF
-				&& (batt_volt >= chg->FFC_VBAT_FULL))
-					chg->ffc_status = FFC_DEFAULT;
-			else if (icharging > (-1)*chg->FFC_NORMAL_CUTOFF)
+				&& (batt_volt >= chg->FFC_VBAT_FULL)) {
+					chg->ffc_count = 0;
+					chg->ffc_status = FFC_IDLE;
+			} else if (icharging > (-1)*chg->FFC_NORMAL_CUTOFF)
 				chg->ffc_count++;
 			else
 				chg->ffc_count = 0;
 			if (chg->ffc_count >= 2) {
 				chg->ffc_count = 0;
-				chg->ffc_status = FFC_DEFAULT;
+				chg->ffc_status = FFC_IDLE;
 				pr_info("ffc nor taper done\n");
 			}
 	} else if (chg->ffc_status == FFC_WARM_TAPER) {
 			if (icharging <= (-1)*chg->FFC_WARM_CUTOFF
-				&& (batt_volt >= chg->FFC_VBAT_FULL))
-					chg->ffc_status = FFC_DEFAULT;
-			else if (icharging > (-1)*chg->FFC_WARM_CUTOFF)
+				&& (batt_volt >= chg->FFC_VBAT_FULL)) {
+					chg->ffc_count = 0;
+					chg->ffc_status = FFC_IDLE;
+			} else if (icharging > (-1)*chg->FFC_WARM_CUTOFF)
 				chg->ffc_count++;
 			else
 				chg->ffc_count = 0;
 			if (chg->ffc_count >= 2) {
 				chg->ffc_count = 0;
-				chg->ffc_status = FFC_DEFAULT;
+				chg->ffc_status = FFC_IDLE;
 				pr_info("ffc normal taper done\n");
 			}
+	} else if (chg->ffc_status == FFC_IDLE) {
+		chg->ffc_count++;
+		op_charging_en(chg, false);
+		if (chg->ffc_count >= 2) {
+			smblib_set_prop_charge_parameter_set(chg);
+			chg->ffc_status = FFC_DEFAULT;
+		}
 	} else {
-		chg->ffc_count = 0;
-		chg->ffc_status = FFC_DEFAULT;
+			chg->ffc_count = 0;
+			chg->ffc_status = FFC_DEFAULT;
 	}
 }
 

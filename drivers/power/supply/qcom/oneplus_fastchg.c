@@ -1151,8 +1151,9 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				di->fast_chg_ing = false;
 				notify_check_usb_suspend(true, false);
 				oneplus_notify_pmic_check_charger_present();
-				op_switch_normal_set();
 				__pm_relax(&di->fastchg_wake_lock);
+			} else if (arg == DASH_NOTIFY_NORMAL_TEMP_FULL + 3) {
+				op_switch_normal_set();
 			}
 			break;
 		case DASH_NOTIFY_TEMP_OVER:
