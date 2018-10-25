@@ -7194,9 +7194,10 @@ static void ffc_exit(struct smb_charger *chg) {
 	} else if (chg->ffc_status == FFC_IDLE) {
 		chg->ffc_count++;
 		op_charging_en(chg, false);
-		if (chg->ffc_count >= 2) {
-			smblib_set_prop_charge_parameter_set(chg);
+		if (chg->ffc_count > 2) {
 			chg->ffc_status = FFC_DEFAULT;
+			smblib_set_prop_charge_parameter_set(chg);
+			op_charging_en(chg, true);
 		}
 	} else {
 			chg->ffc_count = 0;
