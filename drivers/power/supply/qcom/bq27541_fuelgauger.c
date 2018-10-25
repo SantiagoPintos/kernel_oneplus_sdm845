@@ -155,7 +155,7 @@
 #define BQ27541_SUBCMD_RESET     0x0041
 #define ZERO_DEGREE_CELSIUS_IN_TENTH_KELVIN   (-2731)
 #define BQ27541_INIT_DELAY   ((HZ)*1)
-#define SET_BQ_PARAM_DELAY_MS 3000
+#define SET_BQ_PARAM_DELAY_MS 600
 
 
 /* Bq27411 sub commands */
@@ -274,6 +274,12 @@ struct update_pre_capacity_data {
 };
 static struct update_pre_capacity_data update_pre_capacity_data;
 #endif
+
+static int __debug_temp_mask;
+module_param_named(
+	debug_temp_mask, __debug_temp_mask, int, 0600
+);
+
 static void bq27411_modify_soc_smooth_parameter(
 	struct bq27541_device_info *di, bool is_powerup);
 
@@ -987,6 +993,8 @@ static int bq27541_get_battery_temperature(void)
 	static unsigned long pre_time;
 	unsigned long current_time, time_last;
 
+	if (__debug_temp_mask)
+			return __debug_temp_mask;
 	if (bq27541_di->is_mcl_verion
 		&& bq27541_di->already_modify_smooth) {
 		if (!battery_is_match())
