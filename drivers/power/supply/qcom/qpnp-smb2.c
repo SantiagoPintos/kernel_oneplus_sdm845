@@ -306,7 +306,10 @@ static int smb2_parse_dt(struct smb2 *chip)
 			chg->vbatmax[BATT_TEMP_NORMAL], rc, 1);
 	OF_PROP_READ(node, "vbatmax-warm-mv",
 			chg->vbatmax[BATT_TEMP_WARM], rc, 1);
-
+	OF_PROP_READ(node, "little-cool-vbat-thr-mv",
+			chg->temp_littel_cool_voltage, rc, 1);
+	if (rc < 0)
+		chg->temp_littel_cool_voltage = 4180;
 	/* read vbatdet setting for different temp regions */
 	OF_PROP_READ(node, "vbatdet-little-cold-mv",
 			chg->vbatdet[BATT_TEMP_LITTLE_COLD], rc, 1);

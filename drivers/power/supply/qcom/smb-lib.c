@@ -6655,7 +6655,7 @@ static int handle_batt_temp_little_cool(struct smb_charger *chg)
 			op_charging_en(chg, true);
 
 		vbat_mv = get_prop_batt_voltage_now(chg) / 1000;
-		if (vbat_mv > 4180) {
+		if (vbat_mv > chg->temp_littel_cool_voltage) {
 			set_chg_ibat_vbat_max(chg, 450,
 					chg->vbatmax[BATT_TEMP_LITTLE_COOL]);
 			chg->temp_littel_cool_set_current = false;
@@ -7700,10 +7700,10 @@ static void op_heartbeat_work(struct work_struct *work)
 	vbat_mv = get_prop_batt_voltage_now(chg) / 1000;
 	temp_region = op_battery_temp_region_get(chg);
 	if (temp_region == BATT_TEMP_LITTLE_COOL) {
-		if (vbat_mv > 4180 + 20
+		if (vbat_mv > chg->temp_littel_cool_voltage + 40
 		&& chg->temp_littel_cool_set_current) {
 			chg->is_power_changed = true;
-		} else if (vbat_mv < 4180 - 10
+		} else if (vbat_mv < chg->temp_littel_cool_voltage - 40
 		&& !chg->temp_littel_cool_set_current) {
 			chg->is_power_changed = true;
 		}

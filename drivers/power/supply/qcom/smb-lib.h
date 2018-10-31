@@ -406,6 +406,7 @@ struct smb_charger {
 	int				ibatmax[TEMP_REGION_MAX];
 	int				vbatmax[TEMP_REGION_MAX];
 	int				vbatdet[TEMP_REGION_MAX];
+	int				temp_littel_cool_voltage;
 	int				fake_chgvol;
 	int				fake_temp;
 	int				fake_protect_sts;
