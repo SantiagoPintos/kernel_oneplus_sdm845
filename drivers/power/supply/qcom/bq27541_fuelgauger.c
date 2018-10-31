@@ -181,6 +181,8 @@
 
 #define BQ27541_BQ27411_CMD_INVALID			0xFF
 #define BQ27411_OVER_TEMP           0x6c02
+#define BQ27411_MCL_DF           0xBD
+
 
 #define ERROR_SOC  33
 #define ERROR_BATT_VOL  (3800 * 1000)
@@ -256,6 +258,7 @@ struct bq27541_device_info {
 	bool modify_soc_smooth;
 	bool already_modify_smooth;
 	bool is_mcl_verion;
+	bool df_ver_match;
 #endif
 };
 
@@ -419,6 +422,24 @@ static int bq27541_i2c_txsubcmd(u8 reg, unsigned short subcmd,
 		return -EIO;
 
 	return 0;
+}
+
+static bool check_df_version(struct bq27541_device_info *di)
+{
+	int df;
+	bool ret;
+
+	if (di->device_type == DEVICE_BQ27541)
+		return true;
+	bq27541_cntl_cmd(di, BQ27541_SUBCMD_DF_CSUM);
+	udelay(66);
+	bq27541_read(BQ27541_REG_CNTL, &df, 0, di);
+	pr_info("DEVICE DF:%d\n", df);
+	if (df == BQ27411_MCL_DF)
+		ret = true;
+	else
+		ret = false;
+	return ret;
 }
 
 static int bq27541_chip_config(struct bq27541_device_info *di)
@@ -956,6 +977,10 @@ static int bq27541_get_batt_bq_soc(void)
 
 static bool battery_is_match(void)
 {
+	if (bq27541_di->device_type == DEVICE_BQ27541)
+		return true;
+	if (bq27541_di->df_ver_match)
+		return true;
 	if (bq27541_di->get_over_temp == BQ27411_OVER_TEMP
 			&& bq27541_di->is_mcl_verion)
 		return true;
@@ -995,8 +1020,8 @@ static int bq27541_get_battery_temperature(void)
 
 	if (__debug_temp_mask)
 			return __debug_temp_mask;
-	if (bq27541_di->is_mcl_verion
-		&& bq27541_di->already_modify_smooth) {
+	if (bq27541_di->df_ver_match
+		|| bq27541_di->already_modify_smooth) {
 		if (!battery_is_match())
 			return SHUTDOWN_TBAT+10;
 	}
@@ -1314,6 +1339,7 @@ static void bq27541_hw_config(struct work_struct *work)
 	if (type == DEVICE_TYPE_BQ27411) {
 		di->device_type = DEVICE_BQ27411;
 		pr_info("DEVICE_BQ27411\n");
+		di->df_ver_match = check_df_version(di);
 	} else {
 		di->device_type = DEVICE_BQ27541;
 		pr_info("DEVICE_BQ27541\n");
@@ -1890,7 +1916,7 @@ static void bq27411_modify_soc_smooth_parameter(
 			return;
 		msleep(50);
 	}
-	if (di->is_mcl_verion)
+	if (di->is_mcl_verion && !di->df_ver_match)
 		di->get_over_temp = bq_get_over_temp(di);
 write_parameter:
 	rc = bq27411_write_soc_smooth_parameter(di, is_powerup);
