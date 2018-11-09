@@ -6666,7 +6666,7 @@ static int handle_batt_temp_little_cool(struct smb_charger *chg)
 
 		vbat_mv = get_prop_batt_voltage_now(chg) / 1000;
 		if (vbat_mv > chg->temp_littel_cool_voltage) {
-			set_chg_ibat_vbat_max(chg, 450,
+			set_chg_ibat_vbat_max(chg, chg->temp_littel_cool_low_current,
 					chg->vbatmax[BATT_TEMP_LITTLE_COOL]);
 			chg->temp_littel_cool_set_current = false;
 		} else {
