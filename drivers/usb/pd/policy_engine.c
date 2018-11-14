@@ -2069,23 +2069,6 @@ enable_reg:
 		usbpd_err(&pd->dev, "Unable to enable vbus (%d)\n", ret);
 	else
 		pd->vbus_enabled = true;
-
-	count = 10;
-	/*
-	 * Check to make sure VBUS voltage reaches above Vsafe5Vmin (4.75v)
-	 * before proceeding.
-	 */
-	while (count--) {
-		ret = power_supply_get_property(pd->usb_psy,
-				POWER_SUPPLY_PROP_VOLTAGE_NOW, &val);
-		if (ret || val.intval >= 4750000) /*vsafe5Vmin*/
-			break;
-		usleep_range(10000, 12000); /* Delay between two reads */
-	}
-
-	if (ret)
-		msleep(100); /* Delay to wait for VBUS ramp up if read fails */
-
 	return ret;
 }
 
