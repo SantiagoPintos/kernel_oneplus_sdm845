@@ -2359,7 +2359,10 @@ static int active_list_is_low(struct lruvec *lruvec)
 	unsigned long inactive = lruvec_lru_size(lruvec, LRU_INACTIVE_FILE, MAX_NR_ZONES);
 	unsigned long total_uid_lru_nr = uid_lru_size();
 
-	return ((active + inactive) << 1) < (total_uid_lru_nr >> 2);
+	if ((active + inactive) > 204800)
+		return ((active + inactive) << 1) < (total_uid_lru_nr >> 2);
+	else
+		return true;
 }
 
 static void shrink_uid_lru_list(struct lruvec *lruvec,
@@ -2370,7 +2373,7 @@ static void shrink_uid_lru_list(struct lruvec *lruvec,
 	unsigned long nr_reclaimed = 0, nr_isolate_failed = 0;
 	unsigned long dummy1, dummy2, dummy3, dummy4, dummy5;
 	unsigned long uid_size = uid_lru_size();
-	long nr_to_shrink = sc->nr_to_reclaim<< 1;
+	long nr_to_shrink = uid_size >> sc->priority;
 	struct hotcount_prio_node *pos;
 	struct page *page;
 

@@ -1048,16 +1048,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		array_size = lowmem_adj_size;
 	if (lowmem_minfree_size < array_size)
 		array_size = lowmem_minfree_size;
-#ifdef VENDOR_EDIT
-	for (i = 0; i < array_size; i++) {
-		minfree = lowmem_minfree[i];
-		if (other_free < minfree &&
-		    other_file < minfree + uid_lru_total) {
-			min_score_adj = lowmem_adj[i];
-			break;
-		}
-	}
-#else
+
 	for (i = 0; i < array_size; i++) {
 		minfree = lowmem_minfree[i];
 		if (other_free < minfree && other_file < minfree) {
@@ -1065,7 +1056,6 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 			break;
 		}
 	}
-#endif
 
 	ret = adjust_minadj(&min_score_adj);
 
