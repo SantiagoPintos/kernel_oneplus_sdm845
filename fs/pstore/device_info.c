@@ -9,6 +9,7 @@
 #include <soc/qcom/socinfo.h>
 
 #include <linux/pstore.h>
+#include <linux/param_rw.h>
 
 extern struct pstore_info *psinfo;
 
@@ -40,7 +41,6 @@ const char cmdline_info[MAX_ITEM][MAX_LENGTH] =
 	"androidboot.hw_version=",
 	"androidboot.rf_version=",
 	"ddr_manufacture_info=",
-	"androidboot.pcba_number=",
 };
 
 
@@ -146,9 +146,13 @@ static void __init write_device_info(const char *key, const char *value)
 
 static int __init init_device_info(void)
 {
+	char *ptr = NULL;
+
 	pstore_device_info_init();
 
 	device_info_init();
+	ptr = oem_pcba_number;
+	get_param_by_index_and_offset(0, 0x4D, ptr, 28);
 
 	write_device_info("hardware version", oem_hw_version);
 	write_device_info("rf version", oem_rf_version);
