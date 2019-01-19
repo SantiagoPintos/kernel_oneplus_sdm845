@@ -3677,6 +3677,12 @@ sub process {
 			}
 		}
 
+# avoid VENDOR_EDIT
+		if ($rawline =~ /\bVENDOR_EDIT\b/) {
+			WARN("VENDOR_EDIT",
+			     "Please remove VENDOR_EDIT before you commit it\n" . $herecurr);
+		}
+
 #
 # Checks which are anchored on the added line.
 #
@@ -3915,12 +3921,6 @@ sub process {
 #			WARN("LINUX_VERSION_CODE",
 #			     "LINUX_VERSION_CODE should be avoided, code should be for the version to which it is merged\n" . $herecurr);
 #		}
-
-# avoid VENDOR_EDIT
-		if ($line =~ /\bVENDOR_EDIT\b/) {
-			WARN("VENDOR_EDIT",
-			     "Please remove VENDOR_EDIT before you commit it\n" . $herecurr);
-		}
 
 # check for uses of printk_ratelimit
 		if ($line =~ /\bprintk_ratelimit\s*\(/) {
