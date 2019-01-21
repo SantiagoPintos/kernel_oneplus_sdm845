@@ -109,7 +109,7 @@ static void  pstore_device_info_init(void )
 }
 
 
-static void __init pstore_write_device_info(const char *s, unsigned c)
+static void pstore_write_device_info(const char *s, unsigned c)
 {
 	const char *e = s + c;
 
@@ -136,7 +136,7 @@ static void __init pstore_write_device_info(const char *s, unsigned c)
 	}
 }
 
-static void __init write_device_info(const char *key, const char *value)
+static void write_device_info(const char *key, const char *value)
 {
 	pstore_write_device_info(key, strlen(key));
 	pstore_write_device_info(": ", 2);
@@ -173,3 +173,14 @@ static int __init init_device_info(void)
 
 late_initcall(init_device_info);
 
+void save_dump_reason_to_device_info(char *reason) {
+        write_device_info("dump reason is ", reason);
+}
+
+void save_modem_dump_reason_to_device_info(char *reason) {
+        write_device_info("modem dump reason is ", reason);
+}
+
+void save_tz_dump_reason_to_device_info(char *reason) {
+        write_device_info("tz dump reason is ", reason);
+}

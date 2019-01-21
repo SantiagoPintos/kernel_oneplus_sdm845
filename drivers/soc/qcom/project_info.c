@@ -20,6 +20,7 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/machine.h>
+#include <linux/pstore.h>
 
 static struct component_info component_info_desc[COMPONENT_MAX];
 static struct kobject *project_info_kobj;
@@ -84,6 +85,7 @@ void save_dump_reason_to_smem(char *info, char *function_name)
     }
     pr_err("\r%s: dump_reason : %s strl=%d function caused panic :%s strl1=%d \n", __func__,
                            dp_info->dump_reason, strl, function_name, strl1);
+    save_dump_reason_to_device_info(dp_info->dump_reason);
     flag++;
 }
 
