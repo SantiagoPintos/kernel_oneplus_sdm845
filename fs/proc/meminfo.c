@@ -160,8 +160,11 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 	show_val_kb(m, "killed_num:     ", killed_num);
 	show_val_kb(m, "a_shrink_num:   ", active_nr);
 	show_val_kb(m, "ina_shrink_num: ", inactive_nr);
-	for (iter = 0; iter < 5; iter++)
-		show_val_kb(m, "vmpress:        ", vmpress[iter]);
+	show_val_kb(m, "vmpressure 0~20:        ", atomic_read(&vmpress[0]));
+	show_val_kb(m, "vmpressure 20~40:        ", atomic_read(&vmpress[1]));
+	show_val_kb(m, "vmpressure 40~60:        ", atomic_read(&vmpress[2]));
+	show_val_kb(m, "vmpressure 60~80:        ", atomic_read(&vmpress[3]));
+	show_val_kb(m, "vmpressure 80~100:        ", atomic_read(&vmpress[4]));
 	for (iter = 0; iter < 3; iter++)
 		show_val_kb(m, "priority:       ", priority_nr[iter]);
 	show_val_kb(m, "alloc_slow_nr:  ", alloc_slow_nr);

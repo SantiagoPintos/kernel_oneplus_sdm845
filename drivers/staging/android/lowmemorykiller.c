@@ -97,6 +97,10 @@ unsigned long killed_num;
 			pr_info(x);			\
 	} while (0)
 
+unsigned long get_max_minfree(void)
+{
+	return lowmem_minfree[lowmem_minfree_size - 1];
+}
 static unsigned long lowmem_count(struct shrinker *s,
 				  struct shrink_control *sc)
 {
