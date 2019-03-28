@@ -578,6 +578,8 @@ static int dsi_display_read_status(struct dsi_display_ctrl *ctrl,
 	struct dsi_cmd_desc *cmds;
 	u32 flags = 0;
 
+        int retry_times;
+
 	if (!panel || !ctrl || !ctrl->ctrl)
 		return -EINVAL;
 
@@ -607,6 +609,13 @@ static int dsi_display_read_status(struct dsi_display_ctrl *ctrl,
 		cmds[i].msg.rx_buf = config->status_buf;
 		cmds[i].msg.rx_len = config->status_cmds_rlen[i];
 		rc = dsi_ctrl_cmd_transfer(ctrl->ctrl, &cmds[i].msg, flags);
+		
+		retry_times = 0;
+		do {
+		    rc = dsi_ctrl_cmd_transfer(ctrl->ctrl, &cmds[i].msg, flags);
+		    retry_times++;
+		} while ((rc <= 0) && (retry_times < 3));
+
 		if (rc <= 0) {
 			pr_err("rx cmd transfer failed rc=%d\n", rc);
 			return rc;
