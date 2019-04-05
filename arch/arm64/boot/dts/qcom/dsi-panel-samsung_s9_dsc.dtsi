@@ -1,0 +1,183 @@
+/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&mdss_mdp {
+	dsi_samsung_s9_dsc_cmd: qcom,mdss_dsi_samsung_s9_dsc_cmd {
+		qcom,mdss-dsi-panel-name = "samsung dsc cmd mode s9 dsi panel";
+		qcom,mdss-dsi-panel-manufacture = "SAMSUNG";
+		qcom,mdss-dsi-panel-version = "DSC";
+		qcom,mdss-dsi-backlight-version = "SAMSUNG";
+		qcom,mdss-dsi-backlight-manufacture = "SAMSUNG";
+		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-underflow-color = <0xff>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 10>;
+		qcom,mdss-dsi-traffic-mode = "burst_mode";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		qcom,mdss-dsi-te-pin-select = <1>;
+		qcom,mdss-dsi-wr-mem-start = <0x2c>;
+		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
+		qcom,mdss-dsi-te-dcs-command = <1>;
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <1024>;
+		qcom,mdss-brightness-max-level = <1024>;
+		qcom,mdss-pan-physical-width-dimension = <65>; 
+		qcom,mdss-pan-physical-height-dimension = <133>; 						
+		qcom,mdss-dsi-init-delay-us = <1000>;					
+		qcom,mdss-dsi-te-check-enable;
+		qcom,mdss-dsi-te-using-te-pin;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-pixel-packing = "loose";
+	    qcom,mdss-dsi-high-brightness-panel;
+		qcom,mdss-dsi-acl-cmd-index = <0>;
+		qcom,mdss-dsi-acl-mode-index = <1>;
+		qcom,mdss-bl-high2bit;							
+		qcom,mdss-dsi-panel-jitter = <0x4 0x1>;	
+		qcom,mdss-dsi-display-timings {
+			timing@0{
+				qcom,mdss-dsi-panel-width = <1440>;
+				qcom,mdss-dsi-panel-height = <2960>;
+				qcom,mdss-dsi-h-pulse-width = <44>;
+				qcom,mdss-dsi-h-back-porch = <120>;
+				qcom,mdss-dsi-h-front-porch = <116>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-pulse-width = <80>;
+				qcom,mdss-dsi-v-back-porch = <124>;
+				qcom,mdss-dsi-v-front-porch = <120>;
+				qcom,mdss-dsi-panel-framerate = <60>;
+				qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+
+				qcom,mdss-dsi-on-command = [
+					29 01 00 00 00 00 03 9F A5 A5		/* LV1(9F) key enable  */
+					/* DSC setting1 */
+					29 00 00 00 00 00 03 F0 5A 5A		/* level2_key Enable - 5ms */
+					07 01 00 00 00 00 01 01			/* DSC enable :  Compression Mode*/
+					29 00 00 00 00 00 03 F0 A5 A5		/* level2_key Disable*/
+					/* Sleep out */
+					05 01 00 00 0A 00 01 11			/* Sleep out (Wait 10ms) */
+					/* OMOK setting 1 (Initial setting) - Scaler Latch Setting Guide */
+					29 00 00 00 00 00 03 F0 5A 5A	/* Test Key Enable */
+					29 00 00 00 00 00 02 B0 07
+					29 00 00 00 00 00 03 F2 3C 10	/* latch setting 1 : Scaler on/off & address setting & PPS setting -> Image update latch */
+					29 00 00 00 00 00 02 B0 0B
+					29 00 00 00 00 00 02 F2 30		/* latch setting 2 : Ratio change mode -> Image update latch */
+					/* OMOK setting 2 - Seamless setting guide : WQHD */
+					29 00 00 00 00 00 05 2A 00 00 05 9F			/* CASET */
+					29 00 00 00 00 00 05 2B 00 00 0B 8F			/* PASET */
+					29 00 00 00 00 00 02 BA 01		/* scaler setup : scaler off */
+					29 00 00 00 00 00 03 F0 A5 A5	/* Test Key Disable */
+					/* Common Setting */
+					29 00 00 00 00 00 02 35 00		/* TE Vsync ON */
+					/* ISC Setting  */
+					29 00 00 00 00 00 03 F0 5A 5A
+					29 00 00 00 00 00 02 B0 03
+					29 00 00 00 00 00 02 F6 43
+					29 00 00 00 00 00 03 F0 A5 A5
+					/* Brightness Setting */
+					29 00 00 00 00 00 03 F0 5A 5A		/* TEST KEY1 Enable*/
+					29 00 00 00 00 00 23				/* Brightness condition set */
+						CA
+						07 00 00 00
+						80 80 80
+						80 80 80
+						80 80 80
+						80 80 80
+						80 80 80
+						80 80 80
+						80 80 80
+						80 80 80
+						80 80 80
+						00 00 00
+					29 00 00 00 00 00 03 B1 00 0C   /* AID Set : 0% */
+					29 00 00 00 00 00 17	/* MPS/ELVSS Setting */
+						B5
+						19 DC 16 /* temp=25, MPS=high, ELVSS=420nit */
+						01 34 67 9A CD 01 22 33
+						44 00 00 05 55 CC 0C 01
+						11 11 10
+					29 00 00 00 00 00 03 F4 EB 28   /* VINT */
+					29 00 00 00 00 00 13		/* IRC */
+						B8
+						15 20 69 E7 5A 06 57 53 88 59 59 59 1D 1D 1D 1E 1E 1E
+					29 01 00 00 00 00 02 F7 03      /* Gamma, AID update  */
+					29 01 00 00 00 00 03 F0 A5 A5   /* TEST KEY1 Disable */
+					29 01 00 00 00 00 03 9F 5A 5A	/* LV1(9F) key disable  */
+					29 01 00 00 00 00 03 9F A5 A5	// TEST KEY Enable
+					05 01 00 00 00 00 01 01 	// S/W Reset, Delay 120ms
+					29 01 00 00 00 00 03 F0 5A 5A	// TEST KEY Enable
+					29 01 00 00 00 00 03 FC 5A 5A	// TEST KEY Enable
+					29 01 00 00 00 00 02 B0 0A	// Global Para
+					29 01 00 00 00 00 02 FE 14	// Para
+					05 01 00 00 0A 00 01 11 	// Sleep out, Delay 10ms
+					29 01 00 00 00 00 02 9D 01	// DSC Enable
+					29 01 00 00 00 00 5A 9E 	/* PPS */
+					11 00 00 89 30 80 0B 90
+					05 A0 00 28 02 D0 02 D0
+					02 00 02 A4 00 20 04 0B
+					00 0A 00 0E 02 E0 01 E9
+					18 00 10 F0 03 0C 20 00
+					06 0B 0B 33 0E 1C 2A 38
+					46 54 62 69 70 77 79 7B
+					7D 7E 01 02 01 00 09 40
+					09 BE 19 FC 19 FA 19 F8
+					1A 38 1A 78 1A B6 2A B6
+					2A F4 2A F4 4B 34 63 74
+					00
+					39 01 00 00 00 00 03 FC A5 A5	
+					39 00 00 00 00 00 03 F0 A5 A5
+					05 01 00 00 00 00 02 29 00	// display on
+					29 01 00 00 00 00 02 B0 09	// Global Para
+					29 01 00 00 00 00 02 F4 10	/* VDDM LV Setting (VDDM 0x0: 1.0V, 0x10: 0.9V, 0x30: 1.1V) */
+					29 01 00 00 00 00 02 FE B0	// Para
+					29 01 00 00 32 00 02 FE 30	// Para, Delay 50ms
+					05 01 00 00 00 00 02 2C 00	// Checksum start
+					29 01 00 00 00 00 02 BE 07	// GDBIST Pattern 1
+					];
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+				qcom,mdss-dsi-h-sync-pulse = <0>;
+				
+				qcom,mdss-dsi-off-command=[
+					05 01 00 00 00 00 02 28 00
+					29 01 00 00 00 00 03 9F A5 A5		/* LV1 (9F) unlock */
+					05 01 00 00 00 00 02 10 00		/* sleep in */
+					29 01 00 00 B4 00 03 9F 5A 5A		/* LV1 (9F) lock, 180ms delay to match 120ms */
+				];
+				qcom,partial-update-enabled = "single_roi";
+				qcom,panel-roi-alignment=<720 40 720 40 720 40>;
+				qcom,compression-mode = "dsc";
+				qcom,lm-split = <720 720>;
+				qcom,mdss-dsc-encoders = <2>;
+				qcom,mdss-dsc-slice-height = <40>;
+				qcom,mdss-dsc-slice-width = <720>;
+				qcom,mdss-dsc-slice-per-pkt = <1>;
+				qcom,mdss-dsc-bit-per-component = <8>;
+				qcom,mdss-dsc-bit-per-pixel = <8>;
+				qcom,mdss-dsc-block-prediction-enable;
+
+			
+			
+				};
+		};
+	};
+};
+

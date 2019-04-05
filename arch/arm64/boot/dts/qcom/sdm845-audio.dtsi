@@ -92,6 +92,8 @@
 				"msm-dai-q6-tdm.36896", "msm-dai-q6-tdm.36897",
 				"msm-dai-q6-tdm.36912", "msm-dai-q6-tdm.36913",
 				"msm-dai-q6-tdm.36914";
+/*suzhiguang, temp add here */
+		op,smartpa ="max98927";
 	};
 };
 
@@ -103,11 +105,11 @@
 };
 
 &msm_dai_tdm_quat_rx {
-	qcom,msm-cpudai-tdm-group-num-ports = <2>;
-	qcom,msm-cpudai-tdm-group-port-id = <36912 36914>;
-	dai_quat_tdm_rx_1: qcom,msm-dai-q6-tdm-quat-rx-1 {
-		compatible = "qcom,msm-dai-q6-tdm";
-		qcom,msm-cpudai-tdm-dev-id = <36914>;
-		qcom,msm-cpudai-tdm-data-align = <0>;
-	};
+       qcom,msm-cpudai-tdm-group-num-ports = <2>;
+       qcom,msm-cpudai-tdm-group-port-id = <36912 36914>;
+       dai_quat_tdm_rx_1: qcom,msm-dai-q6-tdm-quat-rx-1 {
+               compatible = "qcom,msm-dai-q6-tdm";
+               qcom,msm-cpudai-tdm-dev-id = <36914>;
+               qcom,msm-cpudai-tdm-data-align = <0>;
+       };
 };
