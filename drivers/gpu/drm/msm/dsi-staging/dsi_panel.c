@@ -3725,6 +3725,31 @@ int dsi_panel_set_lp1(struct dsi_panel *panel)
 	if (rc)
 		pr_err("[%s] failed to send DSI_CMD_SET_LP1 cmd, rc=%d\n",
 		       panel->name, rc);
+//#ifdef VENDOR_EDIT
+	switch (panel->aod_mode) {
+	case 1:
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_ON_1);
+		break;
+
+	case 2:
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_ON_2);
+		break;
+
+	case 3:
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_ON_3);
+		break;
+
+	case 4:
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_ON_4);
+		break;
+
+	default:
+		/* default color 10nit*/
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_ON_3);
+		break;
+	}
+	panel->aod_status = 1;
+//#endif
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
@@ -3767,6 +3792,12 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 	if (rc)
 		pr_err("[%s] failed to send DSI_CMD_SET_NOLP cmd, rc=%d\n",
 		       panel->name, rc);
+//#ifdef VENDOR_EDIT
+	if (panel->aod_status) {
+		panel->aod_status = 0;
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_OFF);
+	}
+//#endif
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
