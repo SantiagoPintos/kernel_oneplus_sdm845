@@ -4537,6 +4537,9 @@ int dsi_panel_set_aod_mode(struct dsi_panel *panel, int level)
 		return -EINVAL;
 	}
 
+	if (panel->aod_disable)
+		return 0;
+
 	mutex_lock(&panel->panel_lock);
 	mode = panel->cur_mode;
 	if (level == 1) {

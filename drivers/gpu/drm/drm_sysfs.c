@@ -371,6 +371,42 @@ static ssize_t aod_test_store(struct device *dev,
 	return count;
 }
 
+static ssize_t aod_disable_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct drm_connector *connector = to_drm_connector(dev);
+	int ret = 0;
+	int aod_disable = 0;
+
+	aod_disable = dsi_display_get_aod_disable(connector);
+
+	ret = scnprintf(buf, PAGE_SIZE, "AOD disable = %d\n"
+			"0--AOD enable\n"
+			"1--AOD disable\n",
+			aod_disable);
+	return ret;
+}
+
+static ssize_t aod_disable_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct drm_connector *connector = to_drm_connector(dev);
+	int ret = 0;
+	int aod_disable = 0;
+
+	ret = kstrtoint(buf, 10, &aod_disable);
+	if (ret) {
+		pr_err("kstrtoint failed. ret=%d\n", ret);
+		return ret;
+	}
+
+	ret = dsi_display_set_aod_disable(connector, aod_disable);
+	if (ret)
+		pr_err("set AOD disable(%d) fail\n", aod_disable);
+
+	return count;
+}
+
 static ssize_t SRGB_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -639,6 +675,7 @@ static DEVICE_ATTR_RO(modes);
 static DEVICE_ATTR_RW(acl);
 static DEVICE_ATTR_RW(hbm);
 static DEVICE_ATTR_RW(aod);
+static DEVICE_ATTR_RW(aod_disable);
 static DEVICE_ATTR_RW(SRGB);
 static DEVICE_ATTR_RW(DCI_P3);
 static DEVICE_ATTR_RW(night_mode);
@@ -659,6 +696,7 @@ static struct attribute *connector_dev_attrs[] = {
 	&dev_attr_acl.attr,
 	&dev_attr_hbm.attr,
 	&dev_attr_aod.attr,
+	&dev_attr_aod_disable.attr,
 	&dev_attr_SRGB.attr,
 	&dev_attr_DCI_P3.attr,
 	&dev_attr_night_mode.attr,
