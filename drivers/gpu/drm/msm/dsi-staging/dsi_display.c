@@ -688,7 +688,7 @@ static int dsi_display_validate_status(struct dsi_display_ctrl *ctrl,
 exit:
 	return rc;
 }
-
+#ifndef VENDOR_EDIT
 static int dsi_display_status_reg_read(struct dsi_display *display)
 {
 	int rc = 0, i, cmd_channel_idx = DSI_CTRL_LEFT;
@@ -747,7 +747,192 @@ exit:
 done:
 	return rc;
 }
+#else
 
+static int dsi_panel_tx_cmd_set_op(struct dsi_panel *panel,
+				enum dsi_cmd_set_type type)
+{
+	int rc = 0, i = 0;
+	ssize_t len;
+	struct dsi_cmd_desc *cmds;
+	u32 count;
+	enum dsi_cmd_set_state state;
+	struct dsi_display_mode *mode;
+	const struct mipi_dsi_host_ops *ops = panel->host->ops;
+
+	if (!panel || !panel->cur_mode)
+		return -EINVAL;
+
+	if (panel->type == EXT_BRIDGE)
+		return 0;
+
+	mode = panel->cur_mode;
+
+	cmds = mode->priv_info->cmd_sets[type].cmds;
+	count = mode->priv_info->cmd_sets[type].count;
+	state = mode->priv_info->cmd_sets[type].state;
+
+	if (count == 0) {
+		pr_debug("[%s] No commands to be sent for state(%d)\n",
+				panel->name, type);
+		goto error;
+	}
+
+	for (i = 0; i < count; i++) {
+		if (state == DSI_CMD_SET_STATE_LP)
+			cmds->msg.flags |= MIPI_DSI_MSG_USE_LPM;
+
+		if (cmds->last_command)
+			cmds->msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
+
+		len = ops->transfer(panel->host, &cmds->msg);
+		if (len < 0) {
+			rc = len;
+			pr_err("failed to set cmds(%d), rc=%d\n", type, rc);
+			goto error;
+		}
+		if (cmds->post_wait_ms)
+			usleep_range(cmds->post_wait_ms*1000,
+					((cmds->post_wait_ms*1000)+10));
+		cmds++;
+	}
+error:
+	return rc;
+}
+
+static int dsi_display_status_reg_read(struct dsi_display *display)
+{
+	int rc = 0, i, cmd_channel_idx = DSI_CTRL_LEFT;
+	struct dsi_display_ctrl *m_ctrl, *ctrl;
+	u32 flags = 0;
+	u32 count = 0;
+	struct dsi_panel *panel = NULL;
+	struct dsi_display_mode *mode = NULL;
+	struct dsi_cmd_desc *cmds1;
+	struct dsi_cmd_desc *cmds2;
+	u8 temp_buffer_1[1] = {0};
+	u8 temp_buffer_2[2] = {0};
+	u8 buf[32];
+	u8 ESD_TEST1 = 0;
+	u8 ESD_TEST2 = 0;
+	u8 ESD_TEST3 = 0;
+
+	memset(buf, 0, sizeof(buf));
+	/*
+	 * Check the Panel DSI command channel.
+	 * If the cmd_channel is set, then we should
+	 * choose the right DSI(DSI1) controller to send command,
+	 * else we choose the left(DSI0) controller.
+	 */
+	if (display->panel->esd_config.cmd_channel)
+		cmd_channel_idx = DSI_CTRL_RIGHT;
+	m_ctrl = &display->ctrl[cmd_channel_idx];
+
+	if (display->tx_cmd_buf == NULL) {
+		rc = dsi_host_alloc_cmd_tx_buffer(display);
+		if (rc) {
+			pr_err("failed to allocate cmd tx buffer memory\n");
+			goto done;
+		}
+	}
+
+	rc = dsi_display_cmd_engine_enable(display);
+	if (rc) {
+		pr_err("cmd engine enable failed\n");
+		return -EPERM;
+	}
+	mode = display->panel->cur_mode;
+	panel = display->panel;
+	if (strcmp(panel->name, "samsung s6e3fc2x01 cmd mode dsi panel") == 0) {
+		count = mode->priv_info->cmd_sets[
+				DSI_CMD_READ_SAMSUNG_PANEL_REGISTER_ON].count;
+		if (!count) {
+			pr_err("This panel does not read register\n");
+		} else {
+
+			rc = dsi_panel_tx_cmd_set_op(panel,
+				DSI_CMD_READ_SAMSUNG_PANEL_REGISTER_ON);
+		}
+		cmds1 = mode->priv_info->cmd_sets[DSI_CMD_SET_PANEL_ID1].cmds;
+		if (cmds1->last_command) {
+			cmds1->msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
+			flags |= DSI_CTRL_CMD_LAST_COMMAND;
+		}
+		flags |= (DSI_CTRL_CMD_FETCH_MEMORY | DSI_CTRL_CMD_READ);
+		cmds1->msg.rx_buf = buf;
+		cmds1->msg.rx_len = 1;
+		rc = dsi_ctrl_cmd_transfer(m_ctrl->ctrl, &cmds1->msg, flags);
+		if (rc <= 0)
+			pr_err("rx cmd transfer failed rc=%d\n", rc);
+		memcpy(temp_buffer_1, cmds1->msg.rx_buf, 1);
+		count = mode->priv_info->cmd_sets[
+				DSI_CMD_READ_SAMSUNG_PANEL_REGISTER_ON].count;
+		if (!count) {
+			pr_err("This panel does not read register\n");
+		} else {
+			rc = dsi_panel_tx_cmd_set_op(panel,
+				DSI_CMD_READ_SAMSUNG_PANEL_REGISTER_ON);
+		}
+		cmds2 = mode->priv_info->cmd_sets[DSI_CMD_SET_PANEL_ID6].cmds;
+		if (cmds2->last_command) {
+			cmds2->msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
+			flags |= DSI_CTRL_CMD_LAST_COMMAND;
+		}
+		flags |= (DSI_CTRL_CMD_FETCH_MEMORY | DSI_CTRL_CMD_READ);
+		cmds2->msg.rx_buf = buf;
+		cmds2->msg.rx_len = 2;
+		rc = dsi_ctrl_cmd_transfer(m_ctrl->ctrl, &cmds2->msg, flags);
+		if (rc <= 0)
+			pr_err("rx cmd transfer failed rc=%d\n", rc);
+		memcpy(temp_buffer_2, cmds2->msg.rx_buf, 2);
+		count = mode->priv_info->cmd_sets[
+				DSI_CMD_READ_SAMSUNG_PANEL_REGISTER_OFF].count;
+		if (!count) {
+			pr_err("This panel does not read register\n");
+		} else {
+			rc = dsi_panel_tx_cmd_set_op(panel,
+				DSI_CMD_READ_SAMSUNG_PANEL_REGISTER_OFF);
+		}
+		ESD_TEST1 = temp_buffer_2[0];
+		ESD_TEST2 = temp_buffer_2[1];
+		ESD_TEST3 = temp_buffer_1[0];
+
+		if (((ESD_TEST1 == 132) && (ESD_TEST2 == 0)) ||
+			(ESD_TEST3 != 159))
+			rc = -1;
+		else
+			rc = 1;
+	} else {
+		rc = dsi_display_validate_status(m_ctrl, display->panel);
+	}
+	if (rc <= 0) {
+		pr_err("[%s] read status failed on master,rc=%d\n",
+				display->name, rc);
+		goto exit;
+	}
+
+	if (!display->panel->sync_broadcast_en)
+		goto exit;
+
+	for (i = 0; i < display->ctrl_count; i++) {
+		ctrl = &display->ctrl[i];
+		if (ctrl == m_ctrl)
+			continue;
+
+		rc = dsi_display_validate_status(ctrl, display->panel);
+		if (rc <= 0) {
+			pr_err("[%s] read status failed on slave,rc=%d\n",
+					display->name, rc);
+			goto exit;
+		}
+	}
+exit:
+	dsi_display_cmd_engine_disable(display);
+done:
+	return rc;
+}
+
+#endif
 static int dsi_display_status_bta_request(struct dsi_display *display)
 {
 	int rc = 0;

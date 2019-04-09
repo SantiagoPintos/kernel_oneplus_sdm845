@@ -1631,6 +1631,15 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-panel-adaption-mode-off-command",
 	"qcom,mdss-dsi-panel-serial-num-command",
 	"qcom,mdss-dsi-panel-id-command",
+	"qcom,mdss-dsi-panel-read-register-open-command",
+	"qcom,mdss-dsi-panel-id1-command",
+	"qcom,mdss-dsi-panel-id2-command",
+	"qcom,mdss-dsi-panel-id3-command",
+	"qcom,mdss-dsi-panel-id4-command",
+	"qcom,mdss-dsi-panel-id5-command",
+	"qcom,mdss-dsi-panel-id6-command",
+	"qcom,mdss-dsi-panel-id7-command",
+	"qcom,mdss-dsi-panel-read-register-close-command",
 //#endif
 };
 
@@ -1685,6 +1694,15 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-adaption-mode-off-command-state",
 	"qcom,mdss-dsi-panel-serial-num-command-state",
 	"qcom,mdss-dsi-panel-id-command-state",
+	"qcom,mdss-dsi-panel-read-register-open-command-state",
+	"qcom,mdss-dsi-panel-id1-command-state",
+	"qcom,mdss-dsi-panel-id2-command-state",
+	"qcom,mdss-dsi-panel-id3-command-state",
+	"qcom,mdss-dsi-panel-id4-command-state",
+	"qcom,mdss-dsi-panel-id5-command-state",
+	"qcom,mdss-dsi-panel-id6-command-state",
+	"qcom,mdss-dsi-panel-id7-command-state",
+	"qcom,mdss-dsi-panel-read-register-close-command-state",
 //#endif
 };
 

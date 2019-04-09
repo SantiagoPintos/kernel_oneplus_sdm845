@@ -297,6 +297,15 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_ADAPTION_OFF,
 	DSI_CMD_SET_PANEL_SERIAL_NUMBER,
 	DSI_CMD_SET_PANEL_ID,
+	DSI_CMD_READ_SAMSUNG_PANEL_REGISTER_ON,
+	DSI_CMD_SET_PANEL_ID1,
+	DSI_CMD_SET_PANEL_ID2,
+	DSI_CMD_SET_PANEL_ID3,
+	DSI_CMD_SET_PANEL_ID4,
+	DSI_CMD_SET_PANEL_ID5,
+	DSI_CMD_SET_PANEL_ID6,
+	DSI_CMD_SET_PANEL_ID7,
+	DSI_CMD_READ_SAMSUNG_PANEL_REGISTER_OFF,
 //#endif
 	DSI_CMD_SET_MAX
 };
@@ -371,6 +380,13 @@ struct dsi_panel_cmd_set {
 	u32 count;
 	u32 ctrl_idx;
 	struct dsi_cmd_desc *cmds;
+	struct dsi_cmd_desc *cmds1;
+	struct dsi_cmd_desc *cmds2;
+	struct dsi_cmd_desc *cmds3;
+	struct dsi_cmd_desc *cmds4;
+	struct dsi_cmd_desc *cmds5;
+	struct dsi_cmd_desc *cmds6;
+	struct dsi_cmd_desc *cmds7;
 };
 
 /**
