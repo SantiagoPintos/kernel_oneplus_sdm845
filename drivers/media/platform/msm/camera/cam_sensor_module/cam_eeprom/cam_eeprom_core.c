@@ -17,7 +17,19 @@
 #include "cam_eeprom_core.h"
 #include "cam_eeprom_soc.h"
 #include "cam_debug_util.h"
-#include "cam_common_util.h"
+
+#ifdef VENDOR_EDIT /* add by likelong@camera 2018.6.25 for product information */
+#include <linux/project_info.h>
+struct ois_vendor_match_tbl {
+	uint16_t ois_id;
+	char ois_name[32];
+	char vendor_name[32];
+};
+static struct ois_vendor_match_tbl match_tbl[] = {
+	{0x24, "BU24218GWL", "Rohm"},
+	{0x28, "BU24228GWL", "Rohm"},
+};
+#endif
 
 /**
  * cam_eeprom_read_memory() - read map data into buffer
@@ -32,12 +44,19 @@ static int cam_eeprom_read_memory(struct cam_eeprom_ctrl_t *e_ctrl,
 {
 	int                                rc = 0;
 	int                                j;
-	struct cam_sensor_i2c_reg_setting  i2c_reg_settings = {
-						NULL, 0, 0, 0, 0};
+	struct cam_sensor_i2c_reg_setting  i2c_reg_settings;
 	struct cam_sensor_i2c_reg_array    i2c_reg_array;
 	struct cam_eeprom_memory_map_t    *emap = block->map;
 	struct cam_eeprom_soc_private     *eb_info;
 	uint8_t                           *memptr = block->mapdata;
+
+#ifdef VENDOR_EDIT /* add by likelong@camera 2018.6.25 for product information */
+	int ret = 0;
+	uint32_t reg_data;
+	uint32_t ois_driver_id;
+	uint16_t eeprom_slave_addr = 0xA0>>1;   // 0xA0>>1 is the slave address of main camera Eeprom
+	uint16_t ois_driver_id_reg_addr = 0x0110;   // 0x0110 and 0x0111 are the registers of OIS driver ID
+#endif
 
 	if (!e_ctrl) {
 		CAM_ERR(CAM_EEPROM, "e_ctrl is NULL");
@@ -111,7 +130,6 @@ static int cam_eeprom_read_memory(struct cam_eeprom_ctrl_t *e_ctrl,
 			rc = camera_io_dev_read_seq(&e_ctrl->io_master_info,
 				emap[j].mem.addr, memptr,
 				emap[j].mem.addr_type,
-				emap[j].mem.data_type,
 				emap[j].mem.valid_size);
 			if (rc) {
 				CAM_ERR(CAM_EEPROM, "read failed rc %d",
@@ -139,6 +157,34 @@ static int cam_eeprom_read_memory(struct cam_eeprom_ctrl_t *e_ctrl,
 			}
 		}
 	}
+
+#ifdef VENDOR_EDIT /* add by likelong@camera 2018.6.25 for product information */
+	if (e_ctrl->io_master_info.cci_client->sid == eeprom_slave_addr) {
+		ret = camera_io_dev_read(&(e_ctrl->io_master_info), ois_driver_id_reg_addr, &reg_data,
+			CAMERA_SENSOR_I2C_TYPE_WORD, CAMERA_SENSOR_I2C_TYPE_BYTE);
+		if (ret) {
+			CAM_ERR(CAM_EEPROM, "failed: to read 0x%x rc %d", ois_driver_id_reg_addr, ret);
+		} else {
+			ois_driver_id = reg_data & 0xFF;
+			ret = camera_io_dev_read(&(e_ctrl->io_master_info), ois_driver_id_reg_addr+1, &reg_data,
+				CAMERA_SENSOR_I2C_TYPE_WORD, CAMERA_SENSOR_I2C_TYPE_BYTE);
+			if (ret) {
+				CAM_ERR(CAM_EEPROM, "failed: to read 0x%x rc %d", ois_driver_id_reg_addr+1, ret);
+			} else {
+				ois_driver_id = ((reg_data & 0xFF) << 8) | ois_driver_id;
+				if (ois_driver_id == match_tbl[0].ois_id) {
+					push_component_info(OIS, match_tbl[0].ois_name,
+						match_tbl[0].vendor_name);
+				} else if (ois_driver_id == match_tbl[1].ois_id) {
+					push_component_info(OIS, match_tbl[1].ois_name,
+						match_tbl[1].vendor_name);
+				}
+				CAM_ERR(CAM_EEPROM, "OIS module 0x%x", ois_driver_id);
+			}
+		}
+	}
+#endif
+
 	return rc;
 }
 
@@ -223,7 +269,7 @@ static int cam_eeprom_power_down(struct cam_eeprom_ctrl_t *e_ctrl)
 		CAM_ERR(CAM_EEPROM, "failed: power_info %pK", power_info);
 		return -EINVAL;
 	}
-	rc = cam_sensor_util_power_down(power_info, soc_info);
+	rc = msm_camera_power_down(power_info, soc_info);
 	if (rc) {
 		CAM_ERR(CAM_EEPROM, "power down the core is failed:%d", rc);
 		return rc;
@@ -317,8 +363,12 @@ int32_t cam_eeprom_parse_read_memory_map(struct device_node *of_node,
 power_down:
 	cam_eeprom_power_down(e_ctrl);
 data_mem_free:
-	vfree(e_ctrl->cal_data.mapdata);
-	vfree(e_ctrl->cal_data.map);
+#ifdef VENDOR_EDIT
+	kvfree(e_ctrl->cal_data.mapdata);
+#else
+	kfree(e_ctrl->cal_data.mapdata);
+#endif
+	kfree(e_ctrl->cal_data.map);
 	e_ctrl->cal_data.num_data = 0;
 	e_ctrl->cal_data.num_map = 0;
 	e_ctrl->cam_eeprom_state = CAM_EEPROM_ACQUIRE;
@@ -343,8 +393,8 @@ static int32_t cam_eeprom_get_dev_handle(struct cam_eeprom_ctrl_t *e_ctrl,
 		CAM_ERR(CAM_EEPROM, "Device is already acquired");
 		return -EFAULT;
 	}
-	if (copy_from_user(&eeprom_acq_dev,
-		u64_to_user_ptr(cmd->handle),
+
+	if (copy_from_user(&eeprom_acq_dev, (void __user *) cmd->handle,
 		sizeof(eeprom_acq_dev))) {
 		CAM_ERR(CAM_EEPROM,
 			"EEPROM:ACQUIRE_DEV: copy from user failed");
@@ -363,8 +413,8 @@ static int32_t cam_eeprom_get_dev_handle(struct cam_eeprom_ctrl_t *e_ctrl,
 	e_ctrl->bridge_intf.session_hdl = eeprom_acq_dev.session_handle;
 
 	CAM_DBG(CAM_EEPROM, "Device Handle: %d", eeprom_acq_dev.device_handle);
-	if (copy_to_user(u64_to_user_ptr(cmd->handle),
-		&eeprom_acq_dev, sizeof(struct cam_sensor_acquire_dev))) {
+	if (copy_to_user((void __user *) cmd->handle, &eeprom_acq_dev,
+		sizeof(struct cam_sensor_acquire_dev))) {
 		CAM_ERR(CAM_EEPROM, "EEPROM:ACQUIRE_DEV: copy to user failed");
 		return -EFAULT;
 	}
@@ -533,7 +583,7 @@ static int32_t cam_eeprom_init_pkt_parser(struct cam_eeprom_ctrl_t *e_ctrl,
 	struct cam_cmd_buf_desc        *cmd_desc = NULL;
 	uint32_t                       *offset = NULL;
 	uint32_t                       *cmd_buf = NULL;
-	uintptr_t                        generic_pkt_addr;
+	uint64_t                        generic_pkt_addr;
 	size_t                          pkt_len = 0;
 	uint32_t                        total_cmd_buf_in_bytes = 0;
 	uint32_t                        processed_cmd_buf_in_bytes = 0;
@@ -546,9 +596,9 @@ static int32_t cam_eeprom_init_pkt_parser(struct cam_eeprom_ctrl_t *e_ctrl,
 		(struct cam_eeprom_soc_private *)e_ctrl->soc_info.soc_private;
 	struct cam_sensor_power_ctrl_t *power_info = &soc_private->power_info;
 
-	e_ctrl->cal_data.map = vzalloc((MSM_EEPROM_MEMORY_MAP_MAX_SIZE *
-		MSM_EEPROM_MAX_MEM_MAP_CNT) *
-		(sizeof(struct cam_eeprom_memory_map_t)));
+	e_ctrl->cal_data.map = kcalloc((MSM_EEPROM_MEMORY_MAP_MAX_SIZE *
+		MSM_EEPROM_MAX_MEM_MAP_CNT),
+		(sizeof(struct cam_eeprom_memory_map_t)), GFP_KERNEL);
 	if (!e_ctrl->cal_data.map) {
 		rc = -ENOMEM;
 		CAM_ERR(CAM_EEPROM, "failed");
@@ -567,7 +617,7 @@ static int32_t cam_eeprom_init_pkt_parser(struct cam_eeprom_ctrl_t *e_ctrl,
 		if (!total_cmd_buf_in_bytes)
 			continue;
 		rc = cam_mem_get_cpu_buf(cmd_desc[i].mem_handle,
-			&generic_pkt_addr, &pkt_len);
+			(uint64_t *)&generic_pkt_addr, &pkt_len);
 		if (rc) {
 			CAM_ERR(CAM_EEPROM, "Failed to get cpu buf");
 			return rc;
@@ -644,7 +694,7 @@ static int32_t cam_eeprom_get_cal_data(struct cam_eeprom_ctrl_t *e_ctrl,
 	struct cam_buf_io_cfg *io_cfg;
 	uint32_t              i = 0;
 	int                   rc = 0;
-	uintptr_t              buf_addr;
+	uint64_t              buf_addr;
 	size_t                buf_size;
 	uint8_t               *read_buffer;
 
@@ -659,7 +709,7 @@ static int32_t cam_eeprom_get_cal_data(struct cam_eeprom_ctrl_t *e_ctrl,
 		CAM_DBG(CAM_EEPROM, "Direction: %d:", io_cfg->direction);
 		if (io_cfg->direction == CAM_BUF_OUTPUT) {
 			rc = cam_mem_get_cpu_buf(io_cfg->mem_handle[0],
-				&buf_addr, &buf_size);
+				(uint64_t *)&buf_addr, &buf_size);
 			CAM_DBG(CAM_EEPROM, "buf_addr : %pK, buf_size : %zu\n",
 				(void *)buf_addr, buf_size);
 
@@ -702,7 +752,7 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 	int32_t                         rc = 0;
 	struct cam_control             *ioctl_ctrl = NULL;
 	struct cam_config_dev_cmd       dev_config;
-	uintptr_t                        generic_pkt_addr;
+	uint64_t                        generic_pkt_addr;
 	size_t                          pkt_len;
 	struct cam_packet              *csl_packet = NULL;
 	struct cam_eeprom_soc_private  *soc_private =
@@ -711,12 +761,11 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 
 	ioctl_ctrl = (struct cam_control *)arg;
 
-	if (copy_from_user(&dev_config,
-		u64_to_user_ptr(ioctl_ctrl->handle),
+	if (copy_from_user(&dev_config, (void __user *) ioctl_ctrl->handle,
 		sizeof(dev_config)))
 		return -EFAULT;
 	rc = cam_mem_get_cpu_buf(dev_config.packet_handle,
-		&generic_pkt_addr, &pkt_len);
+		(uint64_t *)&generic_pkt_addr, &pkt_len);
 	if (rc) {
 		CAM_ERR(CAM_EEPROM,
 			"error in converting command Handle Error: %d", rc);
@@ -731,7 +780,7 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 	}
 
 	csl_packet = (struct cam_packet *)
-		(generic_pkt_addr + (uint32_t)dev_config.offset);
+		(generic_pkt_addr + dev_config.offset);
 	switch (csl_packet->header.op_code & 0xFFFFFF) {
 	case CAM_EEPROM_PACKET_OPCODE_INIT:
 		if (e_ctrl->userspace_probe == false) {
@@ -742,8 +791,12 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 				return rc;
 			}
 			rc = cam_eeprom_get_cal_data(e_ctrl, csl_packet);
-			vfree(e_ctrl->cal_data.mapdata);
-			vfree(e_ctrl->cal_data.map);
+#ifdef VENDOR_EDIT
+			kvfree(e_ctrl->cal_data.mapdata);
+#else
+			kfree(e_ctrl->cal_data.mapdata);
+#endif
+			kfree(e_ctrl->cal_data.map);
 			e_ctrl->cal_data.num_data = 0;
 			e_ctrl->cal_data.num_map = 0;
 			CAM_DBG(CAM_EEPROM,
@@ -757,13 +810,33 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 			return rc;
 		}
 
+#ifdef VENDOR_EDIT
+		if ((e_ctrl->cal_data.num_data) < PAGE_SIZE) {
+			e_ctrl->cal_data.mapdata =
+				kzalloc(e_ctrl->cal_data.num_data, GFP_KERNEL);
+			if (!e_ctrl->cal_data.mapdata) {
+				rc = -ENOMEM;
+				CAM_ERR(CAM_EEPROM, "failed");
+				goto error;
+			}
+		} else {
+			e_ctrl->cal_data.mapdata =
+                                vzalloc(e_ctrl->cal_data.num_data);
+                        if (!e_ctrl->cal_data.mapdata) {
+                                rc = -ENOMEM;
+                                CAM_ERR(CAM_EEPROM, "failed");
+                                goto error;
+                        }
+		}
+#else
 		e_ctrl->cal_data.mapdata =
-			vzalloc(e_ctrl->cal_data.num_data);
+			kzalloc(e_ctrl->cal_data.num_data, GFP_KERNEL);
 		if (!e_ctrl->cal_data.mapdata) {
 			rc = -ENOMEM;
 			CAM_ERR(CAM_EEPROM, "failed");
 			goto error;
 		}
+#endif
 
 		rc = cam_eeprom_power_up(e_ctrl,
 			&soc_private->power_info);
@@ -783,14 +856,12 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 		rc = cam_eeprom_get_cal_data(e_ctrl, csl_packet);
 		rc = cam_eeprom_power_down(e_ctrl);
 		e_ctrl->cam_eeprom_state = CAM_EEPROM_ACQUIRE;
-		vfree(e_ctrl->cal_data.mapdata);
-		vfree(e_ctrl->cal_data.map);
-		kfree(power_info->power_setting);
-		kfree(power_info->power_down_setting);
-		power_info->power_setting = NULL;
-		power_info->power_down_setting = NULL;
-		power_info->power_setting_size = 0;
-		power_info->power_down_setting_size = 0;
+#ifdef VENDOR_EDIT
+		kvfree(e_ctrl->cal_data.mapdata);
+#else
+		kfree(e_ctrl->cal_data.mapdata);
+#endif
+		kfree(e_ctrl->cal_data.map);
 		e_ctrl->cal_data.num_data = 0;
 		e_ctrl->cal_data.num_map = 0;
 		break;
@@ -801,13 +872,15 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 power_down:
 	cam_eeprom_power_down(e_ctrl);
 memdata_free:
-	vfree(e_ctrl->cal_data.mapdata);
+#ifdef VENDOR_EDIT
+	kvfree(e_ctrl->cal_data.mapdata);
+#else
+	kfree(e_ctrl->cal_data.mapdata);
+#endif
 error:
 	kfree(power_info->power_setting);
 	kfree(power_info->power_down_setting);
-	power_info->power_setting = NULL;
-	power_info->power_down_setting = NULL;
-	vfree(e_ctrl->cal_data.map);
+	kfree(e_ctrl->cal_data.map);
 	e_ctrl->cal_data.num_data = 0;
 	e_ctrl->cal_data.num_map = 0;
 	e_ctrl->cam_eeprom_state = CAM_EEPROM_INIT;
@@ -842,10 +915,6 @@ void cam_eeprom_shutdown(struct cam_eeprom_ctrl_t *e_ctrl)
 
 		kfree(power_info->power_setting);
 		kfree(power_info->power_down_setting);
-		power_info->power_setting = NULL;
-		power_info->power_down_setting = NULL;
-		power_info->power_setting_size = 0;
-		power_info->power_down_setting_size = 0;
 	}
 
 	e_ctrl->cam_eeprom_state = CAM_EEPROM_INIT;
@@ -865,13 +934,12 @@ int32_t cam_eeprom_driver_cmd(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 	struct cam_control            *cmd = (struct cam_control *)arg;
 
 	if (!e_ctrl || !cmd) {
-		CAM_ERR(CAM_EEPROM, "Invalid Arguments");
+		CAM_ERR(CAM_EEPROM, "e_ctrl is NULL");
 		return -EINVAL;
 	}
 
 	if (cmd->handle_type != CAM_HANDLE_USER_POINTER) {
-		CAM_ERR(CAM_EEPROM, "Invalid handle type: %d",
-			cmd->handle_type);
+		CAM_ERR(CAM_EEPROM, "Invalid Handle Type");
 		return -EINVAL;
 	}
 
@@ -884,7 +952,7 @@ int32_t cam_eeprom_driver_cmd(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 		else
 			eeprom_cap.eeprom_kernel_probe = false;
 
-		if (copy_to_user(u64_to_user_ptr(cmd->handle),
+		if (copy_to_user((void __user *) cmd->handle,
 			&eeprom_cap,
 			sizeof(struct cam_eeprom_query_cap_t))) {
 			CAM_ERR(CAM_EEPROM, "Failed Copy to User");
