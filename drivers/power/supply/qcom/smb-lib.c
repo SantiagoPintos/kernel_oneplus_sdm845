@@ -70,6 +70,9 @@ struct qpnp_pon *pm_pon;
 /*2018/06/14 @bsp add for support notify audio adapter switch*/
 static BLOCKING_NOTIFIER_HEAD(typec_cc_chain);
 static int cc_notifier_call_chain(unsigned long val);
+/* infi@bsp, 2018/08/08 add for support audio_adaptor trigger when reboot */
+bool audio_adapter_flag;
+EXPORT_SYMBOL(audio_adapter_flag);
 #endif
 
 static struct external_battery_gauge *fast_charger;
@@ -4893,6 +4896,7 @@ static void typec_sink_insertion(struct smb_charger *chg)
 /*2018/06/14 @bsp add for support notify audio adapter switch*/
 	if (typec_mode == POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER) {
 		chg->is_audio_adapter = true;
+		audio_adapter_flag = true;
 		pr_info("Type-C %s detected,notify!\n",
 				smblib_typec_mode_name[chg->typec_mode]);
 		cc_notifier_call_chain(1);
@@ -5052,6 +5056,7 @@ static void smblib_handle_typec_removal(struct smb_charger *chg)
 		msleep(*chg->audio_headset_drp_wait_ms);
 
 		chg->is_audio_adapter = false;
+		audio_adapter_flag = false;
 		pr_info("Type-C removal, audio_adapter_present=(%d),notify!\n",
 				chg->is_audio_adapter);
 		cc_notifier_call_chain(0);
@@ -5238,7 +5243,12 @@ static void smblib_handle_typec_cc_state_change(struct smb_charger *chg)
 		smblib_dbg(chg, PR_MISC, "TypeC removal\n");
 		smblib_handle_typec_removal(chg);
 	}
-
+	/* if audio adapter connectted,do not set ICL 0*/
+	if (audio_adapter_flag) {
+		smblib_dbg(chg, PR_INTERRUPT, "IRQ: cc-state-change; Type-C %s detected\n",
+			smblib_typec_mode_name[chg->typec_mode]);
+		return;
+	}
 	/* suspend usb if sink */
 	if ((chg->typec_status[3] & UFP_DFP_MODE_STATUS_BIT)
 			&& chg->typec_present)
