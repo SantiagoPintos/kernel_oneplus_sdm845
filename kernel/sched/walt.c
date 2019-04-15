@@ -29,7 +29,7 @@
 #include "walt.h"
 
 #include <trace/events/sched.h>
-#include "../drivers/oneplus/coretech/opchain/opchain_helper.h"
+#include "../coretech/uxcore/opchain_helper.h"
 
 const char *task_event_names[] = {"PUT_PREV_TASK", "PICK_NEXT_TASK",
 				  "TASK_WAKE", "TASK_MIGRATE", "TASK_UPDATE",

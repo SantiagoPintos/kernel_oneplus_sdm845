@@ -27,7 +27,6 @@
 #define OP_PATH_NORMAL			-2
 #define OP_PATH_OCCUPIED		-1
 #define MIN_POWER_CPU			0
-#define FPSVALUE			60
 
 #define ONESEC_NANO 1000000000
 
@@ -42,4 +41,16 @@
 #define NUMS_CPU			4
 #define CPU_VIRTUAL_PLUG_IN(i) (opc_cpu_active(i))
 #endif
+
+struct opchain_cb {
+	unsigned int (*is_opc_task_t)(void *rq, void *t, int type);
+	void (*opc_binder_pass_t)(void *rq, void* cur, unsigned int dsize, unsigned int *data, int send);
+	void (*opc_task_switch_t)(unsigned int enqueue, int cpu, void *p, void *rq, unsigned long long clock);
+	int (*opc_get_claim_on_cpu_t)(int cpu, void *rq);
+	unsigned int (*opc_get_claims_t)(void **rqs);
+	int (*opc_select_path_t)(void **rqs, void *w_rq, void *t_rq, void *cur, void *t, int prev_cpu);
+	unsigned long (*opc_cpu_util_t)(unsigned long util, int cpu, void *t, void *rq, int op_path);
+	void (*opc_add_to_chain_t)(void *rq, void *t);
+	int (*opc_check_uxtop_cpu_t)(int uxtop, int cpu);
+};
 #endif

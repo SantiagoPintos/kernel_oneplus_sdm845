@@ -11,9 +11,8 @@
 #include <linux/irq_work.h>
 #include <trace/events/sched.h>
 
-#include "walt.h"
 /* Curtis, 20180109, ux realm */
-#include <../drivers/oneplus/coretech/opchain/opchain_helper.h>
+#include <../coretech/uxcore/opchain_helper.h>
 
 int sched_rr_timeslice = RR_TIMESLICE;
 

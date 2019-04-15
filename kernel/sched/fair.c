@@ -38,7 +38,7 @@
 #include <trace/events/sched.h>
 
 /* Curtis, 20180111, ux realm*/
-#include <../drivers/oneplus/coretech/opchain/opchain_helper.h>
+#include <../coretech/uxcore/opchain_helper.h>
 
 #define opc_claim_bit_test(claim, cpu) (claim & ((1 << cpu) | (1 << (cpu + num_present_cpus()))))
 
@@ -7614,7 +7614,7 @@ out:
 	trace_sched_task_util(p, next_cpu, backup_cpu, target_cpu, sync,
 			      fbt_env.need_idle, fastpath,
 			      fbt_env.placement_boost, rtg_target ?
-			      cpumask_first(rtg_target) : -1, start_t);
+			      cpumask_first(rtg_target) : -1, start_t, boosted);
 	return target_cpu;
 }
 
@@ -8640,6 +8640,7 @@ next:
 				LBF_IGNORE_PREFERRED_CLUSTER_TASKS);
 		if (env->flags & LBF_IGNORE_SLAVE)
 			env->flags &= ~LBF_IGNORE_SLAVE;
+
 		env->loop = orig_loop;
 		goto redo;
 	}

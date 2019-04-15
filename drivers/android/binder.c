@@ -83,7 +83,7 @@
 #include "binder_alloc.h"
 #include "binder_trace.h"
 /* curtis, 20180111, opchain*/
-#include <../drivers/oneplus/coretech/opchain/opchain_binder.h>
+#include <../coretech/uxcore/opchain_helper.h>
 
 static HLIST_HEAD(binder_deferred_list);
 static DEFINE_MUTEX(binder_deferred_lock);

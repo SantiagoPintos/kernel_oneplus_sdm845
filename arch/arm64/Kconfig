@@ -1313,3 +1313,4 @@ source "arch/arm64/crypto/Kconfig"
 endif
 
 source "lib/Kconfig"
+source "coretech/Kconfig"
