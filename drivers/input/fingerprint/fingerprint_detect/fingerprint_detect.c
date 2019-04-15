@@ -91,7 +91,6 @@ int fp_pinctrl_id(struct fingerprint_detect_data *fp_dev, int en)
 {
 	int ret = 0;
 	struct device *dev = fp_dev->dev;
-
 	fp_dev->fp_pinctrl = devm_pinctrl_get(dev);
 	if (IS_ERR_OR_NULL(fp_dev->fp_pinctrl)) {
 		dev_err(dev, "Target does not use pinctrl\n");
@@ -287,8 +286,8 @@ static int fingerprint_detect_probe(struct platform_device *pdev)
 			fp_detect->sensor_version = 0x04;
 		} else {
 			push_component_info(FINGERPRINTS,
-				"goodix5228", "goodix");
-			fp_detect->sensor_version = 0x03;
+				"sileadgsl7000", "silead");
+			fp_detect->sensor_version = 0x05;
 		}
 	}
 	fp_version = fp_detect->sensor_version;

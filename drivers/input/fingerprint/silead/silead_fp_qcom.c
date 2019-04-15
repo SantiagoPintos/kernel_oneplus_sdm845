@@ -40,6 +40,42 @@ static irqreturn_t silfp_irq_handler(int irq, void *dev_id);
 static void silfp_work_func(struct work_struct *work);
 static int silfp_input_init(struct silfp_data *fp_dev);
 
+#ifdef VENDOR_EDIT
+int sl_pinctrl_init(struct silfp_data *fp_dev)
+{
+	int ret = 0;
+	struct device *dev = &fp_dev->spi->dev;
+
+	fp_dev->sl_pinctrl = devm_pinctrl_get(dev);
+	if (IS_ERR_OR_NULL(fp_dev->sl_pinctrl)) {
+		dev_err(dev, "Target does not use pinctrl\n");
+		ret = PTR_ERR(fp_dev->sl_pinctrl);
+		goto err;
+	}
+
+	fp_dev->gpio_state_enable =
+		pinctrl_lookup_state(fp_dev->sl_pinctrl, "fp_en_init");
+	if (IS_ERR_OR_NULL(fp_dev->gpio_state_enable)) {
+		dev_err(dev, "Cannot get active pinstate\n");
+		ret = PTR_ERR(fp_dev->gpio_state_enable);
+		goto err;
+	}
+
+	ret = pinctrl_select_state(fp_dev->sl_pinctrl,
+		fp_dev->gpio_state_enable);
+	if (ret) {
+		pr_err("can not set %s pins\n", "fp_en_init");
+		goto err;
+	}
+
+	return 0;
+err:
+	fp_dev->sl_pinctrl = NULL;
+	fp_dev->gpio_state_enable = NULL;
+	return ret;
+}
+#endif
+
 /* -------------------------------------------------------------------- */
 /*                            power supply                              */
 /* -------------------------------------------------------------------- */
@@ -51,20 +87,27 @@ static void silfp_hw_poweron(struct silfp_data *fp_dev)
 #ifdef BSP_SIL_POWER_SUPPLY_REGULATOR
     /* Power control by Regulators(LDO) */
     if ( fp_dev->avdd_ldo ) {
-        err = regulator_set_voltage(fp_dev->avdd_ldo, AVDD_MIN, AVDD_MAX);	/*set 2.8v*/
+	err = regulator_set_voltage(fp_dev->avdd_ldo,
+		AVDD_MIN, AVDD_MAX);	/*set 2.8v*/
         #ifdef VENDOR_EDIT
  		err = regulator_set_load(fp_dev->avdd_ldo, CURRENT);
 		if (err < 0)
-			pr_err("%s: Failed to set regulator current avdd\n", __func__);
-        #endif
-        err = regulator_enable(fp_dev->avdd_ldo);	/*enable regulator*/
-        //pmic_set_register_value(PMIC_RG_VCAMA_CAL,0x0A);
-    }
-    if ( fp_dev->vddio_ldo ) {
-        err = regulator_set_voltage(fp_dev->vddio_ldo, VDDIO_MIN, VDDIO_MAX);	/*set 1.8v*/
-        err = regulator_enable(fp_dev->vddio_ldo);	/*enable regulator*/
-        //pmic_set_register_value(PMIC_RG_VCAMA_CAL,0x0A);
-    }
+			LOG_MSG_DEBUG(INFO_LOG,
+				"poweron: vreg mode(err:%d)\n", err);
+	#endif
+	err = regulator_enable(fp_dev->avdd_ldo);	/*enable regulator*/
+	//pmic_set_register_value(PMIC_RG_VCAMA_CAL,0x0A);
+	}
+	if (fp_dev->vddio_ldo) {
+	err = regulator_set_voltage(fp_dev->vddio_ldo,
+		VDDIO_MIN, VDDIO_MAX);	/*set 1.8v*/
+		err = regulator_set_load(fp_dev->vddio_ldo, 200000);//100ma
+		if (err < 0)
+			LOG_MSG_DEBUG(INFO_LOG,
+			"poweron: vreg mode(err:%d)\n", err);
+	err = regulator_enable(fp_dev->vddio_ldo);	/*enable regulator*/
+	//pmic_set_register_value(PMIC_RG_VCAMA_CAL,0x0A);
+	}
 #endif /* BSP_SIL_POWER_SUPPLY_REGULATOR */
 
 #ifdef BSP_SIL_POWER_SUPPLY_PINCTRL
@@ -85,24 +128,79 @@ static void silfp_hw_poweron(struct silfp_data *fp_dev)
         err = gpio_direction_output(fp_dev->vddio_port, 1);
     }
 #endif /* BSP_SIL_POWER_SUPPLY_GPIO */
+    fp_dev->power_is_off = 0;
     LOG_MSG_DEBUG(INFO_LOG, "%s: power supply ret:%d \n", __func__, err);
+}
+
+static void silfp_hw_poweroff(struct silfp_data *fp_dev) 
+{
+	int err = 0;
+
+	LOG_MSG_DEBUG(INFO_LOG, "[%s] enter.\n", __func__);
+#ifdef BSP_SIL_POWER_SUPPLY_REGULATOR
+	/* Power control by Regulators(LDO) */
+	if ((fp_dev->power_is_off == 0) &&
+		fp_dev->avdd_ldo &&
+		(regulator_is_enabled(fp_dev->avdd_ldo) > 0)) {
+		regulator_disable(fp_dev->avdd_ldo);    /*disable regulator*/
+		err = regulator_set_load(fp_dev->avdd_ldo, 0);
+			if (err < 0)
+				LOG_MSG_DEBUG(INFO_LOG,
+					"poweroff: vreg mode(err:%d)\n", err);
+	}
+	if ((fp_dev->power_is_off == 0) &&
+		fp_dev->vddio_ldo &&
+		(regulator_is_enabled(fp_dev->vddio_ldo) > 0)) {
+		regulator_disable(fp_dev->vddio_ldo);   /*disable regulator*/
+		err = regulator_set_load(fp_dev->vddio_ldo, 0);
+		if (err < 0)
+			LOG_MSG_DEBUG(INFO_LOG,
+				"poweroff: vreg mode(err:%d)\n", err);
+	}
+#endif /* BSP_SIL_POWER_SUPPLY_REGULATOR */
+
+#ifdef BSP_SIL_POWER_SUPPLY_PINCTRL
+    /* Power control by GPIOs */
+    //fp_dev->pin.pins_avdd_h = NULL;
+    //fp_dev->pin.pins_vddio_h = NULL;
+#endif /* BSP_SIL_POWER_SUPPLY_PINCTRL */
+
+#ifdef BSP_SIL_POWER_SUPPLY_GPIO
+    if ( fp_dev->avdd_port > 0 ) {
+        gpio_direction_output(fp_dev->avdd_port, 0);
+    }
+    if ( fp_dev->vddio_port > 0 ) {
+        gpio_direction_output(fp_dev->vddio_port, 0);
+    }
+#endif /* BSP_SIL_POWER_SUPPLY_GPIO */
+    fp_dev->power_is_off = 1;
 }
 
 static void silfp_power_deinit(struct silfp_data *fp_dev)
 {
-    LOG_MSG_DEBUG(INFO_LOG, "[%s] enter.\n", __func__);
+	int err = 0;
+
+	LOG_MSG_DEBUG(INFO_LOG, "[%s] enter.\n", __func__);
 #ifdef BSP_SIL_POWER_SUPPLY_REGULATOR
-    /* Power control by Regulators(LDO) */
-    if ( fp_dev->avdd_ldo ) {
-        regulator_disable(fp_dev->avdd_ldo);	/*disable regulator*/
-        regulator_put(fp_dev->avdd_ldo);
-        fp_dev->avdd_ldo = NULL;
-    }
-    if ( fp_dev->vddio_ldo ) {
-        regulator_disable(fp_dev->vddio_ldo);	/*disable regulator*/
-        regulator_put(fp_dev->vddio_ldo);
-        fp_dev->vddio_ldo = NULL;
-    }
+	/* Power control by Regulators(LDO) */
+	if (fp_dev->avdd_ldo) {
+	regulator_disable(fp_dev->avdd_ldo);	/*disable regulator*/
+		err = regulator_set_load(fp_dev->avdd_ldo, 0);
+		if (err < 0)
+			LOG_MSG_DEBUG(INFO_LOG,
+			"deinit: vreg mode(err:%d)\n", err);
+	regulator_put(fp_dev->avdd_ldo);
+	fp_dev->avdd_ldo = NULL;
+	}
+	if (fp_dev->vddio_ldo) {
+	regulator_disable(fp_dev->vddio_ldo);	/*disable regulator*/
+		err = regulator_set_load(fp_dev->vddio_ldo, 0);
+		if (err < 0)
+			LOG_MSG_DEBUG(INFO_LOG,
+			"deinit: Failed vreg mode(err:%d)\n", err);
+	regulator_put(fp_dev->vddio_ldo);
+	fp_dev->vddio_ldo = NULL;
+	}
 #endif /* BSP_SIL_POWER_SUPPLY_REGULATOR */
 
 #ifdef BSP_SIL_POWER_SUPPLY_PINCTRL
@@ -130,26 +228,36 @@ static void silfp_power_deinit(struct silfp_data *fp_dev)
 /* -------------------------------------------------------------------- */
 static void silfp_hw_reset(struct silfp_data *fp_dev, u8 delay)
 {
-    LOG_MSG_DEBUG(INFO_LOG, "[%s] enter, port=%d\n", __func__, fp_dev->rst_port);
+	LOG_MSG_DEBUG(INFO_LOG,
+		"[%s] enter, port=%d\n", __func__, fp_dev->rst_port);
 
-    if ( fp_dev->rst_port > 0 ) {
-        gpio_direction_output(fp_dev->rst_port, 0);
-        mdelay((delay?delay:5)*RESET_TIME_MULTIPLE);
-        gpio_direction_output(fp_dev->rst_port, 1);
+	if (fp_dev->rst_port > 0) {
+	gpio_direction_output(fp_dev->rst_port, 0);
+	mdelay((delay?delay:1)*RESET_TIME_MULTIPLE);
+	gpio_direction_output(fp_dev->rst_port, 1);
 
-        mdelay((delay?delay:3)*RESET_TIME_MULTIPLE);
-    }
+	mdelay((delay?delay:1)*RESET_TIME_MULTIPLE);
+	}
 }
 
 /* -------------------------------------------------------------------- */
 /*                            power  down                               */
 /* -------------------------------------------------------------------- */
-static void silfp_pwdn(struct silfp_data *fp_dev)
+static void silfp_pwdn(struct silfp_data *fp_dev, u8 flag_avdd)
 {
     LOG_MSG_DEBUG(INFO_LOG, "[%s] enter, port=%d\n", __func__, fp_dev->rst_port);
 
+    if (SIFP_PWDN_FLASH == flag_avdd) {
+        silfp_hw_poweroff(fp_dev);
+        msleep(200*RESET_TIME_MULTIPLE);
+        silfp_hw_poweron(fp_dev);
+    }
     if ( fp_dev->rst_port > 0 ) {
         gpio_direction_output(fp_dev->rst_port, 0);
+    }
+
+    if (SIFP_PWDN_POWEROFF == flag_avdd) {
+        silfp_hw_poweroff(fp_dev);
     }
 }
 
@@ -438,7 +546,7 @@ static int silfp_resource_init(struct silfp_data *fp_dev, struct fp_dev_init_t *
             status = -ENODEV;
             goto err_rst;
         } else {
-            gpio_direction_output(fp_dev->rst_port, 1);
+            gpio_direction_output(fp_dev->rst_port, 0);
         }
     }
 
@@ -460,7 +568,12 @@ static int silfp_resource_init(struct silfp_data *fp_dev, struct fp_dev_init_t *
         dev_info->dev_id = fp_dev->pin.qup_id;
         strncpy(dev_info->ta,TANAME,sizeof(dev_info->ta));
     }
-
+#ifdef VENDOR_EDIT
+	status = sl_pinctrl_init(fp_dev);
+	if (status < 0)
+		LOG_MSG_DEBUG(ERR_LOG, "[%s] Failed init gpio %d",
+			__func__, status);
+#endif
     return status;
 
 err_input:

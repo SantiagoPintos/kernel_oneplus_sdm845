@@ -91,16 +91,6 @@ int gf_parse_dts(struct gf_dev* gf_dev)
 		goto err_irq;
 	}
 	gpio_direction_input(gf_dev->irq_gpio);
-#ifdef VENDOR_EDIT
-	/*liuyan 2017/7/28 add*/
-	rc = devm_gpio_request(dev, gf_dev->enable_gpio, "goodix_en");
-	if (rc) {
-		pr_err("failed to request enable gpio, rc = %d\n", rc);
-		goto err_irq;
-	}
-
-#endif
-
 
 /***********power regulator_get****************/
 	gf_dev->vdd_3v2 = regulator_get(dev, "vdd-3v2");
@@ -141,12 +131,15 @@ int gf_parse_dts(struct gf_dev* gf_dev)
 		pr_err("Regulator vdd enable failed rc=%d\n", rc);
 
 #ifdef VENDOR_EDIT
-	if (get_boot_mode() ==  MSM_BOOT_MODE__FACTORY)	{
+	if (get_boot_mode() ==  MSM_BOOT_MODE__FACTORY)
+	{
 		rc = regulator_disable(gf_dev->vdd_3v2);
 		if (rc)
 			pr_err("Regulator vdd disable failed rc=%d\n", rc);
 	}
 #endif
+
+	return rc;
 
 err_irq:
 	devm_gpio_free(dev, gf_dev->reset_gpio);
@@ -173,7 +166,6 @@ int gf_power_on(struct gf_dev* gf_dev)
 {
 	int rc = 0;
 
-	msleep(10);
 	pr_info("---- power on ok ----\n");
 
 	return rc;
@@ -181,9 +173,10 @@ int gf_power_on(struct gf_dev* gf_dev)
 
 int gf_power_off(struct gf_dev* gf_dev)
 {
-	int rc = 0;
+    int rc = 0;
 
-	pr_info("---- power off ----\n");
+    pr_info("---- power off ----\n");
+
 	return rc;
 }
 
@@ -195,7 +188,7 @@ int gf_hw_reset(struct gf_dev *gf_dev, unsigned int delay_ms)
 	}
 	gpio_direction_output(gf_dev->reset_gpio, 1);
 	gpio_set_value(gf_dev->reset_gpio, 0);
-	msleep(20);
+	mdelay(3);
 	gpio_set_value(gf_dev->reset_gpio, 1);
 	mdelay(delay_ms);
 	return 0;

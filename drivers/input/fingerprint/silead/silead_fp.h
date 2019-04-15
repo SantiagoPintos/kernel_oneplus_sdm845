@@ -62,6 +62,12 @@ static inline void wake_unlock(struct wake_lock *lock)
 }
 #endif /* _LINUX_WAKELOCK_H */
 
+enum _pwdn_mode_t {
+	SIFP_PWDN_NONE = 0,
+	SIFP_PWDN_POWEROFF = 1, /* shutdown the avdd power supply */
+	SIFP_PWDN_FLASH = 2, /* shutdown avdd 200ms for H/W full reset */
+	SIFP_PWDN_MAX,
+};
 enum _netlink_cmd_t {
 	SIFP_NETLINK_START = 0,
 	SIFP_NETLINK_IRQ = 1,
@@ -69,6 +75,9 @@ enum _netlink_cmd_t {
 	SIFP_NETLINK_SCR_ON,
 	SIFP_NETLINK_CONNECT,
 	SIFP_NETLINK_DISCONNECT,
+	SIFP_NETLINK_UI_READY,
+	SIFP_NETLINK_TP_TOUCHDOWN,
+	SIFP_NETLINK_TP_TOUCHUP,
 	SIFP_NETLINK_MAX,
 };
 
@@ -115,12 +124,19 @@ struct fp_dev_init_t {
 	char ta[DEVNAME_LEN];
 };
 
+struct fp_underscreen_info {
+    uint8_t touch_state;
+    uint8_t area_rate;
+    uint16_t x;
+    uint16_t y;
+};
+
 struct fp_dev_debug_t {
 	uint8_t cmd[4];
 };
 
 struct fp_dev_kmap_t {
-	uint16_t k[7];  /* Up/Down/Right/Left/Click/Double Click/Longpress */
+	uint16_t k[NAV_KEY_MAX-NAV_KEY_START];  /* Up/Down/Right/Left/Click/Double Click/Longpress */
 };
 
 #define PROC_VND_ID_LEN   32
@@ -148,10 +164,16 @@ struct fp_dev_kmap_t {
 #define SIFP_IOC_PKG_SIZE     _IOR(SIFP_IOC_MAGIC, 25, u8)
 #define SIFP_IOC_DBG_LEVEL    _IOWR(SIFP_IOC_MAGIC,26, u8)
 #define SIFP_IOC_WAKELOCK     _IOW(SIFP_IOC_MAGIC, 27, u8)
-#define SIFP_IOC_PWDN         _IO(SIFP_IOC_MAGIC,  28)
+#define SIFP_IOC_PWDN         _IOW(SIFP_IOC_MAGIC,  28, u8)
 #define SIFP_IOC_PROC_NODE    _IOW(SIFP_IOC_MAGIC, 29, char[PROC_VND_ID_LEN])
+#define SIFP_IOC_GET_TP_TOUCH_INFO          _IOR(SIFP_IOC_MAGIC, 30, struct fp_underscreen_info)
+#define SIFP_IOC_SET_TP_MSG_REPORT_MODE          _IOW(SIFP_IOC_MAGIC, 31, u8)
 
-#define RESET_TIME            2	/* Default chip reset wait time(ms) */
+#ifdef VENDOR_EDIT
+#define SIFP_IOC_REPORT_KEY          _IOW(SIFP_IOC_MAGIC, 32, uint8_t)
+#endif
+
+#define RESET_TIME            1	/* Default chip reset wait time(ms) */
 #define RESET_TIME_MULTIPLE   1 /* Multiple for reset time multiple*wait_time */
 #define SIFP_NETLINK_ROUTE    30
 #define NL_MSG_LEN            16
@@ -175,8 +197,8 @@ struct fp_dev_kmap_t {
 #endif
 
 /* AVDD voltage range 2.8v ~ 3.3v */
-#define AVDD_MAX  3200000
-#define AVDD_MIN  3200000
+#define AVDD_MAX  3000000
+#define AVDD_MIN  3000000
 
 /* VDDIO voltage range 1.8v ~ AVDD */
 #define VDDIO_MAX 1800000
@@ -216,6 +238,7 @@ struct fp_dev_kmap_t {
   #define TANAME ""
 #endif /* BSP_SIL_PLAT_XXX */
 
+extern int opticalfp_irq_handler(struct fp_underscreen_info* tp_info);
 #endif /* __SILEAD_FP_H__ */
 
 /* End of file silead_fp.h */

@@ -15,7 +15,6 @@
 #define pr_fmt(fmt)		KBUILD_MODNAME ": " fmt
 
 #ifdef VENDOR_EDIT
-/*liuyan change for sdm845 */
 #define CONFIG_MSM_RDM_NOTIFY
 #undef CONFIG_FB
 #endif
@@ -102,11 +101,9 @@ struct gf_key_map maps[] = {
 #endif
 	{ EV_KEY, GF_NAV_INPUT_LONG_PRESS },
 #ifndef VENDOR_EDIT
-/*liuyan 2017/8/3, do need these event*/
 	{ EV_KEY, GF_NAV_INPUT_HEAVY },
 #endif
 #ifdef VENDOR_EDIT
-/*liuyan 2017/8/4, add*/
 	{ EV_KEY, GF_NAV_INPUT_F2},
 #endif
 #endif
@@ -321,7 +318,6 @@ static void nav_event_input(struct gf_dev *gf_dev, gf_nav_event_t nav_event)
 		pr_debug("%s nav double click\n", __func__);
 		break;
 #ifdef VENDOR_EDIT
-/*liuyan 2017/8/7 add for reprot f2*/
 	case GF_NAV_F2:
 		nav_input = GF_NAV_INPUT_F2;
 		pr_debug("%s nav f2\n", __func__);
@@ -440,7 +436,7 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			pr_info("power cmd\n");
 		} else {
 			pr_info("Sensor is power off currently. \n");
-			return -ENODEV;
+			//return -ENODEV;
 		}
 	}
 
@@ -465,7 +461,7 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 	case GF_IOC_RESET:
 		pr_info("%s GF_IOC_RESET. \n", __func__);
-		gf_hw_reset(gf_dev, 3);
+		gf_hw_reset(gf_dev, 0);
 		break;
 	case GF_IOC_INPUT_KEY_EVENT:
 		if (copy_from_user(&gf_key, (struct gf_key *)arg, sizeof(struct gf_key))) {
@@ -593,7 +589,7 @@ static int gf_open(struct inode *inode, struct file *filp)
 					goto err_irq;
 			}
             #endif
-			gf_hw_reset(gf_dev, 3);
+			//gf_hw_reset(gf_dev, 5);
 			gf_dev->device_available = 1;
 		}
 	} else {
@@ -663,7 +659,6 @@ static const struct file_operations gf_fops = {
 };
 
 #ifdef VENDOR_EDIT
-/*liuyan 2017/12/7 add for detect screen state*/
 static ssize_t screen_state_get(struct device *device,
 			     struct device_attribute *attribute,
 			     char *buffer)
@@ -683,10 +678,32 @@ static struct attribute *gf_attributes[] = {
 static const struct attribute_group gf_attribute_group = {
 	.attrs = gf_attributes,
 };
+
+int gf_opticalfp_irq_handler(int event)
+{
+	char msg = 0;
+
+	pr_info("[info]:%s, event %d", __func__, event);
+
+	if (gf.spi == NULL) {
+		return 0;
+	}
+	if (event == 1) {
+		msg = GF_NET_EVENT_TP_TOUCHDOWN;
+		sendnlmsg(&msg);
+	} else if (event == 0) {
+		msg = GF_NET_EVENT_TP_TOUCHUP;
+		sendnlmsg(&msg);
+	}
+
+	__pm_wakeup_event(&fp_wakelock, 10*HZ);
+
+	return 0;
+}
+EXPORT_SYMBOL(gf_opticalfp_irq_handler);
 #endif
 
 #ifdef VENDOR_EDIT
-/*liuyan change for sdm845 */
 #if defined(CONFIG_FB)
 static int goodix_fb_state_chg_callback(struct notifier_block *nb,
 		unsigned long val, void *data)
@@ -751,7 +768,8 @@ static int goodix_fb_state_chg_callback(
 	unsigned int blank;
 	char msg = 0;
 
-	if (val != MSM_DRM_EARLY_EVENT_BLANK)
+	if (val != MSM_DRM_EARLY_EVENT_BLANK &&
+		val != MSM_DRM_ONSCREENFINGERPRINT_EVENT)
 		return 0;
 
 	if (evdata->id != MSM_DRM_PRIMARY_DISPLAY)
@@ -759,6 +777,29 @@ static int goodix_fb_state_chg_callback(
 
 	pr_info("[info] %s go to the msm_drm_notifier_callback value = %d\n",
 			__func__, (int)val);
+#ifdef VENDOR_EDIT
+	blank = *(int *)(evdata->data);
+	if (val == MSM_DRM_ONSCREENFINGERPRINT_EVENT) {
+		pr_info("[%s] UI ready enter\n", __func__);
+
+		switch (blank) {
+		case 0:
+			pr_info("[%s] UI disappear\n", __func__);
+			msg = GF_NET_EVENT_UI_DISAPPEAR;
+			sendnlmsg(&msg);
+			break;
+		case 1:
+			pr_info("[%s] UI ready\n", __func__);
+			msg = GF_NET_EVENT_UI_READY;
+			sendnlmsg(&msg);
+			break;
+		default:
+			pr_info("[%s] Unknown EVENT\n", __func__);
+			break;
+		}
+		return 0;
+	}
+#endif
 	gf_dev = container_of(nb, struct gf_dev, msm_drm_notif);
 	if (evdata && evdata->data && val ==
 		MSM_DRM_EARLY_EVENT_BLANK && gf_dev) {
@@ -862,7 +903,6 @@ static int gf_probe(struct platform_device *pdev)
 		gf_dev->devt = 0;
 	}
 	mutex_unlock(&device_list_lock);
-/*zoulian@20170727 parse dts move to probe*/
 	status = gf_parse_dts(gf_dev);
 	if (status)
 		goto err_parse_dt;
@@ -875,7 +915,6 @@ static int gf_probe(struct platform_device *pdev)
 	if (status)
 		goto err_irq;
 
-/*end zoulian@20170727 parse dts move to probe*/
 #ifdef VENDOR_EDIT
 	status = gf_pinctrl_init(gf_dev);
 	if (status)
@@ -927,7 +966,6 @@ static int gf_probe(struct platform_device *pdev)
 #endif
 
 #ifdef VENDOR_EDIT
-/*liuyan change for sdm845 */
 #if defined(CONFIG_FB)
 	gf_dev->notifier = goodix_noti_block;
 	fb_register_client(&gf_dev->notifier);
@@ -994,7 +1032,6 @@ static int gf_remove(struct platform_device *pdev)
 	wakeup_source_trash(&fp_wakelock);
 
 #ifdef VENDOR_EDIT
-/*liuyan change for sdm845 */
 #if defined(CONFIG_FB)
 	fb_unregister_client(&gf_dev->notifier);
 #elif defined(CONFIG_MSM_RDM_NOTIFY)
