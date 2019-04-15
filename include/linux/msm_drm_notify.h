@@ -29,7 +29,11 @@ enum {
 	/* panel: power on for tp*/
 	MSM_DRM_BLANK_UNBLANK_CUST,
 	/* panel: lcd doze mode */
-	MSM_DRM_BLANK_NORMAL
+	MSM_DRM_BLANK_NORMAL,
+	/* panel: power off */
+	MSM_DRM_BLANK_POWERDOWN_CUST,
+
+	MSM_DRM_ONSCREENFINGERPRINT_EVENT,
 	/*#endif*/
 };
 
