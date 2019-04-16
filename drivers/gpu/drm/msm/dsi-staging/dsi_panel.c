@@ -705,6 +705,7 @@ static int dsi_panel_led_bl_register(struct dsi_panel *panel,
 }
 #endif
 
+bool HBM_flag;
 static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	u32 bl_lvl)
 {
@@ -725,11 +726,14 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	}
 #endif /* VENDOR_EDIT */
 
-    if (panel->bl_config.bl_high2bit){
-        rc = mipi_dsi_dcs_set_display_brightness_samsung(dsi, bl_lvl);
-    } else
-    ///#endif
-	rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
+	if (panel->bl_config.bl_high2bit) {
+		if (HBM_flag == true)
+			return 0;
+
+		rc = mipi_dsi_dcs_set_display_brightness_samsung(dsi, bl_lvl);
+	} else
+		///#endif
+		rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
 	if (rc < 0)
 		pr_err("failed to update dcs backlight:%d\n", bl_lvl);
 
@@ -4153,6 +4157,7 @@ int dsi_panel_disable(struct dsi_panel *panel)
 
 	/* Avoid sending panel off commands when ESD recovery is underway */
 	if (!atomic_read(&panel->esd_recovery_pending)) {
+		HBM_flag = false;
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_OFF);
 		if (rc) {
 			pr_err("[%s] failed to send DSI_CMD_SET_OFF cmds, rc=%d\n",
@@ -4280,7 +4285,11 @@ int dsi_panel_set_hbm_mode(struct dsi_panel *panel, int level)
 			pr_err("This panel does not support HBM mode off.\n");
 			goto error;
 		} else {
+		HBM_flag = false;
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM_OFF);
+		pr_err("hbm_backight = %d panel->bl_config.bl_level =%d\n",
+			panel->hbm_backlight, panel->bl_config.bl_level);
+		rc = dsi_panel_update_backlight(panel, panel->hbm_backlight);
 		}
 		break;
 
@@ -4330,6 +4339,7 @@ int dsi_panel_set_hbm_mode(struct dsi_panel *panel, int level)
 			pr_err("This panel does not support HBM mode 5.\n");
 			goto error;
 		} else {
+			HBM_flag = true;
 			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM_ON_5);
 		}
 		break;

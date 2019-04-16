@@ -4915,6 +4915,9 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 	if (fp_index < 0)
 		cstate->fingerprint_dim_layer = NULL;
 
+	if (fppressed_index < 0)
+		cstate->fingerprint_pressed = false;
+
 	return 0;
 }
 #endif /* VENDOR_EDIT */
