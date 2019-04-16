@@ -510,6 +510,10 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 	struct dsi_display *dsi_display;
 	struct dsi_backlight_config *bl_config;
 	int rc = 0;
+#ifdef VENDOR_EDIT
+	/*xiaoxiaohuan@OnePlus.MultiMediaService, add for fingerprint*/
+	struct backlight_device *bd;
+#endif /* VENDOR_EDIT */
 
 	if (!c_conn) {
 		SDE_ERROR("Invalid params sde_connector null\n");
@@ -523,6 +527,16 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 			((dsi_display) ? dsi_display->panel : NULL));
 		return -EINVAL;
 	}
+#ifdef VENDOR_EDIT
+	/*xiaoxiaohuan@OnePlus.MultiMediaService, add for fingerprint*/
+		bd = c_conn->bl_device;
+		if (!bd) {
+			SDE_ERROR("Invalid params backlight_device null\n");
+			return -EINVAL;
+		}
+
+		mutex_lock(&bd->update_lock);
+#endif /* VENDOR_EDIT */
 
 	bl_config = &dsi_display->panel->bl_config;
 
@@ -550,10 +564,135 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 		bl_config->bl_level);
 	rc = c_conn->ops.set_backlight(dsi_display, bl_config->bl_level);
 	c_conn->unset_bl_level = 0;
+#ifdef VENDOR_EDIT
+	/*xiaoxiaohuan@OnePlus.MultiMediaService, add for fingerprint*/
+		mutex_unlock(&bd->update_lock);
+#endif /* VENDOR_EDIT */
 
 	return rc;
 }
 
+#ifdef VENDOR_EDIT
+//xiaoxiaohuan@OnePlus.MultiMediaService,2018/08/04, add for fingerprint
+extern bool sde_crtc_get_fingerprint_mode(struct drm_crtc_state *crtc_state);
+extern bool sde_crtc_get_fingerprint_pressed(struct drm_crtc_state *crtc_state);
+extern int dsi_display_set_hbm_mode(struct drm_connector *connector, int level);
+static int dsi_panel_tx_cmd_set_op(struct dsi_panel *panel,
+		enum dsi_cmd_set_type type)
+{
+	int rc = 0, i = 0;
+	ssize_t len;
+	struct dsi_cmd_desc *cmds;
+	u32 count;
+	enum dsi_cmd_set_state state;
+	struct dsi_display_mode *mode;
+	const struct mipi_dsi_host_ops *ops = panel->host->ops;
+
+	if (!panel || !panel->cur_mode)
+		return -EINVAL;
+
+	if (panel->type == EXT_BRIDGE)
+		return 0;
+
+	mode = panel->cur_mode;
+
+	cmds = mode->priv_info->cmd_sets[type].cmds;
+	count = mode->priv_info->cmd_sets[type].count;
+	state = mode->priv_info->cmd_sets[type].state;
+
+	if (count == 0) {
+		pr_debug("[%s] No commands to be sent for state(%d)\n",
+				panel->name, type);
+		goto error;
+	}
+
+	for (i = 0; i < count; i++) {
+		if (state == DSI_CMD_SET_STATE_LP)
+			cmds->msg.flags |= MIPI_DSI_MSG_USE_LPM;
+
+		if (cmds->last_command)
+			cmds->msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
+
+		len = ops->transfer(panel->host, &cmds->msg);
+		if (len < 0) {
+			rc = len;
+			pr_err("failed to set cmds(%d), rc=%d\n", type, rc);
+			goto error;
+		}
+		if (cmds->post_wait_ms)
+			usleep_range(cmds->post_wait_ms*1000,
+					((cmds->post_wait_ms*1000)+10));
+		cmds++;
+	}
+error:
+	return rc;
+}
+
+static int _sde_connector_update_hbm(struct sde_connector *c_conn)
+{
+	struct drm_connector *connector = &c_conn->base;
+	struct dsi_display *dsi_display;
+	struct sde_connector_state *c_state;
+	int rc = 0;
+	int fingerprint_mode;
+
+	if (!c_conn) {
+		SDE_ERROR("Invalid params sde_connector null\n");
+		return -EINVAL;
+	}
+
+	if (c_conn->connector_type != DRM_MODE_CONNECTOR_DSI)
+		return 0;
+
+	c_state = to_sde_connector_state(connector->state);
+
+	dsi_display = c_conn->display;
+	if (!dsi_display || !dsi_display->panel) {
+		SDE_ERROR("Invalid params(s) dsi_display %pK, panel %pK\n",
+				dsi_display,
+				((dsi_display) ? dsi_display->panel : NULL));
+		return -EINVAL;
+	}
+
+	if (!c_conn->encoder || !c_conn->encoder->crtc ||
+			!c_conn->encoder->crtc->state) {
+		return 0;
+	}
+
+	fingerprint_mode = sde_crtc_get_fingerprint_mode(
+					c_conn->encoder->crtc->state);
+	if (fingerprint_mode != dsi_display->panel->is_hbm_enabled) {
+		struct drm_encoder *drm_enc = c_conn->encoder;
+
+		dsi_display->panel->is_hbm_enabled = fingerprint_mode;
+		if (fingerprint_mode) {
+			mutex_lock(&dsi_display->panel->panel_lock);
+			sde_encoder_poll_line_counts(drm_enc);
+			rc = dsi_panel_tx_cmd_set_op(dsi_display->panel,
+						DSI_CMD_SET_HBM_ON_5);
+			mutex_unlock(&dsi_display->panel->panel_lock);
+			if (rc) {
+				pr_err("failed to send DSI_CMD_HBM_ON rc=%d\n",
+						rc);
+				return rc;
+			}
+		} else {
+			_sde_connector_update_bl_scale(c_conn);
+			sde_encoder_poll_line_counts(drm_enc);
+			mutex_lock(&dsi_display->panel->panel_lock);
+			rc = dsi_panel_tx_cmd_set_op(dsi_display->panel,
+						DSI_CMD_SET_HBM_OFF);
+			mutex_unlock(&dsi_display->panel->panel_lock);
+			if (rc) {
+				pr_err("failed to send DSI_CMD_HBM_OFF rc=%d\n",
+							rc);
+				return rc;
+			}
+		}
+	}
+	return 0;
+}
+#endif
 static int _sde_connector_update_dirty_properties(
 				struct drm_connector *connector)
 {
@@ -625,7 +764,14 @@ int sde_connector_pre_kickoff(struct drm_connector *connector)
 		SDE_EVT32(connector->base.id, SDE_EVTLOG_ERROR);
 		goto end;
 	}
-
+#ifdef VENDOR_EDIT
+/*xiaoxiaohuan@OnePlus.MultiMediaService,2018/08/04, add for fingerprint*/
+	rc = _sde_connector_update_hbm(c_conn);
+	if (rc) {
+		SDE_EVT32(connector->base.id, SDE_EVTLOG_ERROR);
+		goto end;
+	}
+#endif
 	if (!c_conn->ops.pre_kickoff)
 		return 0;
 
@@ -2265,6 +2411,11 @@ struct drm_connector *sde_connector_init(struct drm_device *dev,
 		0x0, 0, MAX_AD_BL_SCALE_LEVEL, MAX_AD_BL_SCALE_LEVEL,
 		CONNECTOR_PROP_AD_BL_SCALE);
 
+#ifdef VENDOR_EDIT
+//xiaoxiaohuan@OnePlus.MultiMediaService,2018/08/04, add for fingerprint
+	msm_property_install_range(&c_conn->property_info, "CONNECTOR_CUST",
+		0x0, 0, INT_MAX, 0, CONNECTOR_PROP_CUSTOM);
+#endif
 	c_conn->bl_scale_dirty = false;
 	c_conn->bl_scale = MAX_BL_SCALE_LEVEL;
 	c_conn->bl_scale_ad = MAX_AD_BL_SCALE_LEVEL;

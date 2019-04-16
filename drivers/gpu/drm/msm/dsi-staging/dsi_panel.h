@@ -223,7 +223,10 @@ struct dsi_panel {
 	int status_value;
 	int panel_mismatch_check;
 	int panel_mismatch;
-	//#endif
+	int hbm_backlight;
+	bool is_hbm_enabled;
+	int  op_force_screenfp;
+//#endif
 	bool lp11_init;
 	bool ulps_enabled;
 	bool ulps_suspend_enabled;
@@ -340,6 +343,8 @@ void dsi_panel_ext_bridge_put(struct dsi_panel *panel);
 //#ifdef VENDOR_EDIT
 int dsi_panel_set_acl_mode(struct dsi_panel *panel, int level);
 int dsi_panel_set_hbm_mode(struct dsi_panel *panel, int level);
+int dsi_panel_op_set_hbm_mode(struct dsi_panel *panel, int level);
+
 int dsi_panel_set_aod_mode(struct dsi_panel *panel, int level);
 int dsi_panel_set_srgb_mode(struct dsi_panel *panel, int level);
 int dsi_panel_set_dci_p3_mode(struct dsi_panel *panel, int level);

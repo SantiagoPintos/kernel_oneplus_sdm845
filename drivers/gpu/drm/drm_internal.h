@@ -122,6 +122,9 @@ int dsi_display_set_aod_mode_test(struct drm_connector *connector, int level);
 int dsi_display_get_aod_mode_test(struct drm_connector *connector);
 int dsi_display_set_aod_disable(struct drm_connector *connector, int disable);
 int dsi_display_get_aod_disable(struct drm_connector *connector);
+int dsi_display_set_fp_hbm_mode(struct drm_connector *connector, int level);
+int dsi_display_get_fp_hbm_mode(struct drm_connector *connector);
+
 //#endif
 
 /* drm_debugfs.c */

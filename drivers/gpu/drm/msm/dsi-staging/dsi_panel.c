@@ -717,8 +717,14 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	}
 
 	dsi = &panel->mipi_device;
+#ifdef VENDOR_EDIT
+	/*xiaoxiaohuan@OnePlus.MultiMediaService add for fingerprint*/
+	if (panel->is_hbm_enabled) {
+		pr_err("OPEN HBM\n");
+		return 0;
+	}
+#endif /* VENDOR_EDIT */
 
-	//#ifdef VENDOR_EDIT
     if (panel->bl_config.bl_high2bit){
         rc = mipi_dsi_dcs_set_display_brightness_samsung(dsi, bl_lvl);
     } else
@@ -4332,6 +4338,60 @@ int dsi_panel_set_hbm_mode(struct dsi_panel *panel, int level)
 
 	}
 	pr_info("Set HBM Mode = %d\n", level);
+
+error:
+	mutex_unlock(&panel->panel_lock);
+
+	return rc;
+}
+
+int dsi_panel_op_set_hbm_mode(struct dsi_panel *panel, int level)
+{
+	int rc = 0;
+	u32 count;
+	struct dsi_display_mode *mode;
+
+	if (!panel || !panel->cur_mode) {
+		pr_err("Invalid params\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&panel->panel_lock);
+
+	mode = panel->cur_mode;
+	switch (level) {
+	case 0:
+		count = mode->priv_info->cmd_sets[DSI_CMD_SET_HBM_OFF].count;
+		if (!count) {
+			pr_err("This panel does not support HBM mode off.\n");
+			goto error;
+		} else {
+			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM_OFF);
+			pr_err("HBM OFF->hbm_backight = %d"
+					"panel->bl_config.bl_level = %d\n",
+					panel->hbm_backlight,
+					panel->bl_config.bl_level);
+			rc = dsi_panel_update_backlight(panel,
+				panel->hbm_backlight);
+		}
+		break;
+
+	case 1:
+		count = mode->priv_info->cmd_sets[DSI_CMD_SET_HBM_ON_5].count;
+		if (!count) {
+			pr_err("This panel does not support HBM mode.\n");
+			goto error;
+		} else {
+			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM_ON_5);
+		}
+		break;
+	default:
+		break;
+
+	}
+	pr_err("Set HBM Mode = %d\n", level);
+	if (level == 5)
+		pr_err("HBM == 5 for fingerprint\n");
 
 error:
 	mutex_unlock(&panel->panel_lock);
