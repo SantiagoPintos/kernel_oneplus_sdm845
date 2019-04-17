@@ -750,6 +750,8 @@ CONFIG_PSTORE_RAM=y
 CONFIG_PSTORE_DEVICE_INFO=y
 CONFIG_PSTORE_PMSG=y
 CONFIG_BOOTLOADER_LOG=y
+# Curtis, 20180115, opchain
+CONFIG_OPCHAIN=y
 # waynechang,2017/3/15, add CONFIG_INPUT_KEYCHORD to enable keychord function for systrace service
 CONFIG_INPUT_KEYCHORD=y
 #endif

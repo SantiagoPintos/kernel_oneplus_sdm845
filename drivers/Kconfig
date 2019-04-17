@@ -221,4 +221,7 @@ source "drivers/oneplus/Kconfig"
 # liochen@filesystem,2017/09/10, support param partion read/write
 source "drivers/param_read_write/Kconfig"
 #endif
+
+source "drivers/oneplus/Kconfig"
+
 endmenu

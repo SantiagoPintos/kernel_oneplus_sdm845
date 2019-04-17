@@ -9,3 +9,4 @@ obj-y += boot_mode.o
 endif
 #endif /* VENDOR_EDIT */
 
+obj-y += coretech/

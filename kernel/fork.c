@@ -547,7 +547,14 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 	tsk->splice_pipe = NULL;
 	tsk->task_frag.page = NULL;
 	tsk->wake_q.next = NULL;
-
+#ifdef VENDOR_EDIT
+	/* Curtis, 20180109, opchain*/
+	tsk->utask_tag = 0;
+	tsk->utask_tag_base = 0;
+	tsk->etask_claim = 0;
+	tsk->claim_cpu = -1;
+	tsk->utask_slave = 0;
+#endif
 	account_kernel_stack(tsk, 1);
 
 	kcov_task_init(tsk);
