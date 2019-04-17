@@ -1216,10 +1216,8 @@ int dsi_display_set_power(struct drm_connector *connector,
 	#ifdef VENDOR_EDIT
 	struct msm_drm_notifier notifier_data;
 	int blank;
-	#endif
-	//#ifdef VENDOR_EDIT
 	int aod_mode = 0;
-	//#endif
+	#endif
 	if (!display || !display->panel) {
 		pr_err("invalid display/panel\n");
 		return -EINVAL;
@@ -1233,7 +1231,7 @@ int dsi_display_set_power(struct drm_connector *connector,
 			aod_mode = display->panel->aod_mode_test;
 		else
 			aod_mode = display->panel->aod_mode ?
-				display->panel->aod_mode : 3;
+				display->panel->aod_mode : 5;
 		dsi_panel_set_aod_mode(display->panel, aod_mode);
 		//#endif
 		break;

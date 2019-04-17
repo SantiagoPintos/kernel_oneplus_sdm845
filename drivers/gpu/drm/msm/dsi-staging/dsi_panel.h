@@ -214,6 +214,7 @@ struct dsi_panel {
 	int aod_mode;
 	int aod_mode_test;
 	int aod_status;
+	int aod_curr_mode;
 	int aod_disable;
 	int srgb_mode;
 	int dci_p3_mode;

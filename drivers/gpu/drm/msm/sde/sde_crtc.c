@@ -2677,25 +2677,26 @@ struct ba {
 
 struct ba brightness_alpha_lut[] = {
 	{0, 0xff},
-	{1, 0xee},
-	{2, 0xe8},
-	{3, 0xe6},
-	{4, 0xe5},
-	{6, 0xe4},
-	{10, 0xe0},
-	{20, 0xd5},
-	{30, 0xce},
-	{45, 0xc6},
-	{70, 0xb7},
-	{100, 0xad},
-	{150, 0xa0},
-	{227, 0x8a},
-	{300, 0x80},
-	{400, 0x6e},
-	{500, 0x5b},
-	{600, 0x50},
-	{800, 0x38},
-	{1023, 0x18},
+	{1, 0xf1},
+	{2, 0xec},
+	{3, 0xeb},
+	{4, 0xea},
+	{6, 0xe8},
+	{10, 0xe4},
+	{20, 0xdc},
+	{30, 0xd4},
+	{45, 0xcc},
+	{70, 0xbe},
+	{100, 0xb3},
+	{150, 0xa6},
+	{227, 0x90},
+	{300, 0x83},
+	{400, 0x70},
+	{500, 0x60},
+	{600, 0x53},
+	{800, 0x3c},
+	{1023, 0x22},
+	{2000, 0x83},
 };
 
 static int interpolate(int x, int xa, int xb, int ya, int yb)
@@ -2758,29 +2759,22 @@ ssize_t oneplus_display_notify_fp_press(struct device *dev,
 	struct drm_atomic_state *state;
 	struct drm_crtc_state *crtc_state;
 	struct drm_crtc *crtc;
-	static ktime_t on_time;
 	int onscreenfp_status = 0;
 	int err;
 
+	SDE_ATRACE_BEGIN("oneplus_display_notify_fp_press");
 	err = sscanf(buf, "%du", &onscreenfp_status);
 	if (err < 0)
 		pr_err("sscanf failed for &onscreenfp_status\n");
 
 	onscreenfp_status = !!onscreenfp_status;
-	if (onscreenfp_status == oneplus_onscreenfp_status)
+	if (onscreenfp_status == oneplus_onscreenfp_status) {
+		SDE_ATRACE_END("oneplus_display_notify_fp_press");
 		return count;
+	}
 
 	pr_err("notify fingerpress %s\n", onscreenfp_status ? "on" : "off");
 
-	if (onscreenfp_status) {
-		on_time = ktime_get();
-	} else {
-		ktime_t now = ktime_get();
-		ktime_t delta = ktime_sub(now, on_time);
-
-		if (ktime_to_ns(delta) < 300000000)
-			msleep(300 - (ktime_to_ns(delta) / 1000000));
-	}
 	oneplus_onscreenfp_status = onscreenfp_status;
 	drm_modeset_lock_all(drm_dev);
 
@@ -2793,6 +2787,70 @@ ssize_t oneplus_display_notify_fp_press(struct device *dev,
 		drm_atomic_state_free(state);
 
 	drm_modeset_unlock_all(drm_dev);
+	SDE_ATRACE_END("oneplus_display_notify_fp_press");
+
+	return count;
+}
+
+int oneplus_dim_status;
+ssize_t oneplus_display_notify_dim(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct dsi_display *display = get_main_display();
+	struct drm_device *drm_dev = display->drm_dev;
+	struct drm_connector *dsi_connector = display->drm_conn;
+	struct drm_mode_config *mode_config = &drm_dev->mode_config;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+	struct drm_crtc *crtc;
+	int dim_status = 0;
+	int err;
+
+	SDE_ATRACE_BEGIN("oneplus_display_notify_dim");
+	err = sscanf(buf, "%du", &dim_status);
+	if (err)
+		pr_err("oneplus_display_notify_dim sscanf failed");
+
+	//dim_status = !!dim_status;
+	pr_info("notify dim %d\n", dim_status);
+
+	if (display->panel->aod_status == 0 && (dim_status == 2)) {
+		pr_err("fp set it in normal status\n");
+
+		if (dim_status == oneplus_dim_status)
+			return count;
+
+		oneplus_dim_status = dim_status;
+		SDE_ATRACE_END("oneplus_display_notify_dim");
+		return count;
+
+	} else if (display->panel->aod_status == 1 && dim_status == 2) {
+		oneplus_onscreenfp_status = 1;
+
+	} else if (display->panel->aod_status == 1 && dim_status == 0) {
+		oneplus_onscreenfp_status = 0;
+	}
+
+	if (dim_status == oneplus_dim_status)
+		return count;
+
+	oneplus_dim_status = dim_status;
+	drm_modeset_lock_all(drm_dev);
+
+	state = drm_atomic_state_alloc(drm_dev);
+	state->acquire_ctx = mode_config->acquire_ctx;
+	crtc = dsi_connector->state->crtc;
+	crtc_state = drm_atomic_get_crtc_state(state, crtc);
+
+	if ((oneplus_dim_status != 0) &&
+		!(oneplus_dim_status == 5 && display->panel->aod_status == 0)) {
+		err = drm_atomic_commit(state);
+		if (err < 0)
+			drm_atomic_state_free(state);
+	}
+	drm_modeset_unlock_all(drm_dev);
+	SDE_ATRACE_END("oneplus_display_notify_dim");
 
 	return count;
 }
@@ -4854,6 +4912,8 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 	int fppressed_index = -1;
 	int zpos = INT_MAX;
 	int mode;
+	int fp_mode = oneplus_onscreenfp_status;
+	int dim_mode = oneplus_dim_status;
 	int i;
 
 	for (i = 0; i < cnt; i++) {
@@ -4872,6 +4932,29 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 				return -EINVAL;
 			}
 		}
+
+		if (fppressed_index >= 0) {
+			if (fp_mode == 0) {
+				pstates[fppressed_index].sde_pstate->
+				property_values[PLANE_PROP_ALPHA].value = 0;
+				fppressed_index = -1;
+			} else {
+				pstates[fppressed_index].sde_pstate->
+				property_values[PLANE_PROP_ALPHA].value = 0xff;
+			}
+		}
+
+		if (fp_index >= 0) {
+			if (dim_mode == 0) {
+				pstates[fp_index].sde_pstate->
+				property_values[PLANE_PROP_ALPHA].value = 0;
+				fp_index = -1;
+			} else {
+				pstates[fp_index].sde_pstate->
+				property_values[PLANE_PROP_ALPHA].value = 0xff;
+			}
+		}
+
 		if (fppressed_index >= 0) {
 			if (zpos > pstates[fppressed_index].stage)
 				zpos = pstates[fppressed_index].stage;

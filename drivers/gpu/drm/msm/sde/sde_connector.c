@@ -628,13 +628,14 @@ error:
 	return rc;
 }
 
+extern bool HBM_flag;
 static int _sde_connector_update_hbm(struct sde_connector *c_conn)
 {
 	struct drm_connector *connector = &c_conn->base;
 	struct dsi_display *dsi_display;
 	struct sde_connector_state *c_state;
 	int rc = 0;
-	int fingerprint_mode;
+	int fingerprint_mode = 0;
 
 	if (!c_conn) {
 		SDE_ERROR("Invalid params sde_connector null\n");
@@ -655,19 +656,17 @@ static int _sde_connector_update_hbm(struct sde_connector *c_conn)
 	}
 
 	if (!c_conn->encoder || !c_conn->encoder->crtc ||
-			!c_conn->encoder->crtc->state) {
+			!c_conn->encoder->crtc->state)
 		return 0;
-	}
 
 	fingerprint_mode = sde_crtc_get_fingerprint_mode(
 					c_conn->encoder->crtc->state);
 	if (fingerprint_mode != dsi_display->panel->is_hbm_enabled) {
-		struct drm_encoder *drm_enc = c_conn->encoder;
 
 		dsi_display->panel->is_hbm_enabled = fingerprint_mode;
 		if (fingerprint_mode) {
+			HBM_flag = true;
 			mutex_lock(&dsi_display->panel->panel_lock);
-			sde_encoder_poll_line_counts(drm_enc);
 			rc = dsi_panel_tx_cmd_set_op(dsi_display->panel,
 						DSI_CMD_SET_HBM_ON_5);
 			mutex_unlock(&dsi_display->panel->panel_lock);
@@ -678,7 +677,6 @@ static int _sde_connector_update_hbm(struct sde_connector *c_conn)
 			}
 		} else {
 			_sde_connector_update_bl_scale(c_conn);
-			sde_encoder_poll_line_counts(drm_enc);
 			mutex_lock(&dsi_display->panel->panel_lock);
 			rc = dsi_panel_tx_cmd_set_op(dsi_display->panel,
 						DSI_CMD_SET_HBM_OFF);
