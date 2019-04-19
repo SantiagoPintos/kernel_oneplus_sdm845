@@ -7666,8 +7666,40 @@ int dsi_display_set_aod_mode(struct drm_connector *connector, int level)
 		return -EINVAL;
 
 	panel = dsi_display->panel;
-	mutex_lock(&dsi_display->display_lock);
 	panel->aod_mode = level;
+
+	if (strcmp(dsi_display->panel->name,
+			"samsung s6e3fc2x01 cmd mode dsi panel") == 0) {
+		pr_info("dsi_display_set_aod_mode\n");
+	} else {
+		dsi_display->panel->aod_mode = 0;
+		return 0;
+	}
+
+	mutex_lock(&dsi_display->display_lock);
+	if (!dsi_panel_initialized(panel))
+		goto error;
+
+	rc = dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+			DSI_CORE_CLK, DSI_CLK_ON);
+	if (rc) {
+		pr_err("[%s] failed to enable DSI core clocks, rc=%d\n",
+				dsi_display->name, rc);
+		goto error;
+	}
+	rc = dsi_panel_set_aod_mode(panel, level);
+	if (rc)
+		pr_err("unable to set aod mode\n");
+
+	rc = dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+			DSI_CORE_CLK, DSI_CLK_OFF);
+	if (rc) {
+		pr_err("[%s] failed to disable DSI core clocks, rc=%d\n",
+				dsi_display->name, rc);
+		goto error;
+	}
+
+error:
 	mutex_unlock(&dsi_display->display_lock);
 
 	return rc;

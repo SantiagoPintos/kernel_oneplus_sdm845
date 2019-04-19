@@ -37,6 +37,10 @@ struct msm_commit {
 
 BLOCKING_NOTIFIER_HEAD(msm_drm_notifier_list);
 
+#ifdef VENDOR_EDIT
+int connector_state_crtc_index;
+#endif
+
 /**
  * msm_drm_register_client - register a client notifier
  * @nb: notifier block to callback on events
@@ -260,6 +264,9 @@ msm_disable_outputs(struct drm_device *dev, struct drm_atomic_state *old_state)
 		blank = MSM_DRM_BLANK_POWERDOWN;
 		notifier_data.data = &blank;
 		notifier_data.id = crtc_idx;
+		#ifdef VENDOR_EDIT
+		connector_state_crtc_index = crtc_idx;
+		#endif
 		msm_drm_notifier_call_chain(MSM_DRM_EARLY_EVENT_BLANK,
 					     &notifier_data);
 		/*
@@ -411,9 +418,6 @@ void msm_atomic_helper_commit_modeset_disables(struct drm_device *dev,
  * and do the plane commits at the end. This is useful for drivers doing runtime
  * PM since planes updates then only happen when the CRTC is actually enabled.
  */
-#ifdef VENDOR_EDIT
-int connector_state_crtc_index;
-#endif
 static void msm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 		struct drm_atomic_state *old_state)
 {
@@ -583,6 +587,8 @@ static void complete_commit(struct msm_commit *c)
 	kms->funcs->complete_commit(kms, state);
 
 	drm_atomic_state_free(state);
+
+	priv->commit_end_time =  ktime_get(); //commit end time
 
 	commit_destroy(c);
 }

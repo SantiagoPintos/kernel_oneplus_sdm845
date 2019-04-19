@@ -2747,6 +2747,31 @@ int oneplus_get_panel_brightness_to_alpha(void)
 	return brightness_to_alpha(display->panel->hbm_backlight);
 }
 
+int oneplus_onscreenaod_hid;
+int oneplus_aod_hid;
+ssize_t oneplus_display_notify_aod_hid(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	int onscreenaod_hid = 0, err = 0;
+
+	SDE_ATRACE_BEGIN("aod_hid_node");
+	err = sscanf(buf, "%du", &onscreenaod_hid);
+	if (err)
+		pr_err("sscanf failed onscreenaod_hid");
+
+	oneplus_onscreenaod_hid = !!onscreenaod_hid;
+	if (onscreenaod_hid == oneplus_onscreenaod_hid) {
+		SDE_ATRACE_END("oneplus_display_notify_fp_press");
+		return count;
+	}
+
+	pr_info("notify aod hid %d\n", onscreenaod_hid);
+	oneplus_onscreenaod_hid = onscreenaod_hid;
+	SDE_ATRACE_END("aod_hid_node");
+	return count;
+}
+
 int oneplus_onscreenfp_status;
 ssize_t oneplus_display_notify_fp_press(struct device *dev,
 		struct device_attribute *attr,
@@ -2759,8 +2784,11 @@ ssize_t oneplus_display_notify_fp_press(struct device *dev,
 	struct drm_atomic_state *state;
 	struct drm_crtc_state *crtc_state;
 	struct drm_crtc *crtc;
+	struct msm_drm_private *priv;
 	int onscreenfp_status = 0;
 	int err;
+	ktime_t now;
+	bool need_commit = false;
 
 	SDE_ATRACE_BEGIN("oneplus_display_notify_fp_press");
 	err = sscanf(buf, "%du", &onscreenfp_status);
@@ -2773,7 +2801,7 @@ ssize_t oneplus_display_notify_fp_press(struct device *dev,
 		return count;
 	}
 
-	pr_err("notify fingerpress %s\n", onscreenfp_status ? "on" : "off");
+	pr_info("notify fingerpress %s\n", onscreenfp_status ? "on" : "off");
 
 	oneplus_onscreenfp_status = onscreenfp_status;
 	drm_modeset_lock_all(drm_dev);
@@ -2782,9 +2810,16 @@ ssize_t oneplus_display_notify_fp_press(struct device *dev,
 	state->acquire_ctx = mode_config->acquire_ctx;
 	crtc = dsi_connector->state->crtc;
 	crtc_state = drm_atomic_get_crtc_state(state, crtc);
-	err = drm_atomic_commit(state);
-	if (err < 0)
-		drm_atomic_state_free(state);
+	priv = drm_dev->dev_private;
+	now = ktime_get();
+	need_commit = (((now.tv64 - priv->commit_end_time.tv64) > 20000000 ?
+			true : false) && display->panel->aod_status == 0);
+
+	if (need_commit) {
+		err = drm_atomic_commit(state);
+		if (err < 0)
+			drm_atomic_state_free(state);
+	}
 
 	drm_modeset_unlock_all(drm_dev);
 	SDE_ATRACE_END("oneplus_display_notify_fp_press");
@@ -4910,11 +4945,34 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 {
 	int fp_index = -1;
 	int fppressed_index = -1;
+	int aod_index = -1, aod_mode = -1;
 	int zpos = INT_MAX;
-	int mode;
+	int mode = 0, i = 0;
 	int fp_mode = oneplus_onscreenfp_status;
 	int dim_mode = oneplus_dim_status;
-	int i;
+	struct dsi_display *display = get_main_display();
+
+	if (!display)
+		return 0;
+
+	if (display->panel->aod_status == 1) {
+		if (oneplus_dim_status == 2 && oneplus_onscreenfp_status == 1) {
+			fp_mode = 1;
+			dim_mode = 0;
+		} else if (oneplus_dim_status == 2 &&
+				oneplus_onscreenfp_status == 0) {
+			fp_mode = 1;
+			dim_mode = 0;
+		}
+	}
+
+	if (oneplus_onscreenaod_hid && oneplus_dim_status == 5)
+		oneplus_aod_hid = 1;
+
+	aod_mode = oneplus_aod_hid;
+
+	if ((oneplus_dim_status == 5) && display->panel->aod_status == 0)
+		dim_mode = 0;
 
 	for (i = 0; i < cnt; i++) {
 		mode = sde_plane_check_fingerprint_layer(pstates[i].drm_pstate);
@@ -4923,7 +4981,18 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 			fp_index = i;
 		if (mode == 2)
 			fppressed_index = i;
+		if (mode == 3)
+			aod_index = i;
 	}
+
+	if (fp_index >= 0)
+		display->panel->dim_status = true;
+	else
+		display->panel->dim_status = false;
+
+	if (aod_index < 0)
+		oneplus_aod_hid = 0;
+
 	if (fp_index >= 0 || fppressed_index >= 0 || oneplus_force_screenfp) {
 		if (fp_index >= 0 && fppressed_index >= 0) {
 			if (pstates[fp_index].stage >=
@@ -4955,6 +5024,21 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 			}
 		}
 
+		if (aod_index >= 0) {
+			if (aod_mode == 1) {
+				SDE_ATRACE_BEGIN("aod_layer_hid");
+				pstates[aod_index].sde_pstate->
+				property_values[PLANE_PROP_ALPHA].value = 0;
+				aod_index = -1;
+				SDE_ATRACE_END("aod_layer_hid");
+			}
+
+			if (zpos > pstates[aod_index].stage)
+				zpos = pstates[aod_index].stage;
+
+			pstates[aod_index].stage++;
+		}
+
 		if (fppressed_index >= 0) {
 			if (zpos > pstates[fppressed_index].stage)
 				zpos = pstates[fppressed_index].stage;
@@ -4967,7 +5051,8 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 			pstates[fp_index].stage++;
 		}
 		for (i = 0; i < cnt; i++) {
-			if (i == fp_index || i == fppressed_index)
+			if (i == fp_index || i == fppressed_index ||
+						i == aod_index)
 				continue;
 
 			if (pstates[i].stage >= zpos) {

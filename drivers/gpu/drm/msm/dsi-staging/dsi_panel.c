@@ -4070,12 +4070,28 @@ int dsi_panel_enable(struct dsi_panel *panel)
 	mutex_lock(&panel->panel_lock);
 
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_ON);
-	if (rc) {
+	if (rc)
 		pr_err("[%s] failed to send DSI_CMD_SET_ON cmds, rc=%d\n",
 		       panel->name, rc);
-	}
+
+	if (panel->aod_mode != 2)
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_POST_ON);
+
+	if (rc)
+		pr_err("[%s] failed to send DSI_CMD_SET_ON cmds, rc=%d\n",
+				panel->name, rc);
+
 	panel->panel_initialized = true;
 	mutex_unlock(&panel->panel_lock);
+	if (panel->aod_mode == 2) {
+		rc = dsi_panel_set_aod_mode(panel, 2);
+		panel->aod_status = 1;
+	}
+	if (panel->aod_mode == 0) {
+		rc = dsi_panel_set_aod_mode(panel, 0);
+		panel->aod_status = 0;
+	}
+
 //#ifdef VENDOR_EDIT
 	if (panel->acl_mode)
 		dsi_panel_set_acl_mode(panel, panel->acl_mode);
@@ -4166,11 +4182,24 @@ int dsi_panel_disable(struct dsi_panel *panel)
 	if (panel->type == EXT_BRIDGE)
 		return 0;
 
+	panel->panel_initialized = false;
 	mutex_lock(&panel->panel_lock);
+
+	if (panel->aod_mode == 2) {
+		//panel->aod_status = 0;
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_OFF_SAMSUNG);
+	}
 
 	/* Avoid sending panel off commands when ESD recovery is underway */
 	if (!atomic_read(&panel->esd_recovery_pending)) {
 		HBM_flag = false;
+
+		if (panel->aod_mode == 2)
+			panel->aod_status = 1;
+
+		if (panel->aod_mode == 0)
+			panel->aod_status = 0;
+
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_OFF);
 		if (rc) {
 			pr_err("[%s] failed to send DSI_CMD_SET_OFF cmds, rc=%d\n",
@@ -4178,7 +4207,6 @@ int dsi_panel_disable(struct dsi_panel *panel)
 			goto error;
 		}
 	}
-	panel->panel_initialized = false;
 
 error:
 	mutex_unlock(&panel->panel_lock);
@@ -4684,15 +4712,19 @@ int dsi_panel_set_aod_mode(struct dsi_panel *panel, int level)
 				if (panel->srgb_mode)
 					dsi_panel_set_srgb_mode(panel,
 						panel->srgb_mode);
+
 				if (panel->dci_p3_mode)
 					dsi_panel_set_dci_p3_mode(panel,
 						panel->dci_p3_mode);
+
 				if (panel->night_mode)
 					dsi_panel_set_night_mode(panel,
 						panel->night_mode);
+
 				if (panel->adaption_mode)
 					dsi_panel_set_adaption_mode(panel,
 						panel->adaption_mode);
+
 				rc = dsi_panel_update_backlight(panel,
 						panel->bl_config.bl_level);
 			}

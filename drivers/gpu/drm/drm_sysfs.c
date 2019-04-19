@@ -782,6 +782,10 @@ extern  ssize_t oneplus_display_notify_dim(struct device *dev,
 		struct device_attribute *attr,
 		const char *buf, size_t count);
 
+extern  ssize_t oneplus_display_notify_aod_hid(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count);
+
 /******************************************************************/
 static DEVICE_ATTR_RW(status);
 static DEVICE_ATTR_RO(enabled);
@@ -810,6 +814,8 @@ static DEVICE_ATTR(notify_fppress, S_IRUGO|S_IWUSR, NULL,
 	oneplus_display_notify_fp_press);
 static DEVICE_ATTR(notify_dim, S_IRUGO|S_IWUSR, NULL,
 	oneplus_display_notify_dim);
+static DEVICE_ATTR(notify_aod, S_IRUGO|S_IWUSR, NULL,
+	oneplus_display_notify_aod_hid);
 
 //#endif
 
@@ -837,6 +843,7 @@ static struct attribute *connector_dev_attrs[] = {
 	&dev_attr_dim_alpha.attr,
 	&dev_attr_notify_fppress.attr,
 	&dev_attr_notify_dim.attr,
+	&dev_attr_notify_aod.attr,
 //#endif
 	NULL
 };

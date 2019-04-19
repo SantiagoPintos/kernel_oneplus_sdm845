@@ -226,7 +226,8 @@ struct dsi_panel {
 	int panel_mismatch;
 	int hbm_backlight;
 	bool is_hbm_enabled;
-	int  op_force_screenfp;
+	int op_force_screenfp;
+	bool dim_status;
 //#endif
 	bool lp11_init;
 	bool ulps_enabled;
