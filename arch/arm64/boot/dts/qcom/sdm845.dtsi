@@ -3494,11 +3494,8 @@
 			polling-delay-passive = <10>;
 			polling-delay = <0>;
 			thermal-governor = "step_wise";
-<<<<<<< HEAD
 			disable-thermal-zone;
-=======
 			wake-capable-sensor;
->>>>>>> origin/sdm845_Q
 			trips {
 				gpu_trip0: gpu-trip0 {
 					temperature = <95000>;
