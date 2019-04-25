@@ -1275,6 +1275,12 @@ int dsi_display_set_power(struct drm_connector *connector,
 		notifier_data.id = connector_state_crtc_index;
 		msm_drm_notifier_call_chain(MSM_DRM_EARLY_EVENT_BLANK,
 					    &notifier_data);
+	} else if (power_mode == SDE_MODE_DPMS_OFF) {
+		blank = MSM_DRM_BLANK_POWERDOWN_CUST;
+		notifier_data.data = &blank;
+		notifier_data.id = connector_state_crtc_index;
+		msm_drm_notifier_call_chain(MSM_DRM_EARLY_EVENT_BLANK,
+					    &notifier_data);
 	}
 	#endif
 	return rc;
