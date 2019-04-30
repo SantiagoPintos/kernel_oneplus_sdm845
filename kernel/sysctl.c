@@ -131,6 +131,10 @@ static int __maybe_unused one_thousand = 1000;
 #ifdef CONFIG_SCHED_WALT
 static int two_million = 2000000;
 #endif
+
+/*dylanchang, 2019/4/30, add foreground task io opt*/
+unsigned int sysctl_fg_io_opt = 1;
+
 #ifdef CONFIG_PRINTK
 static int ten_thousand = 10000;
 #endif
@@ -380,6 +384,14 @@ static struct ctl_table kern_table[] = {
 		.mode		= 0644,
 		.proc_handler	= sched_updown_migrate_handler,
 	},
+/*dylanchang, 2019/4/30, add foreground task io opt*/
+{
+		.procname	= "fg_io_opt",
+		.data		= &sysctl_fg_io_opt,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec,
+},
 	{
 		.procname	= "sched_downmigrate",
 		.data		= &sysctl_sched_capacity_margin_down,
