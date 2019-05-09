@@ -84,6 +84,12 @@
 #define IF_HAVE_PG_IDLE(flag,string)
 #endif
 
+#ifdef CONFIG_SMART_BOOST
+#define IF_HAVE_PG_UIDRU(flag, string) ,{1UL << flag, string}
+#else
+#define IF_HAVE_PG_UIDRU(flag, string)
+#endif
+
 #define __def_pageflag_names						\
 	{1UL << PG_locked,		"locked"	},		\
 	{1UL << PG_error,		"error"		},		\
@@ -111,7 +117,9 @@ IF_HAVE_PG_HWPOISON(PG_hwpoison,	"hwpoison"	)		\
 IF_HAVE_PG_IDLE(PG_young,		"young"		)		\
 IF_HAVE_PG_IDLE(PG_idle,		"idle"		)		\
 /* CONFIG_MEMPLUS add by bin.zhong@ASTI */	\
-IF_HAVE_PG_WILLNEED(PG_willneed,	"willneed")
+IF_HAVE_PG_WILLNEED(PG_willneed,	"willneed")	\
+/* CONFIG_SMART_BOOST add by bin.zhong@ASTI */	\
+IF_HAVE_PG_UIDRU(PG_uidlru,		"uidlru")
 
 #define show_page_flags(flags)						\
 	(flags) ? __print_flags(flags, "|",				\

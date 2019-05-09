@@ -1345,6 +1345,38 @@ keep:
 }
 
 /* bin.zhong@ASTI add for CONFIG_MEMPLUS */
+unsigned long reclaim_clean_pages_from_list(struct zone *zone,
+					    struct list_head *page_list)
+{
+	struct scan_control sc = {
+		.gfp_mask = GFP_KERNEL,
+		.priority = DEF_PRIORITY,
+		.may_unmap = 1,
+		/* Doesn't allow to write out dirty page */
+		.may_writepage = 0,
+	};
+	unsigned long ret;
+	struct page *page, *next;
+	LIST_HEAD(clean_pages);
+	unsigned long dummy1, dummy2, dummy3, dummy4, dummy5;
+
+	list_for_each_entry_safe(page, next, page_list, lru) {
+		if (page_is_file_cache(page) && !PageDirty(page) &&
+		    !__PageMovable(page)) {
+			ClearPageActive(page);
+			list_move(&page->lru, &clean_pages);
+		}
+	}
+
+	ret = shrink_page_list(&clean_pages, zone->zone_pgdat, &sc,
+			TTU_IGNORE_ACCESS, &dummy1, &dummy2, &dummy3,
+			&dummy4, &dummy5, true);
+	list_splice(&clean_pages, page_list);
+	mod_node_page_state(zone->zone_pgdat, NR_ISOLATED_FILE, -ret);
+	return ret;
+}
+
+/* bin.zhong@ASTI add for CONFIG_MEMPLUS or CONFIG_SMART_BOOST*/
 unsigned long coretech_reclaim_pagelist(struct list_head *page_list,
 	struct vm_area_struct *vma, void *sc)
 {
@@ -1418,34 +1450,31 @@ unsigned long swapout_to_disk(struct list_head *page_list,
 }
 #endif
 
-unsigned long reclaim_clean_pages_from_list(struct zone *zone,
-					    struct list_head *page_list)
+/* bin.zhong@ASTI add for CONFIG_SMART_BOOST */
+static void smart_boost_reclaim_pages(struct lruvec *lruvec,
+					struct pglist_data *pgdat,
+					struct scan_control *sc)
 {
-	struct scan_control sc = {
-		.gfp_mask = GFP_KERNEL,
-		.priority = DEF_PRIORITY,
-		.may_unmap = 1,
-		/* Doesn't allow to write out dirty page */
-		.may_writepage = 0,
-	};
-	unsigned long ret, dummy1, dummy2, dummy3, dummy4, dummy5;
-	struct page *page, *next;
-	LIST_HEAD(clean_pages);
+	LIST_HEAD(page_list);
+	unsigned long nr_isolate = 0;
+	struct page *page;
+	unsigned long dummy1, dummy2, dummy3, dummy4, dummy5;
 
-	list_for_each_entry_safe(page, next, page_list, lru) {
-		if (page_is_file_cache(page) && !PageDirty(page) &&
-		    !__PageMovable(page)) {
-			ClearPageActive(page);
-			list_move(&page->lru, &clean_pages);
-		}
+	nr_isolate = smb_isolate_list_or_putbcak(&page_list,
+		lruvec, pgdat, sc->priority,
+		(sc->nr_reclaimed > sc->nr_to_reclaim));
+	if (!nr_isolate)
+		return;
+
+	sc->nr_reclaimed += shrink_page_list(&page_list, pgdat, sc,
+			TTU_IGNORE_ACCESS, &dummy1, &dummy2, &dummy3,
+			&dummy4, &dummy5, true);
+
+	while (!list_empty(&page_list)) {
+		page = lru_to_page(&page_list);
+		list_del(&page->lru);
+		putback_lru_page(page);
 	}
-
-	ret = shrink_page_list(&clean_pages, zone->zone_pgdat, &sc,
-			TTU_UNMAP|TTU_IGNORE_ACCESS,
-			&dummy1, &dummy2, &dummy3, &dummy4, &dummy5, true);
-	list_splice(&clean_pages, page_list);
-	mod_node_page_state(zone->zone_pgdat, NR_ISOLATED_FILE, -ret);
-	return ret;
 }
 
 #ifdef CONFIG_PROCESS_RECLAIM
@@ -2208,6 +2237,8 @@ static void shrink_active_list(unsigned long nr_to_scan,
 
 	mem_cgroup_uncharge_list(&l_hold);
 	free_hot_cold_page_list(&l_hold, true);
+	/* bin.zhong@ASTI add for CONFIG_SMART_BOOST */
+	smart_boost_reclaim_pages(lruvec, pgdat, sc);
 }
 
 /*

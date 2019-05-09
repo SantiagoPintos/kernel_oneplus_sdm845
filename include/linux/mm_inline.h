@@ -61,7 +61,10 @@ static __always_inline void del_page_from_lru_list(struct page *page,
 				struct lruvec *lruvec, enum lru_list lru)
 {
 	list_del(&page->lru);
-	update_lru_size(lruvec, lru, page_zonenum(page), -hpage_nr_pages(page));
+	/* bin.zhong@ASTI add for CONFIG_SMART_BOOST */
+	if (!smb_update_uid_lru_size(page, lruvec, lru))
+		update_lru_size(lruvec, lru,
+			page_zonenum(page), -hpage_nr_pages(page));
 }
 
 /**

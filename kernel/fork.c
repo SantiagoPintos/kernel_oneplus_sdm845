@@ -2051,6 +2051,9 @@ long _do_fork(unsigned long clone_flags,
 
 		trace_sched_process_fork(current, p);
 
+		/* bin.zhong@ASTI add for CONFIG_SMART_BOOST */
+		SMB_HOT_COUNT_INIT((clone_flags & CLONE_VM), p);
+
 		pid = get_task_pid(p, PIDTYPE_PID);
 		nr = pid_vnr(pid);
 

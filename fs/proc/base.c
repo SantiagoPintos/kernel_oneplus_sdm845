@@ -3347,6 +3347,9 @@ static const struct pid_entry tgid_base_stuff[] = {
 	REG("memplus_type", 0666,
 		proc_pid_memplus_type_operations),
 #endif
+#ifdef CONFIG_SMART_BOOST
+	REG("page_hot_count", 0666, proc_page_hot_count_operations),
+#endif
 };
 
 static int proc_tgid_base_readdir(struct file *file, struct dir_context *ctx)

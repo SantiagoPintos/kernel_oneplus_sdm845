@@ -941,6 +941,7 @@ const char * const vmstat_text[] = {
 #if IS_ENABLED(CONFIG_ZSMALLOC)
 	"nr_zspages",
 #endif
+	/* enum numa_stat_item counters */
 #ifdef CONFIG_NUMA
 	"numa_hit",
 	"numa_miss",
@@ -948,6 +949,9 @@ const char * const vmstat_text[] = {
 	"numa_interleave",
 	"numa_local",
 	"numa_other",
+#endif
+#ifdef CONFIG_SMART_BOOST
+	"nr_uid_lru",
 #endif
 	"nr_free_cma",
 

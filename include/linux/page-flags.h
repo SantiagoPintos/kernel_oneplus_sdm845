@@ -108,6 +108,9 @@ enum pageflags {
 #ifdef CONFIG_MEMPLUS
 	PG_willneed,
 #endif
+#ifdef CONFIG_SMART_BOOST
+	PG_uidlru,
+#endif
 	__NR_PAGEFLAGS,
 
 	/* Filesystems */
@@ -309,6 +312,10 @@ PAGEFLAG(Readahead, reclaim, PF_NO_COMPOUND)
 #ifdef CONFIG_MEMPLUS
 PAGEFLAG(Willneed, willneed, PF_HEAD)
 __CLEARPAGEFLAG(Willneed, willneed, PF_HEAD)
+#endif
+#ifdef CONFIG_SMART_BOOST
+PAGEFLAG(UIDLRU, uidlru, PF_HEAD) __CLEARPAGEFLAG(UIDLRU, uidlru, PF_HEAD)
+	__SETPAGEFLAG(UIDLRU, uidlru, PF_HEAD)
 #endif
 
 #ifdef CONFIG_HIGHMEM
