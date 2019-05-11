@@ -13,7 +13,6 @@
 
 extern struct pstore_info *psinfo;
 
-//extern uint32_t chip_serial_num;
 extern char ufs_vendor_and_rev[32];
 
 
@@ -160,7 +159,7 @@ static int __init init_device_info(void)
 	write_device_info("pcba number", oem_pcba_number);
 	write_device_info("serial number", oem_serialno);
 
-	scnprintf(oem_serialno, sizeof(oem_serialno), "%x", /*chip_serial_num*/socinfo_get_serial_number());
+	scnprintf(oem_serialno, sizeof(oem_serialno), "%x", socinfo_get_serial_number());
 	write_device_info("socinfo serial_number", oem_serialno);
 
 	write_device_info("ufs vendor and rev", ufs_vendor_and_rev);
