@@ -2,26 +2,6 @@
 #include <linux/module.h>
 #include <linux/oneplus/boot_mode.h>
 
-bool n76e_supported;
-int is_hw_support_n76e(void)
-{
-	return n76e_supported;
-}
-
-static int __init hw_verion_init(char *str)
-{
-	if (strncmp(str, "24", 2) == 0)
-		n76e_supported = true;
-	else
-		n76e_supported = false;
-
-	pr_info("get hw_version %s,n76e_support=%d\n",
-					str, n76e_supported);
-	return 0;
-}
-
-__setup("androidboot.hw_version=", hw_verion_init);
-
 static enum oem_boot_mode boot_mode = MSM_BOOT_MODE__NORMAL;
 
 char *enum_ftm_mode[] = {"normal",
