@@ -801,6 +801,7 @@ status = "disabled";
 	ibatmax-little-cold-ma = <325>;
 	ibatmax-cool-ma = <500>;
 	ibatmax-little-cool-ma = <875>;
+	ibatmax-little-cool-low_ma = <450>;
 	ibatmax-pre-normal-ma = <1625>;
 	ibatmax-normal-ma = <1950>;
 	ibatmax-warm-ma = <875>;
