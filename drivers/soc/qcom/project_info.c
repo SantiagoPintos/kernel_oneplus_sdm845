@@ -198,6 +198,7 @@ static DEVICE_ATTR(emmc, 0444, component_info_get, NULL);
 static DEVICE_ATTR(f_camera, 0444, component_info_get, NULL);
 static DEVICE_ATTR(r_camera, 0444, component_info_get, NULL);
 static DEVICE_ATTR(second_r_camera, 0444, component_info_get, NULL);
+static DEVICE_ATTR(ois, 0444, component_info_get, NULL);
 static DEVICE_ATTR(tp, 0444, component_info_get, NULL);
 static DEVICE_ATTR(lcd, 0444, component_info_get, NULL);
 static DEVICE_ATTR(wcn, 0444, component_info_get, NULL);
@@ -266,6 +267,7 @@ static struct attribute *component_info_sysfs_entries[] = {
     &dev_attr_f_camera.attr,
     &dev_attr_r_camera.attr,
     &dev_attr_second_r_camera.attr,
+    &dev_attr_ois.attr,
     &dev_attr_tp.attr,
     &dev_attr_lcd.attr,
     &dev_attr_wcn.attr,
@@ -314,6 +316,10 @@ static ssize_t component_info_get(struct device *dev,
         return snprintf(buf, BUF_SIZE, "VER:\t%s\nMANU:\t%s\n",
         get_component_version(SECOND_R_CAMERA),
         get_component_manufacture(SECOND_R_CAMERA));
+    if (attr == &dev_attr_ois)
+        return snprintf(buf, BUF_SIZE, "VER:\t%s\nMANU:\t%s\n",
+        get_component_version(OIS),
+        get_component_manufacture(OIS));
     if (attr == &dev_attr_tp)
         return snprintf(buf, BUF_SIZE, "VER:\t%s\nMANU:\t%s\n",
         get_component_version(TP),
