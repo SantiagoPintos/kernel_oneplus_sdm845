@@ -19,6 +19,7 @@
 #include <linux/of_gpio.h>
 #include <video/mipi_display.h>
 #include <linux/firmware.h>
+#include <linux/project_info.h>
 
 #include "dsi_panel.h"
 #include "dsi_ctrl_hw.h"
@@ -2907,8 +2908,8 @@ static int dsi_panel_parse_oem_config(struct dsi_panel *panel,
 	if (!panel_version)
 		pr_info("%s:%d, panel version not specified\n",
 				__func__, __LINE__);
-	//push_component_info(LCD, (char *)panel_version,
-	//                          (char *)panel_manufacture);
+	push_component_info(LCD, (char *)panel_version,
+	                          (char *)panel_manufacture);
 
 	backlight_manufacture = of_get_property(of_node,
 			"qcom,mdss-dsi-backlight-manufacture", NULL);
@@ -2920,8 +2921,8 @@ static int dsi_panel_parse_oem_config(struct dsi_panel *panel,
 	if (!backlight_version)
 		pr_info("%s:%d, backlight version not specified\n",
 				__func__, __LINE__);
-	//	push_component_info(BACKLIGHT, (char *)backlight_version,
-	//                    (char *)backlight_manufacture);
+	push_component_info(BACKLIGHT, (char *)backlight_version,
+	                    (char *)backlight_manufacture);
 
 	panel->lp11_init =
 		of_property_read_bool(of_node, "qcom,mdss-dsi-lp11-init");
