@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 /* Copyright (c) 2017, The Linux Foundation. All rights reserved.
-=======
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
->>>>>>> origin/sdm845_Q
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -329,31 +325,6 @@ static const struct v4l2_subdev_internal_ops cam_flash_internal_ops = {
 	.close = cam_flash_subdev_close,
 };
 
-<<<<<<< HEAD
-=======
-static int cam_flash_init_subdev(struct cam_flash_ctrl *fctrl)
-{
-	int rc = 0;
-
-	strlcpy(fctrl->device_name, CAM_FLASH_NAME,
-		sizeof(fctrl->device_name));
-	fctrl->v4l2_dev_str.internal_ops =
-		&cam_flash_internal_ops;
-	fctrl->v4l2_dev_str.ops = &cam_flash_subdev_ops;
-	fctrl->v4l2_dev_str.name = CAMX_FLASH_DEV_NAME;
-	fctrl->v4l2_dev_str.sd_flags =
-		V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
-	fctrl->v4l2_dev_str.ent_function = CAM_FLASH_DEVICE_TYPE;
-	fctrl->v4l2_dev_str.token = fctrl;
-
-	rc = cam_register_subdev(&(fctrl->v4l2_dev_str));
-	if (rc)
-		CAM_ERR(CAM_FLASH, "Fail to create subdev with %d", rc);
-
-	return rc;
-}
-
->>>>>>> origin/sdm845_Q
 static int32_t cam_flash_platform_probe(struct platform_device *pdev)
 {
 	int32_t rc = 0;
