@@ -110,7 +110,6 @@ static inline void debug_spin_unlock(raw_spinlock_t *lock)
 	lock->owner_cpu = -1;
 }
 
-<<<<<<< HEAD
 static void __spin_lock_debug(raw_spinlock_t *lock)
 {
 	u64 i;
@@ -142,12 +141,10 @@ static void __spin_lock_debug(raw_spinlock_t *lock)
 	arch_spin_lock(&lock->raw_lock);
 }
 
-=======
 /*
  * We are now relying on the NMI watchdog to detect lockup instead of doing
  * the detection here with an unfair lock which can cause problem of its own.
  */
->>>>>>> origin/sdm845_Q
 void do_raw_spin_lock(raw_spinlock_t *lock)
 {
 	debug_spin_lock_before(lock);

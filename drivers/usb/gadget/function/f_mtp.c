@@ -1046,7 +1046,6 @@ static void send_file_work(struct work_struct *data)
 	if (req)
 		mtp_req_put(dev, &dev->tx_idle, req);
 
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 	if (dev->xfer_file_length >= FILE_LENGTH) {
 		pm_qos_update_request(&devfreq_mtp_request, MIN_CPUFREQ);
@@ -1054,11 +1053,8 @@ static void send_file_work(struct work_struct *data)
 		pm_qos_update_request(&big_cpu_mtp_freq, MIN_CPUFREQ);
 	}
 #endif
-
-	DBG(cdev, "send_file_work returning %d state:%d\n", r, dev->state);
-=======
 	mtp_log("returning %d state:%d\n", r, dev->state);
->>>>>>> origin/sdm845_Q
+
 	/* write the result */
 	dev->xfer_result = r;
 	smp_wmb();
@@ -1205,15 +1201,11 @@ static void receive_file_work(struct work_struct *data)
 		}
 	}
 
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 	queue_delayed_work(cpu_freq_qos_queue, &cpu_freq_qos_work,
 		msecs_to_jiffies(1000)*3);
 #endif
-	DBG(cdev, "receive_file_work returning %d\n", r);
-=======
 	mtp_log("returning %d\n", r);
->>>>>>> origin/sdm845_Q
 	/* write the result */
 	dev->xfer_result = r;
 	smp_wmb();
