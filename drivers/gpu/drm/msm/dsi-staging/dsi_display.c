@@ -1216,7 +1216,6 @@ int dsi_display_set_power(struct drm_connector *connector,
 	#ifdef VENDOR_EDIT
 	struct msm_drm_notifier notifier_data;
 	int blank;
-	int aod_mode = 0;
 	#endif
 	if (!display || !display->panel) {
 		pr_err("invalid display/panel\n");
@@ -1226,40 +1225,12 @@ int dsi_display_set_power(struct drm_connector *connector,
 	switch (power_mode) {
 	case SDE_MODE_DPMS_LP1:
 		rc = dsi_panel_set_lp1(display->panel);
-		//#ifdef VENDOR_EDIT
-		if (display->panel->aod_mode_test)
-			aod_mode = display->panel->aod_mode_test;
-		else
-			aod_mode = display->panel->aod_mode ?
-				display->panel->aod_mode : 5;
-		dsi_panel_set_aod_mode(display->panel, aod_mode);
-		//#endif
 		break;
 	case SDE_MODE_DPMS_LP2:
 		rc = dsi_panel_set_lp2(display->panel);
-		//#ifdef VENDOR_EDIT
-		if ((!display->panel->aod_mode_test)
-				&& (aod_mode != display->panel->aod_mode)
-				&& (display->panel->aod_mode != 0)) {
-			dsi_panel_set_aod_mode(display->panel,
-						display->panel->aod_mode);
-			aod_mode = display->panel->aod_mode;
-		}
-		//#endif
 		break;
 	default:
 		rc = dsi_panel_set_nolp(display->panel);
-		//#ifdef VENDOR_EDIT
-		if ((power_mode == SDE_MODE_DPMS_ON) &&
-				display->panel->aod_status) {
-			dsi_panel_set_aod_mode(display->panel, 0);
-			aod_mode = 0;
-		} else if ((power_mode == SDE_MODE_DPMS_OFF)
-				&& display->panel->aod_status){
-			display->panel->aod_status = 0;
-			aod_mode = 0;
-		}
-		//#endif
 		break;
 	}
 	#ifdef VENDOR_EDIT
