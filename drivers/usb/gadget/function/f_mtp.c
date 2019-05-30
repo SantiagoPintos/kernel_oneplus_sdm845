@@ -40,9 +40,7 @@
 #include <linux/usb/f_mtp.h>
 #include <linux/configfs.h>
 #include <linux/usb/composite.h>
-#ifdef VENDOR_EDIT
 #include <linux/pm_qos.h>
-#endif
 
 #include "configfs.h"
 
@@ -65,7 +63,6 @@
 #define MAX_INST_NAME_LEN          40
 #define MTP_MAX_FILE_SIZE          0xFFFFFFFFL
 
-#ifdef VENDOR_EDIT
 #define MTP_TX_BUFFER_BASE         0xAC700000
 #define MTP_RX_BUFFER_BASE         0xACF00000
 #define MTP_INTR_BUFFER_BASE       0xAD100000
@@ -77,7 +74,6 @@ enum buf_type {
 	RX_BUFFER,
 	INTR_BUFFER,
 };
-#endif
 
 /* String IDs */
 #define INTERFACE_STRING_INDEX	0
@@ -109,13 +105,11 @@ enum buf_type {
 #define DRIVER_NAME "mtp"
 
 #define MAX_ITERATION		100
-#ifdef VENDOR_EDIT
 /* values for qos requests */
 #define FILE_LENGTH	(10 * 1024 * 1024)
 #define PM_QOS_TIMEOUT	3000000
 
 static bool mtp_receive_flag;
-#endif
 
 unsigned int mtp_rx_req_len = MTP_RX_BUFFER_INIT_SIZE;
 module_param(mtp_rx_req_len, uint, 0644);
@@ -127,13 +121,11 @@ unsigned int mtp_tx_reqs = MTP_TX_REQ_MAX;
 module_param(mtp_tx_reqs, uint, 0644);
 
 static const char mtp_shortname[] = DRIVER_NAME "_usb";
-#ifdef VENDOR_EDIT
 static struct pm_qos_request little_cpu_mtp_freq;
 static struct pm_qos_request devfreq_mtp_request;
 static struct pm_qos_request big_cpu_mtp_freq;
 static struct delayed_work cpu_freq_qos_work;
 static struct workqueue_struct *cpu_freq_qos_queue;
-#endif
 
 struct mtp_dev {
 	struct usb_function function;
@@ -434,12 +426,8 @@ static inline struct mtp_dev *func_to_mtp(struct usb_function *f)
 	return container_of(f, struct mtp_dev, function);
 }
 
-#ifdef VENDOR_EDIT
 static struct usb_request *mtp_request_new(struct usb_ep *ep,
 	int buffer_size, enum buf_type type)
-#else
-static struct usb_request *mtp_request_new(struct usb_ep *ep, int buffer_size)
-#endif
 {
 	struct usb_request *req = usb_ep_alloc_request(ep, GFP_KERNEL);
 
@@ -447,7 +435,6 @@ static struct usb_request *mtp_request_new(struct usb_ep *ep, int buffer_size)
 		return NULL;
 
 	/* now allocate buffers for the requests */
-#ifdef VENDOR_EDIT
 	if (useFixAddr) {
 		if (type == TX_BUFFER)
 			req->buf = __va(MTP_TX_BUFFER_BASE + mtpBufferOffset);
@@ -458,22 +445,17 @@ static struct usb_request *mtp_request_new(struct usb_ep *ep, int buffer_size)
 	} else
 		req->buf = kmalloc(buffer_size, GFP_KERNEL);
 	memset(req->buf, 0, buffer_size);
-#else
-	req->buf = kmalloc(buffer_size, GFP_KERNEL);
-#endif
 	if (!req->buf) {
 		usb_ep_free_request(ep, req);
 		return NULL;
 	}
 
-#ifdef VENDOR_EDIT
 	if (useFixAddr) {
 		if (buffer_size == INTR_BUFFER_SIZE)
 			mtpBufferOffset += 0x40; /* alignment */
 		else
 			mtpBufferOffset += buffer_size;
 	}
-#endif
 
 	return req;
 }
@@ -481,15 +463,11 @@ static struct usb_request *mtp_request_new(struct usb_ep *ep, int buffer_size)
 static void mtp_request_free(struct usb_request *req, struct usb_ep *ep)
 {
 	if (req) {
-#ifdef VENDOR_EDIT
 		if (useFixAddr) {
 			req->buf = NULL;
 			mtpBufferOffset = 0;
 		} else
 			kfree(req->buf);
-#else
-		kfree(req->buf);
-#endif
 		usb_ep_free_request(ep, req);
 	}
 }
@@ -614,7 +592,6 @@ static int mtp_create_bulk_endpoints(struct mtp_dev *dev,
 	dev->ep_intr = ep;
 
 retry_tx_alloc:
-#ifdef VENDOR_EDIT
 	if (mtp_tx_req_len == MTP_TX_BUFFER_INIT_SIZE
 		&& mtp_rx_req_len == MTP_RX_BUFFER_INIT_SIZE
 		&& mtp_tx_reqs == MTP_TX_REQ_MAX)
@@ -623,17 +600,11 @@ retry_tx_alloc:
 		useFixAddr = false;
 	pr_info("useFixAddr:%s\n", useFixAddr ? "true" : "false");
 	mtpBufferOffset = 0;
-#endif
 	/* now allocate requests for our endpoints */
 	for (i = 0; i < mtp_tx_reqs; i++) {
-#ifdef VENDOR_EDIT
 		req = mtp_request_new(dev->ep_in,
 				mtp_tx_req_len + extra_buf_alloc,
 				TX_BUFFER);
-#else
-		req = mtp_request_new(dev->ep_in,
-				dev->mtp_tx_req_len + extra_buf_alloc);
-#endif
 		if (!req) {
 			if (dev->mtp_tx_req_len <= MTP_BULK_BUFFER_SIZE)
 				goto fail;
@@ -657,15 +628,9 @@ retry_tx_alloc:
 		dev->mtp_rx_req_len = MTP_BULK_BUFFER_SIZE;
 
 retry_rx_alloc:
-#ifdef VENDOR_EDIT
 	mtpBufferOffset = 0;
-#endif
 	for (i = 0; i < RX_REQ_MAX; i++) {
-#ifdef VENDOR_EDIT
 		req = mtp_request_new(dev->ep_out, mtp_rx_req_len, RX_BUFFER);
-#else
-		req = mtp_request_new(dev->ep_out, dev->mtp_rx_req_len);
-#endif
 		if (!req) {
 			if (dev->mtp_rx_req_len <= MTP_BULK_BUFFER_SIZE)
 				goto fail;
@@ -677,26 +642,17 @@ retry_rx_alloc:
 		req->complete = mtp_complete_out;
 		dev->rx_req[i] = req;
 	}
-#ifdef VENDOR_EDIT
 	mtpBufferOffset = 0;
-#endif
 	for (i = 0; i < INTR_REQ_MAX; i++) {
-#ifdef VENDOR_EDIT
 		req = mtp_request_new(dev->ep_intr,
 			INTR_BUFFER_SIZE + extra_buf_alloc,
 			INTR_BUFFER);
-#else
-		req = mtp_request_new(dev->ep_intr,
-				INTR_BUFFER_SIZE + extra_buf_alloc);
-#endif
 		if (!req)
 			goto fail;
 		req->complete = mtp_complete_intr;
 		mtp_req_put(dev, &dev->intr_idle, req);
 	}
-#ifdef VENDOR_EDIT
 	mtpBufferOffset = 0;
-#endif
 
 	return 0;
 
@@ -944,7 +900,6 @@ static void send_file_work(struct work_struct *data)
 
 	mtp_log("(%lld %lld)\n", offset, count);
 
-#ifdef VENDOR_EDIT
 	if (dev->xfer_file_length >= FILE_LENGTH) {
 		pm_qos_update_request(&devfreq_mtp_request, MAX_CPUFREQ);
 		pm_qos_update_request(&little_cpu_mtp_freq, MAX_CPUFREQ);
@@ -957,7 +912,6 @@ static void send_file_work(struct work_struct *data)
 		pm_qos_update_request_timeout(&big_cpu_mtp_freq,
 		MAX_CPUFREQ-1, PM_QOS_TIMEOUT);
 	}
-#endif
 
 	if (dev->xfer_send_header) {
 		hdr_size = sizeof(struct mtp_data_header);
@@ -1046,13 +1000,11 @@ static void send_file_work(struct work_struct *data)
 	if (req)
 		mtp_req_put(dev, &dev->tx_idle, req);
 
-#ifdef VENDOR_EDIT
 	if (dev->xfer_file_length >= FILE_LENGTH) {
 		pm_qos_update_request(&devfreq_mtp_request, MIN_CPUFREQ);
 		pm_qos_update_request(&little_cpu_mtp_freq, MIN_CPUFREQ);
 		pm_qos_update_request(&big_cpu_mtp_freq, MIN_CPUFREQ);
 	}
-#endif
 	mtp_log("returning %d state:%d\n", r, dev->state);
 
 	/* write the result */
@@ -1089,13 +1041,11 @@ static void receive_file_work(struct work_struct *data)
 		mtp_log("- count(%lld) not multiple of mtu(%d)\n",
 						count, dev->ep_out->maxpacket);
 
-#ifdef VENDOR_EDIT
 	if (delayed_work_pending(&cpu_freq_qos_work))
 		cancel_delayed_work(&cpu_freq_qos_work);
 	pm_qos_update_request(&devfreq_mtp_request, MAX_CPUFREQ);
 	pm_qos_update_request(&little_cpu_mtp_freq, MAX_CPUFREQ);
 	pm_qos_update_request(&big_cpu_mtp_freq, MAX_CPUFREQ - 1);
-#endif
 
 	while (count > 0 || write_req) {
 		if (count > 0) {
@@ -1201,24 +1151,20 @@ static void receive_file_work(struct work_struct *data)
 		}
 	}
 
-#ifdef VENDOR_EDIT
 	queue_delayed_work(cpu_freq_qos_queue, &cpu_freq_qos_work,
 		msecs_to_jiffies(1000)*3);
-#endif
 	mtp_log("returning %d\n", r);
 	/* write the result */
 	dev->xfer_result = r;
 	smp_wmb();
 }
 
-#ifdef VENDOR_EDIT
 static void update_qos_request(struct work_struct *data)
 {
 	pm_qos_update_request(&devfreq_mtp_request, MIN_CPUFREQ);
 	pm_qos_update_request(&little_cpu_mtp_freq, MIN_CPUFREQ);
 	pm_qos_update_request(&big_cpu_mtp_freq, MIN_CPUFREQ);
 }
-#endif
 
 static int mtp_send_event(struct mtp_dev *dev, struct mtp_event *event)
 {
@@ -1304,20 +1250,17 @@ static long mtp_send_receive_ioctl(struct file *fp, unsigned int code,
 		dev->xfer_send_header = 0;
 	} else {
 		work = &dev->receive_file_work;
-#ifdef VENDOR_EDIT
 		pm_qos_update_request(&devfreq_mtp_request, MAX_CPUFREQ);
 		pm_qos_update_request(&little_cpu_mtp_freq, MAX_CPUFREQ);
 		pm_qos_update_request(&big_cpu_mtp_freq, MAX_CPUFREQ - 1);
 		msm_cpuidle_set_sleep_disable(true);
 		mtp_receive_flag = true;
-#endif
 	}
 
 	/* We do the file transfer on a work queue so it will run
 	 * in kernel context, which is necessary for vfs_read and
 	 * vfs_write to use our buffers in the kernel address space.
 	 */
-#ifdef VENDOR_EDIT
 	queue_work(dev->wq, work);
 	/* wait for operation to complete */
 	flush_workqueue(dev->wq);
@@ -1331,11 +1274,6 @@ static long mtp_send_receive_ioctl(struct file *fp, unsigned int code,
 		MAX_CPUFREQ-1, PM_QOS_TIMEOUT);
 		msm_cpuidle_set_sleep_disable(false);
 	}
-#else
-	queue_work(dev->wq, work);
-	/* wait for operation to complete */
-	flush_workqueue(dev->wq);
-#endif
 	fput(filp);
 
 	/* read the result */
@@ -1482,12 +1420,10 @@ static int mtp_release(struct inode *ip, struct file *fp)
 {
 	printk(KERN_INFO "mtp_release\n");
 
-#ifdef VENDOR_EDIT
 	if (mtp_receive_flag) {
 		mtp_receive_flag = false;
 		msm_cpuidle_set_sleep_disable(false);
 	}
-#endif
 	mtp_unlock(&_mtp_dev->open_excl);
 	return 0;
 }
@@ -1924,13 +1860,11 @@ static int __mtp_setup(struct mtp_instance *fi_mtp)
 	INIT_WORK(&dev->send_file_work, send_file_work);
 	INIT_WORK(&dev->receive_file_work, receive_file_work);
 
-#ifdef VENDOR_EDIT
 	cpu_freq_qos_queue = create_singlethread_workqueue("f_mtp_qos");
 	INIT_DELAYED_WORK(&cpu_freq_qos_work, update_qos_request);
 	pm_qos_add_request(&little_cpu_mtp_freq, PM_QOS_C0_CPUFREQ_MIN, MIN_CPUFREQ);
 	pm_qos_add_request(&devfreq_mtp_request, PM_QOS_DEVFREQ_MIN, MIN_CPUFREQ);
 	pm_qos_add_request(&big_cpu_mtp_freq, PM_QOS_C1_CPUFREQ_MIN, MIN_CPUFREQ);
-#endif
 	_mtp_dev = dev;
 
 	ret = misc_register(&mtp_device);
@@ -1941,12 +1875,10 @@ static int __mtp_setup(struct mtp_instance *fi_mtp)
 	return 0;
 
 err2:
-#ifdef VENDOR_EDIT
 	pm_qos_remove_request(&big_cpu_mtp_freq);
 	pm_qos_remove_request(&little_cpu_mtp_freq);
 	pm_qos_remove_request(&devfreq_mtp_request);
 	destroy_workqueue(cpu_freq_qos_queue);
-#endif
 	destroy_workqueue(dev->wq);
 err1:
 	_mtp_dev = NULL;
@@ -1969,12 +1901,10 @@ static void mtp_cleanup(void)
 		return;
 
 	mtp_debugfs_remove();
-#ifdef VENDOR_EDIT
 	pm_qos_remove_request(&big_cpu_mtp_freq);
 	pm_qos_remove_request(&little_cpu_mtp_freq);
 	pm_qos_remove_request(&devfreq_mtp_request);
 	destroy_workqueue(cpu_freq_qos_queue);
-#endif
 	misc_deregister(&mtp_device);
 	destroy_workqueue(dev->wq);
 	_mtp_dev = NULL;
@@ -2092,12 +2022,10 @@ static int mtp_ctrlreq_configfs(struct usb_function *f,
 static void mtp_free(struct usb_function *f)
 {
 	/*NO-OP: no function specific resource allocation in mtp_alloc*/
-#ifdef VENDOR_EDIT
 	struct mtp_instance *fi_mtp;
 
 	fi_mtp = container_of(f->fi, struct mtp_instance, func_inst);
 	fi_mtp->func_inst.f = NULL;
-#endif
 }
 
 struct usb_function *function_alloc_mtp_ptp(struct usb_function_instance *fi,

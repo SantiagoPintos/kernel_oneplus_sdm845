@@ -14,10 +14,8 @@
 #include "ufshcd.h"
 #include "ufs_quirks.h"
 
-#ifdef VENDOR_EDIT
 /* liochen@BSP, 2016/11/30, Add ufs info into *##*37847# */
 #include <linux/project_info.h>
-#endif
 
 static struct ufs_card_fix ufs_fixups[] = {
 	/* UFS cards deviations table */
@@ -53,7 +51,6 @@ static struct ufs_card_fix ufs_fixups[] = {
 	END_FIX
 };
 
-#ifdef VENDOR_EDIT
 /* liochen@BSP, 2016/11/30, Add ufs info into *##*37847# */
 static int ufs_get_capacity_info(struct ufs_hba *hba,  u64 *pcapacity)
 {
@@ -98,9 +95,7 @@ static char* ufs_get_capacity_size(u64 capacity)
                return "0G";
        }
 }
-#endif
 
-#ifdef VENDOR_EDIT
 /* liochen@BSP, 2016/11/30, Add ufs info into *##*37847# */
 char ufs_vendor_and_rev[32] = {'\0'};
 char ufs_product_id[32] = {'\0'};
@@ -161,7 +156,6 @@ out:
 	return err;
 
 }
-#endif
 
 void ufs_advertise_fixup_device(struct ufs_hba *hba)
 {

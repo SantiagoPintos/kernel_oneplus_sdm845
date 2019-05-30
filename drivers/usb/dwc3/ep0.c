@@ -35,7 +35,6 @@
 #include "debug.h"
 #include "gadget.h"
 #include "io.h"
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170112 Add usb enumeration status */
 #include <linux/power/oem_external_fg.h>
 
@@ -53,7 +52,6 @@ void regsister_notify_usb_enumeration_status(
 	}
 }
 EXPORT_SYMBOL(regsister_notify_usb_enumeration_status);
-#endif
 
 static bool enable_dwc3_u1u2;
 module_param(enable_dwc3_u1u2, bool, 0644);
@@ -825,13 +823,11 @@ static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 		ret = dwc3_ep0_handle_feature(dwc, ctrl, 1);
 		break;
 	case USB_REQ_SET_ADDRESS:
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170112 Add usb enumeration status */
 		if (usb_enumeration_status
 			&& usb_enumeration_status->notify_usb_enumeration) {
 			usb_enumeration_status->notify_usb_enumeration(true);
 		}
-#endif
 		dwc3_trace(trace_dwc3_ep0, "USB_REQ_SET_ADDRESS");
 		ret = dwc3_ep0_set_address(dwc, ctrl);
 		break;

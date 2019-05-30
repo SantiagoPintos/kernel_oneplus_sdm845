@@ -7,9 +7,7 @@
 #include <linux/mmzone.h>
 #include <linux/vm_event_item.h>
 #include <linux/atomic.h>
-#ifdef VENDOR_EDIT
 #include <linux/hotcount.h>
-#endif
 
 extern int sysctl_stat_interval;
 

@@ -9,10 +9,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #define pr_fmt(fmt) "SMB2: %s: " fmt, __func__
-#endif
 
 #include <linux/debugfs.h>
 #include <linux/delay.h>
@@ -28,22 +26,18 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/of_regulator.h>
 #include <linux/regulator/machine.h>
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #include <linux/delay.h>
 #include <linux/proc_fs.h>
 #include <linux/msm-bus.h>
-#endif
 #include "smb-reg.h"
 #include "smb-lib.h"
 #include "storm-watch.h"
 #include <linux/pmic-voter.h>
 
-#ifdef VENDOR_EDIT
 /*yangfb@bsp, 20180302,enable stm6620 sheepmode */
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
-#endif
 
 #define SMB2_DEFAULT_WPWR_UW	8000000
 
@@ -195,7 +189,6 @@ struct smb2 {
 	bool			bad_part;
 };
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 static int smbchg_cutoff_volt_with_charger = 3240;
 struct smb_charger *g_chip;
@@ -221,7 +214,6 @@ do {									\
 		pr_err("Error reading " #dt_property	\
 				" property rc = %d\n", rc);		\
 } while (0)
-#endif
 
 #ifdef	CONFIG_OP_DEBUG_CHG
 	static int __debug_mask = PR_OP_DEBUG;
@@ -258,16 +250,10 @@ static int smb2_parse_dt(struct smb2 *chip)
 {
 	struct smb_charger *chg = &chip->chg;
 	struct device_node *node = chg->dev->of_node;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	int byte_len, rc = 0;
-#else
-	int rc, byte_len;
-#endif
-#ifdef VENDOR_EDIT
 	/*yangfb@bsp, 20180302,enable stm6620 sheepmode */
 	enum of_gpio_flags flags;
-#endif
 
 	if (!node) {
 		pr_err("device tree node missing\n");
@@ -277,7 +263,6 @@ static int smb2_parse_dt(struct smb2 *chip)
 	chg->reddragon_ipc_wa = of_property_read_bool(node,
 				"qcom,qcs605-ipc-wa");
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	/* read ibatmax setting for different temp regions */
 	OF_PROP_READ(node, "ibatmax-little-cold-ma",
@@ -367,7 +352,6 @@ static int smb2_parse_dt(struct smb2 *chip)
 		chg->FFC_TEMP_T1, chg->FFC_TEMP_T2, chg->FFC_TEMP_T3,
 		chg->FFC_NOR_FCC, chg->FFC_WARM_FCC, chg->FFC_NORMAL_CUTOFF,
 		chg->FFC_WARM_CUTOFF, chg->FFC_VBAT_FULL);
-#ifdef VENDOR_EDIT
 /*yangfb@bsp, 20181023 icl set 1A if battery lower than 15%*/
 	chg->OTG_ICL_CTRL = of_property_read_bool(node,
 					"op,otg-icl-ctrl-enable");
@@ -395,13 +379,10 @@ static int smb2_parse_dt(struct smb2 *chip)
 		chg->FFC_NORMAL_CUTOFF,
 		chg->FFC_WARM_CUTOFF,
 		chg->FFC_VBAT_FULL);
-#endif
-#ifdef VENDOR_EDIT
 	chg->plug_irq = of_get_named_gpio_flags(node,
 						"op,usb-check", 0, &flags);
 	chg->vbus_ctrl = of_get_named_gpio_flags(node,
 						"op,vbus-ctrl-gpio", 0, &flags);
-#endif
 	/* read other settings */
 	OF_PROP_READ(node, "qcom,cutoff-voltage-with-charger",
 				smbchg_cutoff_volt_with_charger, rc, 1);
@@ -452,10 +433,6 @@ static int smb2_parse_dt(struct smb2 *chip)
 				chg->sw_iterm_ma, chg->check_batt_full_by_sw);
 	/* disable step_chg */
 	chg->step_chg_enabled = false;
-#else
-	chg->step_chg_enabled = of_property_read_bool(node,
-				"qcom,step-charging-enable");
-#endif
 	chg->sw_jeita_enabled = of_property_read_bool(node,
 				"qcom,sw-jeita-enable");
 
@@ -592,12 +569,10 @@ static enum power_supply_property smb2_usb_props[] = {
 	POWER_SUPPLY_PROP_TYPEC_MODE,
 	POWER_SUPPLY_PROP_TYPEC_POWER_ROLE,
 	POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION,
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	POWER_SUPPLY_PROP_OTG_SWITCH,
 	POWER_SUPPLY_PROP_HW_DETECT,
 	POWER_SUPPLY_PROP_OEM_TYPEC_CC_ORIENTATION,
-#endif
 	POWER_SUPPLY_PROP_PD_ALLOWED,
 	POWER_SUPPLY_PROP_PD_ACTIVE,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_SETTLED,
@@ -676,7 +651,6 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 		else
 			val->intval = chg->typec_mode;
 		break;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170414 Add otg switch */
 	case POWER_SUPPLY_PROP_OTG_SWITCH:
 		val->intval = chg->otg_switch;
@@ -684,7 +658,6 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_HW_DETECT:
 		val->intval = chg->hw_detect;
 		break;
-#endif
 	case POWER_SUPPLY_PROP_TYPEC_POWER_ROLE:
 		if (chg->connector_type == POWER_SUPPLY_CONNECTOR_MICRO_USB)
 			val->intval = POWER_SUPPLY_TYPEC_PR_NONE;
@@ -692,10 +665,8 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 			rc = smblib_get_prop_typec_power_role(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION:
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	case POWER_SUPPLY_PROP_OEM_TYPEC_CC_ORIENTATION:
-#endif
 		if (chg->connector_type == POWER_SUPPLY_CONNECTOR_MICRO_USB)
 			val->intval = 0;
 		else
@@ -772,12 +743,8 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 	int rc = 0;
 
 	mutex_lock(&chg->lock);
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170417 Fix otg switch */
 	if (!chg->typec_present && psp != POWER_SUPPLY_PROP_OTG_SWITCH) {
-#else
-	if (!chg->typec_present) {
-#endif
 		switch (psp) {
 		case POWER_SUPPLY_PROP_MOISTURE_DETECTED:
 			vote(chg->disable_power_role_switch, MOISTURE_VOTER,
@@ -795,13 +762,11 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_PD_CURRENT_MAX:
 		rc = smblib_set_prop_pd_current_max(chg, val);
 		break;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170414 Add otg switch */
 	case POWER_SUPPLY_PROP_OTG_SWITCH:
 		rc = vote(chg->otg_toggle_votable, USER_VOTER,
 						val->intval, 0);
 		break;
-#endif
 	case POWER_SUPPLY_PROP_TYPEC_POWER_ROLE:
 		rc = smblib_set_prop_typec_power_role(chg, val);
 		break;
@@ -848,10 +813,8 @@ static int smb2_usb_prop_is_writeable(struct power_supply *psy,
 		enum power_supply_property psp)
 {
 	switch (psp) {
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170414 Add otg switch */
 	case POWER_SUPPLY_PROP_OTG_SWITCH:
-#endif
 	case POWER_SUPPLY_PROP_CTM_CURRENT_MAX:
 		return 1;
 	default:
@@ -1188,10 +1151,8 @@ static int smb2_dc_set_prop(struct power_supply *psy,
 				(bool)val->intval, 0);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-#if defined(VENDOR_EDIT)
 /* Yangfb@bsp support ec4016 wipower */
 		pr_info("dc set icl:%d\n", val->intval);
-#endif
 		rc = smblib_set_prop_dc_current_max(chg, val);
 		break;
 	default:
@@ -1257,7 +1218,6 @@ static enum power_supply_property smb2_batt_props[] = {
 	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_CHARGE_TYPE,
 	POWER_SUPPLY_PROP_CAPACITY,
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	POWER_SUPPLY_PROP_CHARGE_NOW,
 	POWER_SUPPLY_PROP_CHG_PROTECT_STATUS,
@@ -1269,7 +1229,6 @@ static enum power_supply_property smb2_batt_props[] = {
 	POWER_SUPPLY_PROP_IS_AGING_TEST,
 	POWER_SUPPLY_PROP_CONNECT_DISABLE,
 	POWER_SUPPLY_PROP_CONNECTER_TEMP,
-#endif
 	POWER_SUPPLY_PROP_CHARGER_TEMP,
 	POWER_SUPPLY_PROP_CHARGER_TEMP_MAX,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_LIMITED,
@@ -1307,12 +1266,8 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 		val->intval = get_prop_batt_status(chg);
-#else
-		rc = smblib_get_prop_batt_status(chg, val);
-#endif
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
 		rc = smblib_get_prop_batt_health(chg, val);
@@ -1329,7 +1284,6 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CAPACITY:
 		rc = smblib_get_prop_batt_capacity(chg, val);
 		break;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
 		rc = smblib_get_prop_usb_voltage_now(chg, val);
@@ -1361,7 +1315,6 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CONNECTER_TEMP:
 		val->intval = chg->connecter_temp;
 		break;
-#endif
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
 		rc = smblib_get_prop_system_temp_level(chg, val);
 		break;
@@ -1483,7 +1436,6 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
 		rc = smblib_set_prop_system_temp_level(chg, val);
 		break;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	case POWER_SUPPLY_PROP_CHECK_USB_UNPLUG:
 		if (chg->vbus_present && !chg->dash_present)
@@ -1531,7 +1483,6 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CONNECT_DISABLE:
 		op_disconnect_vbus(chg, (bool)val->intval);
 		break;
-#endif
 	case POWER_SUPPLY_PROP_CAPACITY:
 		rc = smblib_set_prop_batt_capacity(chg, val);
 		break;
@@ -1618,7 +1569,6 @@ static int smb2_batt_prop_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_INPUT_SUSPEND:
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
 	case POWER_SUPPLY_PROP_CAPACITY:
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
 	case POWER_SUPPLY_PROP_TEMP:
@@ -1627,7 +1577,6 @@ static int smb2_batt_prop_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_MAX:
 	case POWER_SUPPLY_PROP_IS_AGING_TEST:
 	case POWER_SUPPLY_PROP_CONNECT_DISABLE:
-#endif
 	case POWER_SUPPLY_PROP_PARALLEL_DISABLE:
 	case POWER_SUPPLY_PROP_DP_DM:
 	case POWER_SUPPLY_PROP_RERUN_AICL:
@@ -1832,7 +1781,6 @@ static int smb2_configure_typec(struct smb_charger *chg)
 			"Couldn't configure Type-C interrupts rc=%d\n", rc);
 		return rc;
 	}
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170414 Add otg switch */
 	if (chg->otg_switch) {
 		/* restore it back to 0xA5 */
@@ -1860,7 +1808,6 @@ static int smb2_configure_typec(struct smb_charger *chg)
 			"Couldn't configure power role for DRP rc=%d\n", rc);
 		return rc;
 	}
-#endif
 
 	/*
 	 * disable Type-C factory mode and stay in Attached.SRC state when VCONN
@@ -1990,12 +1937,10 @@ static int smb2_init_hw(struct smb2 *chip)
 				&chg->default_icl_ua);
 	if (chip->dt.usb_icl_ua < 0)
 		chip->dt.usb_icl_ua = chg->default_icl_ua;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	pr_info("vbat_max=%d, ibat_max=%d, iusb_max=%d\n",
 		chg->batt_profile_fv_uv,
 		chg->batt_profile_fcc_ua, chip->dt.usb_icl_ua);
-#endif
 	if (chip->dt.dc_icl_ua < 0)
 		smblib_get_charge_param(chg, &chg->param.dc_icl,
 					&chip->dt.dc_icl_ua);
@@ -2017,7 +1962,6 @@ static int smb2_init_hw(struct smb2 *chip)
 		pr_err("Couldn't set otg soft start rc=%d\n", rc);
 		return rc;
 	}
-#if defined(VENDOR_EDIT)
 /* Yangfb@bsp support ec4016 wipower */
 	/* set a AICL THR for DCIN  */
 	rc = smblib_write(chg, DCIN_AICL_REF_SEL_CFG_REG, 0x3);
@@ -2031,7 +1975,6 @@ static int smb2_init_hw(struct smb2 *chip)
 		pr_err("Couldn't disable qcom wipower\n");
 		return rc;
 	}
-#endif
 	/* set OTG current limit */
 	rc = smblib_set_charge_param(chg, &chg->param.otg_cl,
 				(chg->wa_flags & OTG_WA) ?
@@ -2058,7 +2001,6 @@ static int smb2_init_hw(struct smb2 *chip)
 	}
 
 	/* votes must be cast before configuring software control */
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	vote(chg->usb_icl_votable,
 		DEFAULT_VOTER, !chg->chg_enabled, 0);
@@ -2068,17 +2010,6 @@ static int smb2_init_hw(struct smb2 *chip)
 			chg->ibatmax[BATT_TEMP_NORMAL] * 1000);
 	smblib_set_charge_param(chg, &chg->param.fv,
 			chg->vbatmax[BATT_TEMP_NORMAL] * 1000);
-#else
-	/* vote 0mA on usb_icl for non battery platforms */
-	vote(chg->usb_icl_votable,
-		DEFAULT_VOTER, chip->dt.no_battery, 0);
-	vote(chg->dc_suspend_votable,
-		DEFAULT_VOTER, chip->dt.no_battery, 0);
-	vote(chg->fcc_votable,
-		BATT_PROFILE_VOTER, true, chg->batt_profile_fcc_ua);
-	vote(chg->fv_votable,
-		BATT_PROFILE_VOTER, true, chg->batt_profile_fv_uv);
-#endif
 	vote(chg->dc_icl_votable,
 		DEFAULT_VOTER, true, chip->dt.dc_icl_ua);
 	vote(chg->hvdcp_disable_votable_indirect, PD_INACTIVE_VOTER,
@@ -2091,7 +2022,6 @@ static int smb2_init_hw(struct smb2 *chip)
 			true, 0);
 	vote(chg->pd_disallowed_votable_indirect, HVDCP_TIMEOUT_VOTER,
 			true, 0);
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	/* disable HVDCP */
 	rc = smblib_masked_write(chg, USBIN_OPTIONS_1_CFG_REG,
@@ -2110,7 +2040,6 @@ static int smb2_init_hw(struct smb2 *chip)
 		BIT(0)|BIT(1), 0);
 	if (rc < 0)
 		dev_err(chg->dev, "Couldn't set aicl rerunTimerc=%d\n", rc);
-#endif
 
 	/*
 	 * AICL configuration:
@@ -2187,7 +2116,6 @@ static int smb2_init_hw(struct smb2 *chip)
 			"Couldn't configure VBUS for SW control rc=%d\n", rc);
 		return rc;
 	}
-#ifdef VENDOR_EDIT
 /* xianglin modify otg current load to 1.5A */
 	rc = smblib_masked_write(
 	chg, OTG_CURRENT_LIMIT_CFG_REG,
@@ -2197,7 +2125,6 @@ static int smb2_init_hw(struct smb2 *chip)
 			"Couldn't configure VBUS for SW control rc=%d\n", rc);
 		return rc;
 	}
-#endif
 
 	val = (ilog2(chip->dt.wd_bark_time / 16) << BARK_WDOG_TIMEOUT_SHIFT) &
 						BARK_WDOG_TIMEOUT_MASK;
@@ -2375,7 +2302,6 @@ static int smb2_post_init(struct smb2 *chip)
 	 * not requested
 	 */
 	rerun_election(chg->usb_icl_votable);
-#ifdef VENDOR_EDIT
 	/* yangfb@bsp, 20180124 ,for EID-1772 */
 	/* configure power role for UDP-role */
 	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
@@ -2385,16 +2311,6 @@ static int smb2_post_init(struct smb2 *chip)
 			"Couldn't configure power role for UDP rc=%d\n", rc);
 		return rc;
 	}
-#else
-	/* configure power role for dual-role */
-	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
-				 TYPEC_POWER_ROLE_CMD_MASK, 0);
-	if (rc < 0) {
-		dev_err(chg->dev,
-			"Couldn't configure power role for DRP rc=%d\n", rc);
-		return rc;
-	}
-#endif
 	rerun_election(chg->usb_irq_enable_votable);
 
 	return 0;
@@ -2460,10 +2376,8 @@ static int smb2_chg_config_init(struct smb2 *chip)
 		return -EINVAL;
 	}
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170317 Improve coldboot time */
 	pr_info("PMI8998 Revision=0x%x\n", pmic_rev_id->rev4);
-#endif
 	return 0;
 }
 
@@ -2640,18 +2554,11 @@ static struct smb_irq_info smb2_irqs[] = {
 		.name		= "aicl-fail",
 		.handler	= smblib_handle_debug,
 	},
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	[AICL_DONE_IRQ] = {
 		.name		= "aicl-done",
 		.handler	= smblib_handle_aicl_done,
 	},
-#else
-	[AICL_DONE_IRQ] = {
-		.name		= "aicl-done",
-		.handler	= smblib_handle_debug,
-	},
-#endif
 	[HIGH_DUTY_CYCLE_IRQ] = {
 		.name		= "high-duty-cycle",
 		.handler	= smblib_handle_high_duty_cycle,
@@ -2849,7 +2756,6 @@ static void smb2_create_debugfs(struct smb2 *chip)
 
 #endif
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #ifdef CONFIG_PROC_FS
 static ssize_t write_ship_mode(struct file *file, const char __user *buf,
@@ -2868,8 +2774,6 @@ static const struct file_operations proc_ship_mode_operations = {
 	.llseek		= noop_llseek,
 };
 #endif
-#endif
-#ifdef VENDOR_EDIT
 static irqreturn_t op_usb_plugin_irq_handler(int irq, void *dev_id)
 {
 	schedule_work(&g_chip->otg_switch_work);
@@ -2923,7 +2827,6 @@ void requset_vbus_ctrl_gpio(struct smb_charger *chg)
 	if (ret)
 		pr_err("request failed,gpio:%d ret=%d\n", chg->vbus_ctrl, ret);
 }
-#endif
 
 static int smb2_probe(struct platform_device *pdev)
 {
@@ -2932,19 +2835,15 @@ static int smb2_probe(struct platform_device *pdev)
 	int rc = 0;
 	union power_supply_propval val;
 	int usb_present, batt_present, batt_health, batt_charge_type;
-#ifdef VENDOR_EDIT
 	struct msm_bus_scale_pdata *pdata;
-#endif
 
 	chip = devm_kzalloc(&pdev->dev, sizeof(*chip), GFP_KERNEL);
 	if (!chip)
 		return -ENOMEM;
 
 	chg = &chip->chg;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	g_chip = chg;
-#endif
 	chg->dev = &pdev->dev;
 	chg->param = v1_params;
 	chg->debug_mask = &__debug_mask;
@@ -2984,7 +2883,6 @@ static int smb2_probe(struct platform_device *pdev)
 	/* set driver data before resources request it */
 	platform_set_drvdata(pdev, chip);
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171228 Fix abnormal animation */
 	op_charge_info_init(chg);
 	pdata = msm_bus_cl_get_pdata(pdev);
@@ -2992,7 +2890,6 @@ static int smb2_probe(struct platform_device *pdev)
 		pr_err("Fail to get bus data\n");
 	else
 		chg->bus_client = msm_bus_scale_register_client(pdata);
-#endif
 
 	rc = smb2_init_vbus_regulator(chip);
 	if (rc < 0) {
@@ -3108,7 +3005,6 @@ static int smb2_probe(struct platform_device *pdev)
 		goto cleanup;
 	}
 	batt_charge_type = val.intval;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #ifdef CONFIG_PROC_FS
 	if (!proc_create("ship_mode", 0644, NULL,
@@ -3121,14 +3017,11 @@ static int smb2_probe(struct platform_device *pdev)
 	}
 	if (!usb_present && chg->vbus_present)
 		op_handle_usb_plugin(chg);
-#endif
 
 	device_init_wakeup(chg->dev, true);
-#ifdef VENDOR_EDIT
 	chg->probe_done = true;
 	request_plug_irq(chg);
 	requset_vbus_ctrl_gpio(chg);
-#endif
 	pr_info("QPNP SMB2 probed successfully usb:present=%d type=%d batt:present = %d health = %d charge = %d\n",
 		usb_present, chg->real_charger_type,
 		batt_present, batt_health, batt_charge_type);
@@ -3162,7 +3055,6 @@ static int smb2_remove(struct platform_device *pdev)
 	struct smb2 *chip = platform_get_drvdata(pdev);
 	struct smb_charger *chg = &chip->chg;
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170330 Fix system crash */
 	if (chg->usb_psy)
 		power_supply_unregister(chg->batt_psy);
@@ -3172,13 +3064,6 @@ static int smb2_remove(struct platform_device *pdev)
 		regulator_unregister(chg->vconn_vreg->rdev);
 	if (chg->vbus_vreg && chg->vbus_vreg->rdev)
 		regulator_unregister(chg->vbus_vreg->rdev);
-#else
-	power_supply_unregister(chg->batt_psy);
-	power_supply_unregister(chg->usb_psy);
-	power_supply_unregister(chg->usb_port_psy);
-	regulator_unregister(chg->vconn_vreg->rdev);
-	regulator_unregister(chg->vbus_vreg->rdev);
-#endif
 
 	platform_set_drvdata(pdev, NULL);
 	return 0;
@@ -3188,7 +3073,6 @@ static void smb2_shutdown(struct platform_device *pdev)
 {
 	struct smb2 *chip = platform_get_drvdata(pdev);
 	struct smb_charger *chg = &chip->chg;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #ifdef CONFIG_PROC_FS
 	pr_info("smbchg_shutdown\n");
@@ -3201,7 +3085,6 @@ static void smb2_shutdown(struct platform_device *pdev)
 		while (1)
 			;
 	}
-#endif
 #endif
 
 	/* disable all interrupts */

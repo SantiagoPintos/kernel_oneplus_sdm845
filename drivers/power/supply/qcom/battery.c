@@ -612,9 +612,7 @@ static int pl_fcc_vote_callback(struct votable *votable, void *data,
 
 	if (!chip->main_psy)
 		return 0;
-#ifdef VENDOR_EDIT
 	pr_info("total_fcc_ua=%d\n", total_fcc_ua);
-#endif
 	if (chip->pl_mode != POWER_SUPPLY_PL_NONE) {
 		get_fcc_split(chip, total_fcc_ua, &master_fcc_ua,
 				&slave_fcc_ua);
@@ -848,9 +846,7 @@ static int pl_fv_vote_callback(struct votable *votable, void *data,
 		return 0;
 
 	pval.intval = fv_uv;
-#ifdef VENDOR_EDIT
 	pr_info("fv_uv=%d\n", fv_uv);
-#endif
 
 	rc = power_supply_set_property(chip->main_psy,
 			POWER_SUPPLY_PROP_VOLTAGE_MAX, &pval);
@@ -956,9 +952,7 @@ static int usb_icl_vote_callback(struct votable *votable, void *data,
 				POWER_SUPPLY_PROP_CURRENT_MAX,
 				&pval);
 	}
-#ifdef VENDOR_EDIT
 	pr_info("total_icl_ua=%d\n", icl_ua);
-#endif
 
 	/* set the effective ICL */
 	pval.intval = icl_ua;

@@ -169,9 +169,7 @@ struct fp_dev_kmap_t {
 #define SIFP_IOC_GET_TP_TOUCH_INFO          _IOR(SIFP_IOC_MAGIC, 30, struct fp_underscreen_info)
 #define SIFP_IOC_SET_TP_MSG_REPORT_MODE          _IOW(SIFP_IOC_MAGIC, 31, u8)
 
-#ifdef VENDOR_EDIT
 #define SIFP_IOC_REPORT_KEY          _IOW(SIFP_IOC_MAGIC, 32, uint8_t)
-#endif
 
 #define RESET_TIME            1	/* Default chip reset wait time(ms) */
 #define RESET_TIME_MULTIPLE   1 /* Multiple for reset time multiple*wait_time */
@@ -204,9 +202,7 @@ struct fp_dev_kmap_t {
 #define VDDIO_MAX 1800000
 #define VDDIO_MIN 1800000
 
-#ifdef VENDOR_EDIT
 #define CURRENT 50000
-#endif
 
 #if defined(BSP_SIL_POWER_SUPPLY_REGULATOR) && defined(BSP_SIL_POWER_SUPPLY_PINCTRL) || defined(BSP_SIL_POWER_SUPPLY_REGULATOR) && defined(BSP_SIL_POWER_SUPPLY_GPIO) || defined(BSP_SIL_POWER_SUPPLY_GPIO) && defined(BSP_SIL_POWER_SUPPLY_PINCTRL)
   #error "Don't define multiple power supply mode!"

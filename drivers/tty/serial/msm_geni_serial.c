@@ -29,9 +29,7 @@
 #include <linux/slab.h>
 #include <linux/tty.h>
 #include <linux/tty_flip.h>
-#ifdef VENDOR_EDIT
 #include <linux/miscdevice.h>
-#endif
 /* UART specific GENI registers */
 #define SE_UART_LOOPBACK_CFG		(0x22C)
 #define SE_UART_TX_TRANS_CFG		(0x25C)
@@ -2338,13 +2336,8 @@ static const struct uart_ops msm_geni_serial_pops = {
 
 static const struct of_device_id msm_geni_device_tbl[] = {
 #if defined(CONFIG_SERIAL_CORE_CONSOLE) || defined(CONFIG_CONSOLE_POLL)
-#ifndef VENDOR_EDIT
-	{ .compatible = "qcom,msm-geni-console",
-			.data = (void *)&msm_geni_console_driver},
-#else
     { .compatible = "qcom,msm-geni-console-oem",
 		.data = (void *)&msm_geni_console_driver},
-#endif
 
 #endif
 	{ .compatible = "qcom,msm-geni-serial-hs",
@@ -2352,7 +2345,6 @@ static const struct of_device_id msm_geni_device_tbl[] = {
 	{},
 };
 
-#ifdef VENDOR_EDIT
 struct oemconsole {
 	bool default_console;
 	bool console_initialized;
@@ -2373,7 +2365,6 @@ early_param("console", parse_console_config);
 static int  msm_serial_oem_pinctrl_init(void);
 static int  oem_msm_geni_serial_init(void);
 
-#endif
 
 static int msm_geni_serial_probe(struct platform_device *pdev)
 {
@@ -2749,22 +2740,16 @@ static const struct dev_pm_ops msm_geni_serial_pm_ops = {
 	.suspend_noirq = msm_geni_serial_sys_suspend_noirq,
 	.resume_noirq = msm_geni_serial_sys_resume_noirq,
 };
-#ifdef VENDOR_EDIT
 static const struct of_device_id msm_geni_device_tbl_oem_hs[] = {
 	{ .compatible = "qcom,msm-geni-serial-hs"},
 	{},
 };
-#endif
 static struct platform_driver msm_geni_serial_platform_driver = {
 	.remove = msm_geni_serial_remove,
 	.probe = msm_geni_serial_probe,
 	.driver = {
 		.name = "msm_geni_serial",
-        #ifndef VENDOR_EDIT
-		.of_match_table = msm_geni_device_tbl,
-        #else
         .of_match_table = msm_geni_device_tbl_oem_hs,
-        #endif
 		.pm = &msm_geni_serial_pm_ops,
 	},
 };
@@ -2811,11 +2796,6 @@ static int __init msm_geni_serial_init(void)
 		msm_geni_console_port.uport.line = i;
 	}
 
-#ifndef VENDOR_EDIT
-	ret = console_register(&msm_geni_console_driver);
-	if (ret)
-		return ret;
-#endif
 
 	ret = uart_register_driver(&msm_geni_serial_hs_driver);
 	if (ret) {
@@ -2831,12 +2811,10 @@ static int __init msm_geni_serial_init(void)
 	}
 	pr_info("%s: Driver initialized", __func__);
 
-#ifdef VENDOR_EDIT
     if(oem_console.default_console == 1)
    		 oem_msm_geni_serial_init();
     else
 		 msm_serial_oem_pinctrl_init();
-#endif
 
 	return ret;
 }
@@ -2850,7 +2828,6 @@ static void __exit msm_geni_serial_exit(void)
 }
 module_exit(msm_geni_serial_exit);
 
-#ifdef VENDOR_EDIT
 
 static int oem_msm_geni_serial_init(void)
 {
@@ -2956,7 +2933,6 @@ void  msm_serial_oem_exit(void)
 }
 EXPORT_SYMBOL(msm_serial_oem_exit);
 
-#endif
 
 
 MODULE_DESCRIPTION("Serial driver for GENI based QTI serial cores");

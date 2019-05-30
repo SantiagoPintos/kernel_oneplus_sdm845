@@ -794,16 +794,10 @@ static int scsi_add_lun(struct scsi_device *sdev, unsigned char *inq_result,
 	 * nonetheless.  It doesn't matter if the device sent < 36 bytes
 	 * total, since scsi_probe_lun() initializes inq_result with 0s.
 	 */
-#ifdef VENDOR_EDIT
 	sdev->inquiry = kmemdup(inq_result,
 				max_t(size_t, sdev->inquiry_len, 40),
 				GFP_ATOMIC);
 	*(sdev->inquiry + 40) = 0;
-#else
-	sdev->inquiry = kmemdup(inq_result,
-				max_t(size_t, sdev->inquiry_len, 36),
-				GFP_ATOMIC);
-#endif
 	if (sdev->inquiry == NULL)
 		return SCSI_SCAN_NO_RESPONSE;
 

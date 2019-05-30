@@ -29,9 +29,7 @@
 #include <linux/spinlock.h>
 #include <linux/time.h>
 #include <linux/types.h>
-#ifdef VENDOR_EDIT
 #include <linux/pstore_ram.h>
-#endif
 /* types */
 enum pstore_type_id {
 	PSTORE_TYPE_DMESG	= 0,
@@ -92,7 +90,6 @@ extern int pstore_register(struct pstore_info *);
 extern void pstore_unregister(struct pstore_info *);
 extern bool pstore_cannot_block_path(enum kmsg_dump_reason reason);
 
-#ifdef VENDOR_EDIT  /*move from ram.c*/
 struct ramoops_context {
 	struct persistent_ram_zone **przs;
 	struct persistent_ram_zone *cprz;
@@ -119,7 +116,6 @@ struct ramoops_context {
 	unsigned int device_info_read_cnt;
 	struct pstore_info pstore;
 };
-#endif
 
 void save_dump_reason_to_device_info(char *buf);
 void save_tz_dump_reason_to_device_info(char *buf);

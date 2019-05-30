@@ -37,9 +37,7 @@ struct msm_commit {
 
 BLOCKING_NOTIFIER_HEAD(msm_drm_notifier_list);
 
-#ifdef VENDOR_EDIT
 int connector_state_crtc_index;
-#endif
 
 /**
  * msm_drm_register_client - register a client notifier
@@ -264,9 +262,7 @@ msm_disable_outputs(struct drm_device *dev, struct drm_atomic_state *old_state)
 		blank = MSM_DRM_BLANK_POWERDOWN;
 		notifier_data.data = &blank;
 		notifier_data.id = crtc_idx;
-		#ifdef VENDOR_EDIT
 		connector_state_crtc_index = crtc_idx;
-		#endif
 		msm_drm_notifier_call_chain(MSM_DRM_EARLY_EVENT_BLANK,
 					     &notifier_data);
 		/*
@@ -488,9 +484,7 @@ static void msm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 			notifier_data.id =
 				connector->state->crtc->index;
 			DRM_DEBUG_ATOMIC("Notify early unblank\n");
-			#ifdef VENDOR_EDIT
 			connector_state_crtc_index = connector->state->crtc->index;
-			#endif
 			msm_drm_notifier_call_chain(MSM_DRM_EARLY_EVENT_BLANK,
 					    &notifier_data);
 		}

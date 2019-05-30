@@ -59,12 +59,10 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/vmscan.h>
 
-#ifdef VENDOR_EDIT
 int sysctl_page_cache_reside_switch;
 int sysctl_page_cache_reside_max = 153600; //600M
 unsigned long inactive_nr, active_nr;
 unsigned long priority_nr[3];
-#endif
 struct scan_control {
 	/* How many pages shrink_list() should reclaim */
 	unsigned long nr_to_reclaim;
@@ -164,7 +162,6 @@ unsigned long vm_total_pages;
 
 static LIST_HEAD(shrinker_list);
 static DECLARE_RWSEM(shrinker_rwsem);
-#ifdef VENDOR_EDIT
 static LIST_HEAD(hotcount_prio_list);
 static DEFINE_RWLOCK(prio_list_lock);
 
@@ -359,7 +356,6 @@ void free_hash_table(struct lruvec *lruvec)
 		}
 	}
 }
-#endif
 
 
 #ifdef CONFIG_MEMCG
@@ -1538,7 +1534,6 @@ keep:
 	return nr_reclaimed;
 }
 
-#ifdef VENDOR_EDIT
 static unsigned long isolate_uid_lru_pages(struct page *page)
 {
 	int ret = -EBUSY;
@@ -1636,7 +1631,6 @@ unsigned long reclaim_pages_from_uid_list(uid_t uid)
 	}
 	return nr_reclaimed;
 }
-#endif
 
 unsigned long reclaim_clean_pages_from_list(struct zone *zone,
 					    struct list_head *page_list)
@@ -1794,11 +1788,7 @@ static __always_inline void update_lru_sizes(struct lruvec *lruvec,
 	for (zid = 0; zid < MAX_NR_ZONES; zid++) {
 		if (!nr_zone_taken[zid])
 			continue;
-#ifdef VENDOR_EDIT
 		__update_lru_size(lruvec, lru, zid, -nr_zone_taken[zid], false);
-#else
-		__update_lru_size(lruvec, lru, zid, -nr_zone_taken[zid]);
-#endif
 #ifdef CONFIG_MEMCG
 		mem_cgroup_update_lru_size(lruvec, lru, zid, -nr_zone_taken[zid]);
 #endif
@@ -1950,11 +1940,7 @@ int isolate_lru_page(struct page *page)
 			int lru = page_lru(page);
 			get_page(page);
 			ClearPageLRU(page);
-#ifdef VENDOR_EDIT
 			del_page_from_lru_list(page, lruvec, lru, PageUIDLRU(page)? true:false);
-#else
-			del_page_from_lru_list(page, lruvec, lru);
-#endif
 			ret = 0;
 		}
 		spin_unlock_irq(zone_lru_lock(zone));
@@ -2063,11 +2049,7 @@ putback_inactive_pages(struct lruvec *lruvec, struct list_head *page_list)
 		if (put_page_testzero(page)) {
 			__ClearPageLRU(page);
 			__ClearPageActive(page);
-#ifdef VENDOR_EDIT
 			del_page_from_lru_list(page, lruvec, lru, PageUIDLRU(page)? true:false);
-#else
-			del_page_from_lru_list(page, lruvec, lru);
-#endif
 
 			if (unlikely(PageCompound(page))) {
 				spin_unlock_irq(&pgdat->lru_lock);
@@ -2148,9 +2130,7 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 	if (!inactive_reclaimable_pages(lruvec, sc, lru))
 		return 0;
 
-#ifdef VENDOR_EDIT
 	inactive_nr++;
-#endif
 	while (unlikely(too_many_isolated(pgdat, file, sc, safe))) {
 		congestion_wait(BLK_RW_ASYNC, HZ/10);
 
@@ -2316,22 +2296,14 @@ static void move_active_pages_to_lru(struct lruvec *lruvec,
 		SetPageLRU(page);
 
 		nr_pages = hpage_nr_pages(page);
-#ifdef VENDOR_EDIT
 		update_lru_size(lruvec, lru, page_zonenum(page), nr_pages, PageUIDLRU(page)?true:false);
-#else
-		update_lru_size(lruvec, lru, page_zonenum(page), nr_pages);
-#endif
 		list_move(&page->lru, &lruvec->lists[lru]);
 		pgmoved += nr_pages;
 
 		if (put_page_testzero(page)) {
 			__ClearPageLRU(page);
 			__ClearPageActive(page);
-#ifdef VENDOR_EDIT
 			del_page_from_lru_list(page, lruvec, lru, PageUIDLRU(page)? true:false);
-#else
-			del_page_from_lru_list(page, lruvec, lru);
-#endif
 
 			if (unlikely(PageCompound(page))) {
 				spin_unlock_irq(&pgdat->lru_lock);
@@ -2347,7 +2319,6 @@ static void move_active_pages_to_lru(struct lruvec *lruvec,
 		__count_vm_events(PGDEACTIVATE, pgmoved);
 }
 
-#ifdef VENDOR_EDIT
 #define SMART_BOOST_PUTBACK_LRU 2
 extern unsigned long get_max_minfree(void);
 unsigned long uid_lru_size()
@@ -2435,7 +2406,6 @@ static void shrink_uid_lru_list(struct lruvec *lruvec,
 			__func__, nr_reclaimed,
 			sc->nr_to_reclaim << 1, nr_isolate_failed);*/
 }
-#endif
 static void shrink_active_list(unsigned long nr_to_scan,
 			       struct lruvec *lruvec,
 			       struct scan_control *sc,
@@ -2454,9 +2424,7 @@ static void shrink_active_list(unsigned long nr_to_scan,
 	int file = is_file_lru(lru);
 	struct pglist_data *pgdat = lruvec_pgdat(lruvec);
 
-#ifdef VENDOR_EDIT
 	active_nr++;
-#endif
 	lru_add_drain();
 
 	if (!sc->may_unmap)
@@ -2533,12 +2501,10 @@ static void shrink_active_list(unsigned long nr_to_scan,
 
 	mem_cgroup_uncharge_list(&l_hold);
 	free_hot_cold_page_list(&l_hold, true);
-#ifdef VENDOR_EDIT
 	if (sysctl_page_cache_reside_switch &&
 		((active_list_is_low(lruvec)) ||
 		(!current_is_kswapd() && sc->priority <= 11 && (sc->nr_reclaimed < sc->nr_to_reclaim))))
 		shrink_uid_lru_list(lruvec, pgdat, sc);
-#endif
 
 }
 
@@ -3295,7 +3261,6 @@ retry:
 	} while (--sc->priority >= 0);
 
 	delayacct_freepages_end();
-#ifdef VENDOR_EDIT
 	if (global_reclaim(sc)) {
 		if (sc->priority <= 12 && sc->priority > 10)
 			__count_zid_vm_events(ALLOCSTALL_PRI1, sc->reclaim_idx, 1);
@@ -3306,7 +3271,6 @@ retry:
 		else
 			__count_zid_vm_events(ALLOCSTALL_PRI4, sc->reclaim_idx, 1);
 	}
-#endif
 
 	if (sc->nr_reclaimed)
 		return sc->nr_reclaimed;
@@ -3836,14 +3800,12 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 		pgdat->kswapd_failures++;
 
 out:
-#ifdef VENDOR_EDIT
 	if (sc.priority < 5)
 		priority_nr[0]++;
 	else if (sc.priority > 5 && sc.priority < 10)
 		priority_nr[1]++;
 	else
 		priority_nr[2]++;
-#endif
 
 	/*
 	 * Return the order kswapd stopped reclaiming at as
@@ -4306,12 +4268,10 @@ static int __node_reclaim(struct pglist_data *pgdat, gfp_t gfp_mask, unsigned in
 		do {
 			shrink_node(pgdat, &sc);
 		} while (sc.nr_reclaimed < nr_pages && --sc.priority >= 0);
-#ifdef VENDOR_EDIT
 		if (sc.priority >= 0 && sc.priority <= 2)
 			__count_zid_vm_events(ALLOCSTALL_PRI2, sc->reclaim_idx, 1);
 		else
 			__count_zid_vm_events(ALLOCSTALL_PRI1, sc->reclaim_idx, 1);
-#endif
 	}
 
 	p->reclaim_state = NULL;
@@ -4428,11 +4388,7 @@ void check_move_unevictable_pages(struct page **pages, int nr_pages)
 
 			VM_BUG_ON_PAGE(PageActive(page), page);
 			ClearPageUnevictable(page);
-#ifdef VENDOR_EDIT
 			del_page_from_lru_list(page, lruvec, LRU_UNEVICTABLE, PageUIDLRU(page)? true:false);
-#else
-			del_page_from_lru_list(page, lruvec, LRU_UNEVICTABLE);
-#endif
 			add_page_to_lru_list(page, lruvec, lru);
 			pgrescued++;
 		}

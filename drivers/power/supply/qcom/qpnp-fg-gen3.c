@@ -26,10 +26,8 @@
 #include <linux/qpnp/qpnp-misc.h>
 #include "fg-core.h"
 #include "fg-reg.h"
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #include <linux/power/oem_external_fg.h>
-#endif
 
 #define FG_GEN3_DEV_NAME	"qcom,fg-gen3"
 
@@ -160,7 +158,6 @@
 #define FLOAT_VOLT_v2_WORD		16
 #define FLOAT_VOLT_v2_OFFSET		2
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 static void oem_update_cc_cv_setpoint(struct fg_chip *chip,
 	int cv_float_point);
@@ -169,7 +166,6 @@ static void oneplus_set_allow_read_iic(struct fg_chip *chip,
 static void oneplus_set_lcd_off_status(struct fg_chip *chip,
 	bool status);
 static struct external_battery_gauge *external_fg;
-#endif
 static int fg_decode_voltage_15b(struct fg_sram_param *sp,
 	enum fg_sram_param_id id, int val);
 static int fg_decode_value_16b(struct fg_sram_param *sp,
@@ -434,7 +430,6 @@ module_param_named(
 	profile_dump, fg_profile_dump, bool, 0600
 );
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 void external_battery_gauge_register(
 				struct external_battery_gauge *batt_gauge)
@@ -453,7 +448,6 @@ void external_battery_gauge_unregister(
 	external_fg = NULL;
 }
 EXPORT_SYMBOL(external_battery_gauge_unregister);
-#endif
 
 static int fg_sram_dump_period_ms = 20000;
 module_param_named(
@@ -1006,10 +1000,8 @@ static int fg_batt_missing_config(struct fg_chip *chip, bool enable)
 	return rc;
 }
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #define OP_SW_DEFAULT_ID 200000
-#endif
 static int fg_get_batt_id(struct fg_chip *chip)
 {
 	int rc, ret, batt_id = 0;
@@ -1033,12 +1025,8 @@ static int fg_get_batt_id(struct fg_chip *chip)
 	msleep(chip->dt.bmd_en_delay_ms);
 
 	fg_dbg(chip, FG_STATUS, "batt_id: %d\n", batt_id);
-#ifdef VENDOR_EDIT
 /* Yangfb@bsp, 20170110 Add OP battery profile */
 	chip->batt_id_ohms = OP_SW_DEFAULT_ID;
-#else
-	chip->batt_id_ohms = batt_id;
-#endif
 out:
 	ret = fg_batt_missing_config(chip, true);
 	if (ret < 0) {
@@ -1208,7 +1196,6 @@ static int fg_set_esr_timer(struct fg_chip *chip, int cycles_init,
 
 /* Other functions HERE */
 
-#ifdef VENDOR_EDIT
 /* Yangfb@bsp, 20170109 set Ibat 500mA by default */
 static void fg_notify_charger(struct fg_chip *chip)
 {
@@ -1240,39 +1227,6 @@ static void fg_notify_charger(struct fg_chip *chip)
 
 	fg_dbg(chip, FG_STATUS, "Notified charger on float voltage and FCC\n");
 }
-#else
-static void fg_notify_charger(struct fg_chip *chip)
-{
-	union power_supply_propval prop = {0, };
-	int rc;
-
-	if (!chip->batt_psy)
-		return;
-
-	if (!chip->profile_available)
-		return;
-
-	prop.intval = chip->bp.float_volt_uv;
-	rc = power_supply_set_property(chip->batt_psy,
-			POWER_SUPPLY_PROP_VOLTAGE_MAX, &prop);
-	if (rc < 0) {
-		pr_err("Error in setting voltage_max property on batt_psy, rc=%d\n",
-			rc);
-		return;
-	}
-
-	prop.intval = chip->bp.fastchg_curr_ma * 1000;
-	rc = power_supply_set_property(chip->batt_psy,
-			POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, &prop);
-	if (rc < 0) {
-		pr_err("Error in setting constant_charge_current_max property on batt_psy, rc=%d\n",
-			rc);
-		return;
-	}
-
-	fg_dbg(chip, FG_STATUS, "Notified charger on float voltage and FCC\n");
-}
-#endif
 
 static int fg_batt_miss_irq_en_cb(struct votable *votable, void *data,
 					int enable, const char *client)
@@ -1303,10 +1257,6 @@ static int fg_delta_bsoc_irq_en_cb(struct votable *votable, void *data,
 
 	if (enable) {
 		enable_irq(chip->irqs[BSOC_DELTA_IRQ].irq);
-#ifndef VENDOR_EDIT
-/* david.liu@bsp, 20171023 Battery & Charging porting */
-		enable_irq_wake(chip->irqs[BSOC_DELTA_IRQ].irq);
-#endif
 	} else {
 		disable_irq_wake(chip->irqs[BSOC_DELTA_IRQ].irq);
 		disable_irq_nosync(chip->irqs[BSOC_DELTA_IRQ].irq);
@@ -3862,10 +3812,8 @@ out:
 	return rc;
 }
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #define DEFALUT_BATT_TEMP	250
-#endif
 static int fg_esr_validate(struct fg_chip *chip)
 {
 	int rc, esr_uohms;
@@ -4077,7 +4025,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CAPACITY:
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 		if (!get_extern_fg_regist_done())
 			pval->intval = get_prop_pre_shutdown_soc();
@@ -4086,42 +4033,27 @@ static int fg_psy_get_property(struct power_supply *psy,
 			pval->intval = external_fg->get_battery_soc();
 		else
 			pval->intval = 50;
-#else
-		rc = fg_get_prop_capacity(chip, &pval->intval);
-#endif
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY_RAW:
 		rc = fg_get_msoc_raw(chip, &pval->intval);
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 		if (chip->use_external_fg && external_fg
 				&& external_fg->get_battery_mvolts)
 			pval->intval = external_fg->get_battery_mvolts();
 		else
 			pval->intval = 4000000;
-#else
-		if (chip->battery_missing)
-			pval->intval = 3700000;
-		else
-			rc = fg_get_battery_voltage(chip, &pval->intval);
-#endif
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 		if (chip->use_external_fg && external_fg
 				&& external_fg->get_average_current)
 			pval->intval = external_fg->get_average_current();
 		else
 			pval->intval = 0;
-#else
-		rc = fg_get_battery_current(chip, &pval->intval);
-#endif
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 		if (!get_extern_fg_regist_done()
 				&& get_extern_bq_present())
@@ -4131,9 +4063,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 			pval->intval = external_fg->get_battery_temperature();
 		} else
 			pval->intval = -400;
-#else
-		rc = fg_get_battery_temp(chip, &pval->intval);
-#endif
 		break;
 	case POWER_SUPPLY_PROP_COLD_TEMP:
 		rc = fg_get_jeita_threshold(chip, JEITA_COLD, &pval->intval);
@@ -4214,7 +4143,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_DEBUG_BATTERY:
 		pval->intval = is_debug_batt_id(chip);
 		break;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170303 Add internal FG info */
 	case POWER_SUPPLY_PROP_FG_CAPACITY:
 		rc = fg_get_prop_capacity(chip, &pval->intval);
@@ -4235,7 +4163,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 		else
 			pval->intval = 50;
 		break;
-#endif
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE:
 		rc = fg_get_sram_prop(chip, FG_SRAM_VBATT_FULL, &pval->intval);
 		break;
@@ -4273,7 +4200,6 @@ static int fg_psy_set_property(struct power_supply *psy,
 	int rc = 0;
 
 	switch (psp) {
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	case POWER_SUPPLY_PROP_CC_TO_CV_POINT:
 		oem_update_cc_cv_setpoint(chip, pval->intval);
@@ -4284,7 +4210,6 @@ static int fg_psy_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_UPDATE_LCD_IS_OFF:
 		oneplus_set_lcd_off_status(chip, pval->intval);
 		break;
-#endif
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE:
 		rc = fg_set_constant_chg_voltage(chip, pval->intval);
 		break;
@@ -4375,10 +4300,8 @@ static int fg_property_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_COOL_TEMP:
 	case POWER_SUPPLY_PROP_WARM_TEMP:
 	case POWER_SUPPLY_PROP_HOT_TEMP:
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	case POWER_SUPPLY_PROP_SET_ALLOW_READ_EXTERN_FG_IIC:
-#endif
 		return 1;
 	default:
 		break;
@@ -4472,11 +4395,9 @@ static enum power_supply_property fg_psy_props[] = {
 	POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE,
 	POWER_SUPPLY_PROP_CC_STEP,
 	POWER_SUPPLY_PROP_CC_STEP_SEL,
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	POWER_SUPPLY_PROP_SET_ALLOW_READ_EXTERN_FG_IIC,
 	POWER_SUPPLY_PROP_BQ_SOC,
-#endif
 };
 
 static const struct power_supply_desc fg_psy_desc = {
@@ -4746,7 +4667,6 @@ static int fg_hw_init(struct fg_chip *chip)
 		return rc;
 	}
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	rc = fg_masked_write(chip,
 			BATT_INFO_ESR_PULL_DN_CFG(chip), 0xFF, 0);
@@ -4754,7 +4674,6 @@ static int fg_hw_init(struct fg_chip *chip)
 		pr_err("Error in writing ESR PULL DN, rc=%d\n", rc);
 		return rc;
 	}
-#endif
 
 	fg_encode(chip->sp, FG_SRAM_ESR_PULSE_THRESH,
 		chip->dt.esr_pulse_thresh_ma, buf);
@@ -4774,7 +4693,6 @@ static int fg_hw_init(struct fg_chip *chip)
 		return rc;
 	}
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	rc = fg_masked_write(chip,
 			BATT_INFO_ESR_PULL_DN_CFG(chip), 0xFF, 0);
@@ -4782,7 +4700,6 @@ static int fg_hw_init(struct fg_chip *chip)
 		pr_err("Error in writing ESR PULL DN, rc=%d\n", rc);
 		return rc;
 	}
-#endif
 
 	if (is_debug_batt_id(chip) || chip->dt.disable_esr_pull_dn) {
 		val = ESR_NO_PULL_DOWN;
@@ -5127,18 +5044,10 @@ static struct fg_irq_info fg_irqs[FG_IRQ_MAX] = {
 	[MSOC_DELTA_IRQ] = {
 		.name		= "msoc-delta",
 		.handler	= fg_delta_msoc_irq_handler,
-#ifndef VENDOR_EDIT
-/* yangfangbiao@bsp, 20170919 Fix warning message */
-		.wakeable	= true,
-#endif
 	},
 	[BSOC_DELTA_IRQ] = {
 		.name		= "bsoc-delta",
 		.handler	= fg_delta_bsoc_irq_handler,
-#ifndef VENDOR_EDIT
-/* yangfangbiao@bsp, 20170919 Fix warning message */
-		.wakeable	= true,
-#endif
 	},
 	[SOC_READY_IRQ] = {
 		.name		= "soc-ready",
@@ -5153,10 +5062,6 @@ static struct fg_irq_info fg_irqs[FG_IRQ_MAX] = {
 	[BATT_TEMP_DELTA_IRQ] = {
 		.name		= "batt-temp-delta",
 		.handler	= fg_delta_batt_temp_irq_handler,
-#ifndef VENDOR_EDIT
-/* yangfangbiao@bsp, 20170919 Fix warning message */
-		.wakeable	= true,
-#endif
 	},
 	[BATT_MISSING_IRQ] = {
 		.name		= "batt-missing",
@@ -5572,12 +5477,10 @@ static int fg_parse_dt(struct fg_chip *chip)
 	else
 		chip->dt.rsense_sel = (u8)temp & SOURCE_SELECT_MASK;
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	chip->use_external_fg =
 	of_property_read_bool(node, "oem,use_external_fg");
 	pr_info("use_external_fg=%d\n", chip->use_external_fg);
-#endif
 
 	chip->dt.jeita_thresholds[JEITA_COLD] = DEFAULT_BATT_TEMP_COLD;
 	chip->dt.jeita_thresholds[JEITA_COOL] = DEFAULT_BATT_TEMP_COOL;
@@ -5829,11 +5732,9 @@ static void fg_cleanup(struct fg_chip *chip)
 	cancel_work_sync(&chip->status_change_work);
 	cancel_work_sync(&chip->esr_filter_work);
 	cancel_delayed_work_sync(&chip->pl_enable_work);
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170314 Fix system crash */
 	if (chip->fg_psy)
 		power_supply_unregister(chip->fg_psy);
-#endif
 
 	for (i = 0; i < FG_IRQ_MAX; i++) {
 		if (fg_irqs[i].irq)
@@ -5879,7 +5780,6 @@ static int fg_tz_get_temp(void *data, int *temperature)
 static struct thermal_zone_of_device_ops fg_gen3_tz_ops = {
 	.get_temp = fg_tz_get_temp,
 };
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 static void oem_update_cc_cv_setpoint(
 				struct fg_chip *chip, int cv_float_point)
@@ -5906,7 +5806,6 @@ static void oneplus_set_lcd_off_status(struct fg_chip *chip,
 	else
 		pr_info("set lcd off status fail\n");
 }
-#endif
 
 static int fg_gen3_probe(struct platform_device *pdev)
 {

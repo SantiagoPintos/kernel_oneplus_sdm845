@@ -360,9 +360,7 @@ struct hap_chip {
 	atomic_t			state;
 	bool				module_en;
 	bool				lra_auto_mode;
-#ifdef VENDOR_EDIT
 	bool				test_mode;
-#endif
 	bool				play_irq_en;
 	bool				auto_res_err_recovery_hw;
 	bool				vcc_pon_enabled;
@@ -651,9 +649,7 @@ static bool is_haptics_idle(struct hap_chip *chip)
 	}
 
 	if (i >= MAX_RETRIES && (val & HAP_BUSY_BIT)) {
-#ifdef VENDOR_EDIT
 		pr_info("Haptics Busy after %d retries\n", i);
-#endif
 		pr_debug("Haptics Busy after %d retries\n", i);
 		return false;
 	}
@@ -1203,7 +1199,6 @@ static int qpnp_haptics_auto_mode_config(struct hap_chip *chip, int time_ms)
 	old_play_mode = chip->play_mode;
 	pr_debug("auto_mode, time_ms: %d\n", time_ms);
 	if (time_ms <= 20) {
-#ifdef VENDOR_EDIT
 		if (chip->test_mode) {
 			wave_samp[0] = 0x34;
 			wave_samp[1] = 0x34;
@@ -1223,17 +1218,6 @@ static int qpnp_haptics_auto_mode_config(struct hap_chip *chip, int time_ms)
 			wave_samp[6] = 0x28;
 			wave_samp[7] = 0x28;
 		}
-#else
-		wave_samp[0] = 0x7e;
-		wave_samp[1] = 0x7e;
-		wave_samp[2] = 0x7e;
-		wave_samp[3] = 0x7e;
-		wave_samp[4] = 0x7e;
-		wave_samp[5] = 0x28;
-		wave_samp[6] = 0x28;
-		wave_samp[7] = 0x28;
-
-#endif
 		/* short pattern */
 		rc = qpnp_haptics_parse_buffer_dt(chip);
 		if (!rc) {
@@ -1290,7 +1274,6 @@ static int qpnp_haptics_auto_mode_config(struct hap_chip *chip, int time_ms)
 		chip->play_mode = HAP_BUFFER;
 		chip->wave_shape = HAP_WAVE_SINE;
 	} else {
-#ifdef VENDOR_EDIT
 
 		if (chip->test_mode) {
 			wave_samp[0] = 0x34;
@@ -1311,16 +1294,6 @@ static int qpnp_haptics_auto_mode_config(struct hap_chip *chip, int time_ms)
 			wave_samp[6] = 0x28;
 			wave_samp[7] = 0x28;
 		}
-#else
-		wave_samp[0] = 0x28;
-		wave_samp[1] = 0x28;
-		wave_samp[2] = 0x28;
-		wave_samp[3] = 0x28;
-		wave_samp[4] = 0x28;
-		wave_samp[5] = 0x28;
-		wave_samp[6] = 0x28;
-		wave_samp[7] = 0x28;
-#endif
 		rc = qpnp_haptics_parse_buffer_dt(chip);
 		if (!rc) {
 			rc = qpnp_haptics_wave_rep_config(chip,
@@ -1352,10 +1325,8 @@ static int qpnp_haptics_auto_mode_config(struct hap_chip *chip, int time_ms)
 			ares_cfg.lra_qwd_drive_duration = -EINVAL;
 			ares_cfg.calibrate_at_eop = -EINVAL;
 		}
-#ifdef VENDOR_EDIT
 		if (chip->test_mode)
 			chip->vmax_mv = 2900;
-#endif
 		vmax_mv = chip->vmax_mv;
 		rc = qpnp_haptics_vmax_config(chip, vmax_mv, false);
 		if (rc < 0)
@@ -1862,10 +1833,8 @@ static ssize_t qpnp_haptics_store_vmax(struct device *dev,
 	rc = kstrtoint(buf, 10, &data);
 	if (rc < 0)
 		return rc;
-#ifdef VENDOR_EDIT
 	if (chip->test_mode)
 		data = 2900;
-#endif
 	old_vmax_mv = chip->vmax_mv;
 	chip->vmax_mv = data;
 	rc = qpnp_haptics_vmax_config(chip, chip->vmax_mv, false);
@@ -1928,7 +1897,6 @@ static ssize_t qpnp_haptics_store_lra_auto_mode(struct device *dev,
 	return count;
 }
 
-#ifdef VENDOR_EDIT
 static ssize_t qpnp_haptics_show_test_mode(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -1956,7 +1924,6 @@ static ssize_t qpnp_haptics_store_test_mode(struct device *dev,
 	chip->test_mode = !!data;
 	return count;
 }
-#endif
 static struct device_attribute qpnp_haptics_attrs[] = {
 	__ATTR(state, 0664, qpnp_haptics_show_state, qpnp_haptics_store_state),
 	__ATTR(duration, 0664, qpnp_haptics_show_duration,
@@ -1976,10 +1943,8 @@ static struct device_attribute qpnp_haptics_attrs[] = {
 	__ATTR(rf_hz, 0664, qpnp_haptics_show_rf_hz, qpnp_haptics_store_rf_hz),
 	__ATTR(lra_auto_mode, 0664, qpnp_haptics_show_lra_auto_mode,
 		qpnp_haptics_store_lra_auto_mode),
-#ifdef VENDOR_EDIT
 	__ATTR(test_mode, 0664, qpnp_haptics_show_test_mode,
 		qpnp_haptics_store_test_mode),
-#endif
 };
 
 /* Dummy functions for brightness */
@@ -2110,9 +2075,7 @@ static int qpnp_haptics_config(struct hap_chip *chip)
 			return rc;
 		}
 
-#ifdef VENDOR_EDIT
 		chip->play_irq_en = true;
-#endif
 		/* use play_irq only for buffer mode */
 		if (chip->play_mode != HAP_BUFFER) {
 			disable_irq(chip->play_irq);
@@ -2644,9 +2607,7 @@ static int qpnp_haptics_probe(struct platform_device *pdev)
 			goto sysfs_fail;
 		}
 	}
-#ifdef VENDOR_EDIT
 		pr_info("qpnp_haptics_probe done\n");
-#endif
 	return 0;
 
 sysfs_fail:

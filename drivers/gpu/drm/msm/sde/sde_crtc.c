@@ -39,7 +39,6 @@
 #include "sde_core_perf.h"
 #include "sde_trace.h"
 
-#ifdef VENDOR_EDIT
 //xiaoxiaohuan@OnePlus.MultiMediaService, add for fingerprint
 #include <linux/msm_drm_notify.h>
 #include <linux/notifier.h>
@@ -67,7 +66,6 @@
 #include <drm/drm_mipi_dsi.h>
 
 extern int msm_drm_notifier_call_chain(unsigned long val, void *v);
-#endif
 
 #define SDE_PSTATES_MAX (SDE_STAGE_MAX * 4)
 #define SDE_MULTIRECT_PLANE_MAX (SDE_STAGE_MAX * 2)
@@ -1660,12 +1658,10 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 		for (i = 0; i < cstate->num_dim_layers; i++)
 			_sde_crtc_setup_dim_layer_cfg(crtc, sde_crtc,
 					mixer, &cstate->dim_layer[i]);
-#ifdef VENDOR_EDIT
 //xiaoxiaohuan@OnePlus.MultiMediaService, add for fingerprint
 		if (cstate->fingerprint_dim_layer)
 			_sde_crtc_setup_dim_layer_cfg(crtc, sde_crtc,
 					mixer, cstate->fingerprint_dim_layer);
-#endif
 	}
 
 	_sde_crtc_program_lm_output_roi(crtc);
@@ -2512,7 +2508,6 @@ void sde_crtc_complete_commit(struct drm_crtc *crtc,
 	SDE_EVT32_VERBOSE(DRMID(crtc));
 
 	sde_core_perf_crtc_update(crtc, 0, false);
-	#ifdef VENDOR_EDIT
 	//xiaoxiaohuan@OnePlus.MultiMediaService, add for fingerprint
 	{
 		struct sde_crtc_state *old_cstate;
@@ -2539,7 +2534,6 @@ void sde_crtc_complete_commit(struct drm_crtc *crtc,
 					&notifier_data);
 		}
 	}
-#endif /* VENDOR_EDIT */
 }
 
 /**
@@ -2643,7 +2637,6 @@ static void _sde_crtc_set_dim_layer_v1(struct sde_crtc_state *cstate,
 	}
 }
 
-#ifdef VENDOR_EDIT
 //xiaoxiaohuan@OnePlus.MultiMediaService, add for fingerprint
 bool sde_crtc_get_fingerprint_mode(struct drm_crtc_state *crtc_state)
 {
@@ -2938,7 +2931,6 @@ static int sde_crtc_config_fingerprint_dim_layer(struct drm_crtc_state
 
 	return 0;
 }
-#endif
 
 
 /**
@@ -4961,7 +4953,6 @@ static int _sde_crtc_check_secure_state(struct drm_crtc *crtc,
 	return 0;
 }
 
-#ifdef VENDOR_EDIT
 extern int sde_plane_check_fingerprint_layer(const struct drm_plane_state
 						*drm_state);
 static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
@@ -5112,7 +5103,6 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 
 	return 0;
 }
-#endif /* VENDOR_EDIT */
 
 static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 		struct drm_crtc_state *state)
@@ -5263,11 +5253,9 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 			sde_plane_clear_multirect(pipe_staged[i]);
 		}
 	}
-#ifdef VENDOR_EDIT
 	rc = sde_crtc_onscreenfinger_atomic_check(cstate, pstates, cnt);
 	if (rc)
 		goto end;
-#endif
 	/* assign mixer stages based on sorted zpos property */
 	sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
 
@@ -5624,11 +5612,9 @@ static void sde_crtc_install_properties(struct drm_crtc *crtc,
 		"idle_time", 0, 0, U64_MAX, 0,
 		CRTC_PROP_IDLE_TIMEOUT);
 
-#ifdef VENDOR_EDIT
 //xiaoxiaohuan@OnePlus.MultiMediaService,2018/08/04, add for fingerprint
 	msm_property_install_range(&sde_crtc->property_info, "CRTC_CUST",
 		0x0, 0, INT_MAX, 0, CRTC_PROP_CUSTOM);
-#endif
 
 	msm_property_install_range(&sde_crtc->property_info,
 		"enable_sui_enhancement", 0, 0, U64_MAX, 0,

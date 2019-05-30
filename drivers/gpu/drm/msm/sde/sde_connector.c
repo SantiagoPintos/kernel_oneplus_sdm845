@@ -514,10 +514,8 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 	struct dsi_display *dsi_display;
 	struct dsi_backlight_config *bl_config;
 	int rc = 0;
-#ifdef VENDOR_EDIT
 	/*xiaoxiaohuan@OnePlus.MultiMediaService, add for fingerprint*/
 	struct backlight_device *bd;
-#endif /* VENDOR_EDIT */
 
 	if (!c_conn) {
 		SDE_ERROR("Invalid params sde_connector null\n");
@@ -531,7 +529,6 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 			((dsi_display) ? dsi_display->panel : NULL));
 		return -EINVAL;
 	}
-#ifdef VENDOR_EDIT
 	/*xiaoxiaohuan@OnePlus.MultiMediaService, add for fingerprint*/
 		bd = c_conn->bl_device;
 		if (!bd) {
@@ -540,7 +537,6 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 		}
 
 		mutex_lock(&bd->update_lock);
-#endif /* VENDOR_EDIT */
 
 	bl_config = &dsi_display->panel->bl_config;
 
@@ -568,15 +564,12 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 		bl_config->bl_level);
 	rc = c_conn->ops.set_backlight(dsi_display, bl_config->bl_level);
 	c_conn->unset_bl_level = 0;
-#ifdef VENDOR_EDIT
 	/*xiaoxiaohuan@OnePlus.MultiMediaService, add for fingerprint*/
 		mutex_unlock(&bd->update_lock);
-#endif /* VENDOR_EDIT */
 
 	return rc;
 }
 
-#ifdef VENDOR_EDIT
 //xiaoxiaohuan@OnePlus.MultiMediaService,2018/08/04, add for fingerprint
 extern bool sde_crtc_get_fingerprint_mode(struct drm_crtc_state *crtc_state);
 extern bool sde_crtc_get_fingerprint_pressed(struct drm_crtc_state *crtc_state);
@@ -747,7 +740,6 @@ static int _sde_connector_update_hbm(struct sde_connector *c_conn)
 	}
 	return 0;
 }
-#endif
 static int _sde_connector_update_dirty_properties(
 				struct drm_connector *connector)
 {
@@ -819,14 +811,12 @@ int sde_connector_pre_kickoff(struct drm_connector *connector)
 		SDE_EVT32(connector->base.id, SDE_EVTLOG_ERROR);
 		goto end;
 	}
-#ifdef VENDOR_EDIT
 /*xiaoxiaohuan@OnePlus.MultiMediaService,2018/08/04, add for fingerprint*/
 	rc = _sde_connector_update_hbm(c_conn);
 	if (rc) {
 		SDE_EVT32(connector->base.id, SDE_EVTLOG_ERROR);
 		goto end;
 	}
-#endif
 	if (!c_conn->ops.pre_kickoff)
 		return 0;
 
@@ -2466,11 +2456,9 @@ struct drm_connector *sde_connector_init(struct drm_device *dev,
 		0x0, 0, MAX_AD_BL_SCALE_LEVEL, MAX_AD_BL_SCALE_LEVEL,
 		CONNECTOR_PROP_AD_BL_SCALE);
 
-#ifdef VENDOR_EDIT
 //xiaoxiaohuan@OnePlus.MultiMediaService,2018/08/04, add for fingerprint
 	msm_property_install_range(&c_conn->property_info, "CONNECTOR_CUST",
 		0x0, 0, INT_MAX, 0, CONNECTOR_PROP_CUSTOM);
-#endif
 	c_conn->bl_scale_dirty = false;
 	c_conn->bl_scale = MAX_BL_SCALE_LEVEL;
 	c_conn->bl_scale_ad = MAX_AD_BL_SCALE_LEVEL;

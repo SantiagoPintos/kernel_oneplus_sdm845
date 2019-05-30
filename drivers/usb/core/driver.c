@@ -1807,14 +1807,12 @@ static int autosuspend_check(struct usb_device *udev)
 			 * or else their drivers don't support autosuspend
 			 * and so they are permanently active.
 			 */
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171122 Avoid crash due to broken fs on otg */
 			if (!intf) {
 				dev_err(&udev->dev, "%s intf is NULL\n",
 						__func__);
 				return -EIO;
 			}
-#endif
 
 			if (intf->dev.power.disable_depth)
 				continue;

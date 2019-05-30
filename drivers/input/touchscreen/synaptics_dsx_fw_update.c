@@ -2055,7 +2055,6 @@ static int fwu_write_f34_v7_blocks(unsigned char *block_ptr,
 			block_ptr += write_size;
 			left_bytes -= write_size;
 		} while (left_bytes);
-		/*#ifdef VENDOR_EDIT*/
 		/*moragan the pollingwap to increase firmware time */
 		retval = fwu_wait_for_idle(WRITE_WAIT_MS, true);
 		/*#endif */

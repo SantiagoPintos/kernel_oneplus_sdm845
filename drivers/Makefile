@@ -182,11 +182,9 @@ obj-$(CONFIG_FPGA)		+= fpga/
 obj-$(CONFIG_SENSORS_SSC)		+= sensors/
 obj-$(CONFIG_TEE)		+= tee/
 
-#ifdef VENDOR_EDIT
 obj-y 	+= oem_debug/
 
 #porting for support oem trace
 obj-$(CONFIG_OEM_DEBUG_SUPPORT)  += oneplus/
 # liochen@BSP, 2017/09/10, support param partion read/write
 obj-y  += param_read_write/
-#endif

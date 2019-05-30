@@ -458,9 +458,6 @@ done:
 static int cam_cpastop_poweron(struct cam_hw_info *cpas_hw)
 {
 	int i;
-#ifndef VENDOR_EDIT
-	cam_cpastop_reset_irq(cpas_hw);
-#endif
 	for (i = 0; i < camnoc_info->specific_size; i++) {
 		if (camnoc_info->specific[i].enable) {
 			cam_cpas_util_reg_update(cpas_hw, CAM_CPAS_REG_CAMNOC,

@@ -23,9 +23,7 @@
 
 #include "dsi_panel.h"
 #include "dsi_ctrl_hw.h"
-//#ifdef VENDOR_EDIT
 #include <linux/pm_wakeup.h>
-//#endif
 /**
  * topology is currently defined by a set of following 3 values:
  * 1. num of layer mixers
@@ -291,7 +289,6 @@ static int dsi_panel_gpio_request(struct dsi_panel *panel)
 			goto error_release_mode_sel;
 		}
 	}
-//#ifdef VENDOR_EDIT
 	if (gpio_is_valid(r_config->vci_gpio)) {
 		rc = gpio_request(r_config->vci_gpio, "vci_gpio");
 		if (rc) {
@@ -306,16 +303,13 @@ static int dsi_panel_gpio_request(struct dsi_panel *panel)
 			goto error_release_poc;
 		}
 	}
-//#endif
 	goto error;
-//#ifdef VENDOR_EDIT
 error_release_poc:
 	if (gpio_is_valid(r_config->vci_gpio))
 		gpio_free(r_config->vci_gpio);
 error_release_vci:
 	if (gpio_is_valid(r_config->lcd_mode_sel_gpio))
 		gpio_free(r_config->lcd_mode_sel_gpio);
-//#endif
 error_release_mode_sel:
 	if (gpio_is_valid(panel->bl_config.en_gpio))
 		gpio_free(panel->bl_config.en_gpio);
@@ -433,7 +427,6 @@ static int dsi_panel_reset(struct dsi_panel *panel)
 exit:
 	return rc;
 }
-//#ifdef VENDOR_EDIT
 int mdss_dsi_disp_vci_en(struct dsi_panel *panel, int enable)
 {
     int rc = 0;
@@ -470,7 +463,6 @@ int mdss_dsi_disp_poc_en(struct dsi_panel *panel, int enable)
     }
     return rc;
 }
-//#endif
 static int dsi_panel_set_pinctrl_state(struct dsi_panel *panel, bool enable)
 {
 	int rc = 0;
@@ -494,22 +486,16 @@ static int dsi_panel_power_on(struct dsi_panel *panel)
 {
 	int rc = 0;
 
-	//#ifdef VENDOR_EDIT
     mdss_dsi_disp_poc_en(panel, 1);
-    //#endif
 	rc = dsi_pwr_enable_regulator(&panel->power_info, true);
 	if (rc) {
 		pr_err("[%s] failed to enable vregs, rc=%d\n", panel->name, rc);
 		goto exit;
 	}
 
-	//#ifdef VENDOR_EDIT
     mdss_dsi_disp_vci_en(panel, 1);
     usleep_range(10000, 10000);
-    //#endif
-    //#ifdef VENDOR_EDIT
     if (!panel->lp11_init){
-    //#endif
         rc = dsi_panel_set_pinctrl_state(panel, true);
         if (rc) {
             pr_err("[%s] failed to set pinctrl, rc=%d\n", panel->name, rc);
@@ -520,9 +506,7 @@ static int dsi_panel_power_on(struct dsi_panel *panel)
             pr_err("[%s] failed to reset panel, rc=%d\n", panel->name, rc);
             goto error_disable_gpio;
         }
-    //#ifdef VENDOR_EDIT
     }
-    //#endif
 	goto exit;
 
 error_disable_gpio:
@@ -550,9 +534,7 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 
 	if (gpio_is_valid(panel->reset_config.reset_gpio))
 		gpio_set_value(panel->reset_config.reset_gpio, 0);
-//#ifdef VENDOR_EDIT
 	    usleep_range(10* 1000, 10* 1000);
-//#endif
 	if (gpio_is_valid(panel->reset_config.lcd_mode_sel_gpio))
 		gpio_set_value(panel->reset_config.lcd_mode_sel_gpio, 0);
 
@@ -561,15 +543,11 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 		pr_err("[%s] failed set pinctrl state, rc=%d\n", panel->name,
 		       rc);
 	}
-//#ifdef VENDOR_EDIT
     mdss_dsi_disp_vci_en(panel, 0);
-//#endif
 	rc = dsi_pwr_enable_regulator(&panel->power_info, false);
 	if (rc)
 		pr_err("[%s] failed to enable vregs, rc=%d\n", panel->name, rc);
-//#ifdef VENDOR_EDIT
     mdss_dsi_disp_poc_en(panel, 0);
-//#endif
 	return rc;
 }
 static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
@@ -719,13 +697,11 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	}
 
 	dsi = &panel->mipi_device;
-#ifdef VENDOR_EDIT
 	/* add for fingerprint*/
 	if (panel->is_hbm_enabled) {
 		pr_err("OPEN HBM\n");
 		return 0;
 	}
-#endif /* VENDOR_EDIT */
 
 	if (panel->bl_config.bl_high2bit) {
 		if (HBM_flag == true)
@@ -733,7 +709,6 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 
 		rc = mipi_dsi_dcs_set_display_brightness_samsung(dsi, bl_lvl);
 	} else
-		///#endif
 		rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
 	if (rc < 0)
 		pr_err("failed to update dcs backlight:%d\n", bl_lvl);
@@ -745,14 +720,12 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 {
 	int rc = 0;
 	struct dsi_backlight_config *bl = &panel->bl_config;
-//#ifdef VENDOR_EDIT
 	static bool first_bl_level = true;
 
 	if (first_bl_level || (bl_lvl == 0)) {
         pr_err("---backlight level = %d---\n", bl_lvl);
         first_bl_level = (bl_lvl == 0)? true : false;
 	}
-//#endif
 
 	if (panel->type == EXT_BRIDGE)
 		return 0;
@@ -1614,7 +1587,6 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"ROI not parsed from DTSI, generated dynamically",
 	"qcom,mdss-dsi-timing-switch-command",
 	"qcom,mdss-dsi-post-mode-switch-on-command",
-//#ifdef VENDOR_EDIT
 	"qcom,mdss-dsi-panel-acl-command",
 	"qcom,mdss-dsi-panel-hbm-on-command",//464
 	"qcom,mdss-dsi-panel-hbm-on-command-2",//498
@@ -1658,7 +1630,6 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-panel-hbm-off-aod-on-command",
 	"qcom,mdss-dsi-panel-aod-off-samsung-command",
 	"qcom,mdss-dsi-panel-aod-off-new-command",
-//#endif
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -1683,7 +1654,6 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"ROI not parsed from DTSI, generated dynamically",
 	"qcom,mdss-dsi-timing-switch-command-state",
 	"qcom,mdss-dsi-post-mode-switch-on-command-state",
-//#ifdef VENDOR_EDIT
 	"qcom,mdss-dsi-acl-command-state",
 	"qcom,mdss-dsi-hbm-on-command-state",//464
 	"qcom,mdss-dsi-hbm-on-command-state",//498
@@ -1727,7 +1697,6 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-panel-hbm-off-aod-on-command-state",
 	"qcom,mdss-dsi-panel-aod-off-samsung-command-state",
 	"qcom,mdss-dsi-panel-aod-off-new-command-state",
-//#endif
 };
 
 static int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -2116,7 +2085,6 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel,
 	if (!gpio_is_valid(panel->reset_config.lcd_mode_sel_gpio))
 		pr_debug("%s:%d mode gpio not specified\n", __func__, __LINE__);
 
-//VENDOR_EDIT
 	panel->reset_config.vci_gpio = of_get_named_gpio(of_node,
 		"qcom,platform-vci-gpio", 0);
 	if (!gpio_is_valid(panel->reset_config.vci_gpio))
@@ -2126,7 +2094,6 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel,
 		"qcom,platform-poc-gpio", 0);
 	if (!gpio_is_valid(panel->reset_config.poc_gpio))
 		pr_debug("%s:%d poc gpio not specified\n", __func__, __LINE__);
-//VENDOR_EDIT
 	data = of_get_property(of_node,
 		"qcom,mdss-dsi-mode-sel-gpio-state", NULL);
 	if (data) {
@@ -2886,7 +2853,6 @@ static int dsi_panel_parse_dms_info(struct dsi_panel *panel,
 	return 0;
 };
 
-//#ifdef VENDOR_EDIT
 
 static int dsi_panel_parse_oem_config(struct dsi_panel *panel,
 		struct device_node *of_node)
@@ -2974,7 +2940,6 @@ static int dsi_panel_parse_oem_config(struct dsi_panel *panel,
 
 	return 0;
 }
-//#endif
 /*
  * The length of all the valid values to be checked should not be greater
  * than the length of returned data from read command.
@@ -3300,11 +3265,9 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 		if (rc)
 			pr_err("failed to parse hdr config, rc=%d\n", rc);
 
-//#ifdef VENDOR_EDIT
     rc = dsi_panel_parse_oem_config(panel, of_node);
 	if (rc)
 	    pr_debug("failed to get oem config, rc=%d\n", rc);
-//#endif
 		rc = dsi_panel_get_mode_count(panel, of_node);
 		if (rc) {
 			pr_err("failed to get mode count, rc=%d\n", rc);
@@ -3697,10 +3660,8 @@ int dsi_panel_pre_prepare(struct dsi_panel *panel)
 	mutex_lock(&panel->panel_lock);
 
 	/* If LP11_INIT is set, panel will be powered up during prepare() */
-//#ifndef VENDOR_EDIT
 //	if (panel->lp11_init)
 //		goto error;
-//#endif
 	rc = dsi_panel_power_on(panel);
 	if (rc) {
 		pr_err("[%s] panel power on failed, rc=%d\n", panel->name, rc);
@@ -3769,7 +3730,6 @@ int dsi_panel_set_lp1(struct dsi_panel *panel)
 	if (rc)
 		pr_err("[%s] failed to send DSI_CMD_SET_LP1 cmd, rc=%d\n",
 		       panel->name, rc);
-//#ifdef VENDOR_EDIT
 	switch (panel->aod_mode) {
 	case 1:
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_ON_1);
@@ -3793,7 +3753,6 @@ int dsi_panel_set_lp1(struct dsi_panel *panel)
 		break;
 	}
 	panel->aod_status = 1;
-//#endif
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
@@ -3836,12 +3795,10 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 	if (rc)
 		pr_err("[%s] failed to send DSI_CMD_SET_NOLP cmd, rc=%d\n",
 		       panel->name, rc);
-//#ifdef VENDOR_EDIT
 	if (panel->aod_status) {
 		panel->aod_status = 0;
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_OFF);
 	}
-//#endif
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
@@ -3859,7 +3816,6 @@ int dsi_panel_prepare(struct dsi_panel *panel)
 		return 0;
 
 	mutex_lock(&panel->panel_lock);
-//#ifndef VENDOR_EDIT
    /*if (panel->lp11_init) {
 		rc = dsi_panel_power_on(panel);
 		if (rc) {
@@ -3879,7 +3835,6 @@ int dsi_panel_prepare(struct dsi_panel *panel)
             pr_err("[%s] failed to reset panel, rc=%d\n", panel->name, rc);
         }
     }
-//#endif
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PRE_ON);
 	if (rc) {
 		pr_err("[%s] failed to send DSI_CMD_SET_PRE_ON cmds, rc=%d\n",
@@ -4093,7 +4048,6 @@ int dsi_panel_enable(struct dsi_panel *panel)
 		panel->aod_status = 0;
 	}
 
-//#ifdef VENDOR_EDIT
 	if (panel->acl_mode)
 		dsi_panel_set_acl_mode(panel, panel->acl_mode);
 
@@ -4116,7 +4070,6 @@ int dsi_panel_enable(struct dsi_panel *panel)
 		dsi_panel_set_hbm_mode(panel, panel->hbm_mode);
 	/* remove print actvie ws */
 	pm_print_active_wakeup_sources_queue(false);
-//#endif
 	return rc;
 }
 
@@ -4211,10 +4164,8 @@ int dsi_panel_disable(struct dsi_panel *panel)
 
 error:
 	mutex_unlock(&panel->panel_lock);
-//#ifdef VENDOR_EDIT
 	/* add print actvie ws */
 	pm_print_active_wakeup_sources_queue(true);
-//#endif
 	return rc;
 }
 
@@ -4268,7 +4219,6 @@ error:
 	return rc;
 }
 
-//#ifdef VENDOR_EDIT
 int dsi_panel_set_acl_mode(struct dsi_panel *panel, int level)
 {
 	int rc = 0;
@@ -4738,4 +4688,3 @@ int dsi_panel_set_aod_mode(struct dsi_panel *panel, int level)
 	return rc;
 }
 
-//#endif

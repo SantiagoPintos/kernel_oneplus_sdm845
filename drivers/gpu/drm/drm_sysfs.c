@@ -222,7 +222,6 @@ static ssize_t modes_show(struct device *device,
 
 	return written;
 }
-//#ifdef VENDOR_EDIT
 static ssize_t acl_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -708,7 +707,6 @@ static ssize_t panel_mismatch_show(struct device *dev,
 			wrong_panel);
 	return ret;
 }
-//#endif
 
 int oneplus_panel_alpha;
 int oneplus_force_screenfp;
@@ -791,7 +789,6 @@ static DEVICE_ATTR_RW(status);
 static DEVICE_ATTR_RO(enabled);
 static DEVICE_ATTR_RO(dpms);
 static DEVICE_ATTR_RO(modes);
-//#ifdef VENDOR_EDIT
 static DEVICE_ATTR_RW(acl);
 static DEVICE_ATTR_RW(hbm);
 static DEVICE_ATTR_RW(op_friginer_print_hbm);
@@ -817,14 +814,12 @@ static DEVICE_ATTR(notify_dim, S_IRUGO|S_IWUSR, NULL,
 static DEVICE_ATTR(notify_aod, S_IRUGO|S_IWUSR, NULL,
 	oneplus_display_notify_aod_hid);
 
-//#endif
 
 static struct attribute *connector_dev_attrs[] = {
 	&dev_attr_status.attr,
 	&dev_attr_enabled.attr,
 	&dev_attr_dpms.attr,
 	&dev_attr_modes.attr,
-//#ifdef VENDOR_EDIT
 	&dev_attr_acl.attr,
 	&dev_attr_hbm.attr,
 	&dev_attr_op_friginer_print_hbm.attr,
@@ -844,7 +839,6 @@ static struct attribute *connector_dev_attrs[] = {
 	&dev_attr_notify_fppress.attr,
 	&dev_attr_notify_dim.attr,
 	&dev_attr_notify_aod.attr,
-//#endif
 	NULL
 };
 

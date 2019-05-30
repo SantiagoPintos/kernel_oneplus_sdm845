@@ -425,10 +425,8 @@ struct sde_crtc_state {
 	u32 sbuf_prefill_line;
 	u64 sbuf_clk_rate[2];
 	bool sbuf_clk_shifted;
-#ifdef VENDOR_EDIT
 	bool fingerprint_pressed;
 	struct sde_hw_dim_layer *fingerprint_dim_layer;
-#endif
 
 	struct sde_crtc_respool rp;
 };

@@ -17,7 +17,6 @@
 #include "cam_soc_util.h"
 #include "cam_trace.h"
 
-#ifdef VENDOR_EDIT /* add by likelong@camera 2017.12.12 for product information */
 #include <linux/project_info.h>
 
 struct camera_vendor_match_tbl {
@@ -138,7 +137,6 @@ static int sensor_get_fuseid(struct cam_sensor_ctrl_t *s_ctrl)
 
 	return 0;
 }
-#endif
 
 static void cam_sensor_update_req_mgr(
 	struct cam_sensor_ctrl_t *s_ctrl,
@@ -483,7 +481,6 @@ int32_t cam_sensor_update_slave_info(struct cam_cmd_probe *probe_info,
 	return rc;
 }
 
-#ifdef VENDOR_EDIT
 int32_t cam_sensor_update_id_info(struct cam_cmd_probe *probe_info,
 	struct cam_sensor_ctrl_t *s_ctrl)
 {
@@ -509,7 +506,6 @@ int32_t cam_sensor_update_id_info(struct cam_cmd_probe *probe_info,
 		s_ctrl->sensordata->id_info.sensor_id_mask);
 	return rc;
 }
-#endif
 
 int32_t cam_handle_cmd_buffers_for_probe(void *cmd_buf,
 	struct cam_sensor_ctrl_t *s_ctrl,
@@ -535,7 +531,6 @@ int32_t cam_handle_cmd_buffers_for_probe(void *cmd_buf,
 			CAM_ERR(CAM_SENSOR, "Updating the slave Info");
 			return rc;
 		}
-#ifdef VENDOR_EDIT
 		probe_info = (struct cam_cmd_probe *)
 			(cmd_buf + sizeof(struct cam_cmd_i2c_info) + sizeof(struct cam_cmd_probe));
 		rc = cam_sensor_update_id_info(probe_info, s_ctrl);
@@ -543,7 +538,6 @@ int32_t cam_handle_cmd_buffers_for_probe(void *cmd_buf,
 			CAM_ERR(CAM_SENSOR, "Updating the id Info");
 			return rc;
 		}
-#endif
 		cmd_buf = probe_info;
 	}
 		break;
@@ -667,14 +661,12 @@ void cam_sensor_shutdown(struct cam_sensor_ctrl_t *s_ctrl)
 	if (s_ctrl->sensor_state == CAM_SENSOR_INIT)
 		return;
 
-#ifdef VENDOR_EDIT
      CAM_INFO(CAM_SENSOR, "streamoff Sensor");
 	rc = cam_sensor_apply_settings(s_ctrl, 0,
 		CAM_SENSOR_PACKET_OPCODE_SENSOR_STREAMOFF);
 	if (rc < 0) {
 		CAM_INFO(CAM_SENSOR, "non-fatal cannot apply streamoff settings");
 	}
-#endif
 
 	cam_sensor_release_resource(s_ctrl);
 	cam_sensor_release_stream_rsc(s_ctrl);
@@ -700,14 +692,12 @@ int cam_sensor_match_id(struct cam_sensor_ctrl_t *s_ctrl)
 {
 	int rc = 0;
 	uint32_t chipid = 0;
-#ifdef VENDOR_EDIT
 	uint32_t sensor_version = 0;
 	uint16_t sensor_version_reg = 0x0018;
 	uint16_t sensor_slave_addr = 0;
 	uint32_t id = 0;
 	uint32_t id_l = 0;
 	uint32_t id_h = 0;
-#endif
 	struct cam_camera_slave_info *slave_info;
 
 	slave_info = &(s_ctrl->sensordata->slave_info);
@@ -718,7 +708,6 @@ int cam_sensor_match_id(struct cam_sensor_ctrl_t *s_ctrl)
 		return -EINVAL;
 	}
 
-#ifdef VENDOR_EDIT
   if (((s_ctrl->sensordata->id_info.sensor_id_reg_addr & 0xFFFF) != 0) && ((s_ctrl->sensordata->id_info.sensor_id_reg_addr >> 16) != 0)) {
 		sensor_slave_addr = s_ctrl->io_master_info.cci_client->sid;
 		s_ctrl->io_master_info.cci_client->sid = s_ctrl->sensordata->id_info.sensor_slave_addr >> 1;
@@ -743,7 +732,6 @@ int cam_sensor_match_id(struct cam_sensor_ctrl_t *s_ctrl)
 	} else {
 		CAM_ERR(CAM_SENSOR, "sensor id register is 0x%x", s_ctrl->sensordata->id_info.sensor_id_reg_addr);
 	}
-#endif
 
 	rc = camera_io_dev_read(
 		&(s_ctrl->io_master_info),
@@ -754,7 +742,6 @@ int cam_sensor_match_id(struct cam_sensor_ctrl_t *s_ctrl)
 	CAM_DBG(CAM_SENSOR, "read id: 0x%x expected id 0x%x:",
 			 chipid, slave_info->sensor_id);
 
-#ifdef VENDOR_EDIT
 	if (chipid == 0x519) {
 		rc = camera_io_dev_read(
 			&(s_ctrl->io_master_info),
@@ -765,21 +752,18 @@ int cam_sensor_match_id(struct cam_sensor_ctrl_t *s_ctrl)
 			CAM_INFO(CAM_SENSOR, "imx519 sensor_version: 0x%x",
 				sensor_version >> 8);
 	}
-#endif
 
 	if (cam_sensor_id_by_mask(s_ctrl, chipid) != slave_info->sensor_id) {
 		CAM_ERR(CAM_SENSOR, "chip id %x does not match %x",
 				chipid, slave_info->sensor_id);
 		return -ENODEV;
 	}
-#ifdef VENDOR_EDIT
 	if (slave_info->sensor_id == 0x519 && fuse_id[0] == '\0') {
 		sensor_get_fuseid(s_ctrl);
 		CAM_ERR(CAM_SENSOR,
 		    "sensor_id: 0x%x, fuse_id:%s",
 		    slave_info->sensor_id, fuse_id);
 	}
-#endif
 	return rc;
 }
 
@@ -792,10 +776,8 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 	struct cam_sensor_power_setting *pd = NULL;
 	struct cam_sensor_power_ctrl_t *power_info =
 		&s_ctrl->sensordata->power_info;
-#ifdef VENDOR_EDIT /* add by likelong@camera 2017.12.12 for product information */
 	uint32_t count = 0, i;
 	enum COMPONENT_TYPE CameraID;
-#endif
 
 	if (!s_ctrl || !arg) {
 		CAM_ERR(CAM_SENSOR, "s_ctrl is NULL");
@@ -919,7 +901,6 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 		s_ctrl->is_probe_succeed = 1;
 		s_ctrl->sensor_state = CAM_SENSOR_INIT;
 
-#ifdef VENDOR_EDIT /* add by likelong@camera 2017.12.12 for product information */
 		if (s_ctrl->id == 0)
 			CameraID = R_CAMERA;
 		else if (s_ctrl->id == 1)
@@ -941,7 +922,6 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 		else
 			push_component_info(CameraID, match_tbl[i].sensor_name,
 				match_tbl[i].vendor_name);
-#endif
 
 	}
 		break;
@@ -1145,7 +1125,6 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 		}
 	}
 		break;
-#ifdef VENDOR_EDIT
 	case CAM_GET_FUSE_ID: {
 		CAM_ERR(CAM_SENSOR, "fuse_id:%s", fuse_id);
 		if (fuse_id[0] == '\0') {
@@ -1160,7 +1139,6 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 		}
 		break;
 	}
-#endif
 	default:
 		CAM_ERR(CAM_SENSOR, "Invalid Opcode: %d", cmd->op_code);
 		rc = -EINVAL;

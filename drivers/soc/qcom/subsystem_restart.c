@@ -41,14 +41,12 @@
 #include <linux/timer.h>
 
 #include "peripheral-loader.h"
-#ifdef VENDOR_EDIT
 #include <linux/proc_fs.h>
 /* liochen@BSP, 2016/07/26, store crash record in PARAM */
 #include <linux/param_rw.h>
 #include <linux/timer.h>
 #include <linux/timex.h>
 #include <linux/rtc.h>
-#endif /* VENDOR_EDIT */
 
 #define DISABLE_SSR 0x9889deed
 /* If set to 0x9889deed, call to subsystem_restart_dev() returns immediately */
@@ -198,9 +196,7 @@ struct subsys_device {
 	struct wakeup_source ssr_wlock;
 	char wlname[64];
 	struct work_struct device_restart_work;
-	#ifdef VENDOR_EDIT
 	struct work_struct crash_record_work;
-	#endif
 	struct subsys_tracking track;
 
 	void *notify;
@@ -823,7 +819,6 @@ static struct subsys_device *find_subsys(const char *str)
 			__find_subsys);
 	return dev ? to_subsys(dev) : NULL;
 }
-#ifdef VENDOR_EDIT
 static int val;
 
 static ssize_t proc_restart_level_all_read(struct file *p_file,
@@ -968,7 +963,6 @@ int op_restart_modem(void)
 }
 EXPORT_SYMBOL(op_restart_modem);
 
-#endif /* VENDOR_EDIT */
 
 static int subsys_start(struct subsys_device *subsys)
 {
@@ -1347,7 +1341,6 @@ static void device_restart_work_hdlr(struct work_struct *work)
 							dev->desc->name);
 }
 
-#ifdef VENDOR_EDIT
 /* liochen@BSP, 2016/07/26, store crash record in PARAM */
 #define KMSG_BUFSIZE 512
 #define MAX_RECORD_COUNT 16
@@ -1444,7 +1437,6 @@ void check_crash_restart(struct work_struct *work)
 	}
 
 }
-#endif
 
 
 int subsystem_restart_dev(struct subsys_device *dev)
@@ -1461,10 +1453,8 @@ int subsystem_restart_dev(struct subsys_device *dev)
 
 	name = dev->desc->name;
 
-	#ifdef VENDOR_EDIT
 	/* liochen@BSP, 2016/07/26, store crash record in PARAM */
 	schedule_work(&dev->crash_record_work);
-	#endif
 
 	/*
 	 * If a system reboot/shutdown is underway, ignore subsystem errors.
@@ -2011,9 +2001,7 @@ struct subsys_device *subsys_register(struct subsys_desc *desc)
 
 	snprintf(subsys->wlname, sizeof(subsys->wlname), "ssr(%s)", desc->name);
 	wakeup_source_init(&subsys->ssr_wlock, subsys->wlname);
-#ifdef VENDOR_EDIT
 	INIT_WORK(&subsys->crash_record_work, check_crash_restart);
-#endif
 	INIT_WORK(&subsys->work, subsystem_restart_wq_func);
 	INIT_WORK(&subsys->device_restart_work, device_restart_work_hdlr);
 	spin_lock_init(&subsys->track.s_lock);
@@ -2174,9 +2162,7 @@ static int __init subsys_restart_init(void)
 	if (ret)
 		goto err_soc;
 
-#ifdef VENDOR_EDIT
 	init_restart_level_all_node();
-#endif /* VENDOR_EDIT */
 
 	return 0;
 

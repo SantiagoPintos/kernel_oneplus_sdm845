@@ -86,9 +86,7 @@ MODULE_PARM_DESC(cpu_to_affin, "affin usb irq to this cpu");
 #define CGCTL_REG		(QSCRATCH_REG_OFFSET + 0x28)
 #define PWR_EVNT_IRQ_STAT_REG    (QSCRATCH_REG_OFFSET + 0x58)
 #define PWR_EVNT_IRQ_MASK_REG    (QSCRATCH_REG_OFFSET + 0x5C)
-#ifdef VENDOR_EDIT
 #define QSCRATCH_USB30_STS_REG	(QSCRATCH_REG_OFFSET + 0xF8)
-#endif
 
 #define PWR_EVNT_POWERDOWN_IN_P3_MASK		BIT(2)
 #define PWR_EVNT_POWERDOWN_OUT_P3_MASK		BIT(3)
@@ -2151,9 +2149,7 @@ static void dwc3_msm_power_collapse_por(struct dwc3_msm *mdwc)
 
 static int dwc3_msm_prepare_suspend(struct dwc3_msm *mdwc)
 {
-#ifdef VENDOR_EDIT
 	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
-#endif
 	unsigned long timeout;
 	u32 reg = 0;
 
@@ -2182,7 +2178,6 @@ static int dwc3_msm_prepare_suspend(struct dwc3_msm *mdwc)
 			break;
 		usleep_range(20, 30);
 	}
-#ifdef VENDOR_EDIT
 	if (!(reg & PWR_EVNT_LPM_IN_L2_MASK)) {
 		dbg_event(0xFF, "PWR_EVNT_LPM",
 			dwc3_msm_read_reg(mdwc->base, PWR_EVNT_IRQ_STAT_REG));
@@ -2196,10 +2191,6 @@ static int dwc3_msm_prepare_suspend(struct dwc3_msm *mdwc)
 			return -EBUSY;
 		}
 	}
-#else
-	if (!(reg & PWR_EVNT_LPM_IN_L2_MASK))
-		dev_err(mdwc->dev, "could not transition HS PHY to L2\n");
-#endif
 
 	/* Clear L2 event bit */
 	dwc3_msm_write_reg(mdwc->base, PWR_EVNT_IRQ_STAT_REG,
@@ -3802,25 +3793,17 @@ uninit_iommu:
 		arm_iommu_detach_device(mdwc->dev);
 		arm_iommu_release_mapping(mdwc->iommu_map);
 	}
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171113 Fix ADB disconnect */
 err:
-#else
-	of_platform_depopulate(&pdev->dev);
-err:
-	destroy_workqueue(mdwc->dwc3_wq);
-#endif
 	return ret;
 }
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171113 Fix ADB disconnect */
 static int dwc3_msm_remove_children(struct device *dev, void *data)
 {
 	device_unregister(dev);
 	return 0;
 }
-#endif
 
 static int dwc3_msm_remove(struct platform_device *pdev)
 {
@@ -3861,13 +3844,9 @@ static int dwc3_msm_remove(struct platform_device *pdev)
 
 	if (mdwc->hs_phy)
 		mdwc->hs_phy->flags &= ~PHY_HOST_MODE;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171113 Fix ADB disconnect */
 	device_for_each_child(&pdev->dev,
 		NULL, dwc3_msm_remove_children);
-#else
-	of_platform_depopulate(&pdev->dev);
-#endif
 
 	pm_runtime_disable(mdwc->dev);
 	pm_runtime_barrier(mdwc->dev);
@@ -4336,10 +4315,6 @@ static int get_psy_type(struct dwc3_msm *mdwc)
 
 	if (mdwc->charging_disabled)
 		return -EINVAL;
-#ifndef VENDOR_EDIT
-		if (mdwc->max_power == mA)
-			return 0;
-#endif
 
 	if (!mdwc->usb_psy) {
 		mdwc->usb_psy = power_supply_get_by_name("usb");

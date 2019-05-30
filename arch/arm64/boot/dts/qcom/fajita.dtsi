@@ -93,7 +93,6 @@ reserved-memory {
 		};
 	};
 
-	/*#ifdef VENDOR_EDIT*/
 
 	qcom,qbt1000 {
 	status = "disabled";
@@ -146,7 +145,6 @@ reserved-memory {
 		status = "okay";
 	};
 
-	//#ifdef VENDOR_EDIT
 	//add tri_state_key support
 	tri_state_key {
 		compatible = "oneplus,tri-state-key";
@@ -160,11 +158,9 @@ reserved-memory {
 		pinctrl-0 = <&tri_state_key_active>;
 		pinctrl-1 = <&tri_state_key_suspend>;
 	};
-	//#endif
 
 
 /*#endif*/
-//#ifdef VENDOR_EDIT
 	dsi_panel_pwr_supply_no_labibb_2: dsi_panel_pwr_supply_no_labibb_2 {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -280,7 +276,6 @@ dsi_samsung_dsc_cmd_display: qcom,dsi-display@22 {
 		vddio-supply = <&pm8998_l14>;
 		qcom,platform-te-gpio = <&tlmm 10 0>;
 	};
-//#endif
 
 	oem_serial_pinctrl {
 		compatible = "oem,oem_serial_pinctrl";
@@ -356,7 +351,6 @@ dsi_samsung_dsc_cmd_display: qcom,dsi-display@22 {
 			power-source = <0>;
 		};
 	};
-	//endif
 };
 
 //add for volume down function ,and we do not use qbt1000 fingerprint sensor.
@@ -1212,7 +1206,6 @@ status = "disabled";
 	};
 };
 
-/*#ifdef VENDOR_EDIT*/
 &tlmm {
 	fp_enable_init: fp_enable_init {
 		mux {
@@ -1376,7 +1369,6 @@ status = "disabled";
 		};
 };
 /*#endif*/
-//#ifndef VENDOR_EDIT
 
 
 //overlay for camera start

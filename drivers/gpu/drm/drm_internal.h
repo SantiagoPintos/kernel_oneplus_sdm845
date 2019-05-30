@@ -93,7 +93,6 @@ int drm_gem_open_ioctl(struct drm_device *dev, void *data,
 void drm_gem_open(struct drm_device *dev, struct drm_file *file_private);
 void drm_gem_release(struct drm_device *dev, struct drm_file *file_private);
 
-//#ifdef VENDOR_EDIT
 int dsi_display_set_acl_mode(struct drm_connector *connector, int level);
 int dsi_display_get_acl_mode(struct drm_connector *connector);
 int dsi_display_set_hbm_mode(struct drm_connector *connector, int level);
@@ -125,7 +124,6 @@ int dsi_display_get_aod_disable(struct drm_connector *connector);
 int dsi_display_set_fp_hbm_mode(struct drm_connector *connector, int level);
 int dsi_display_get_fp_hbm_mode(struct drm_connector *connector);
 
-//#endif
 
 /* drm_debugfs.c */
 #if defined(CONFIG_DEBUG_FS)

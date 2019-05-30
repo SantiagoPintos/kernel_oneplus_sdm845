@@ -227,10 +227,8 @@
 
 /*------------------------------------------------------------------------*/
 
-#ifdef VENDOR_EDIT
 /* Anderson@, 2016/09/21, CD-ROM and VID customized */
 #define PAGE_CACHE_SIZE PAGE_SIZE
-#endif
 #define FSG_DRIVER_DESC		"Mass Storage Function"
 #define FSG_DRIVER_VERSION	"2009/09/11"
 
@@ -1238,7 +1236,6 @@ static int do_read_header(struct fsg_common *common, struct fsg_buffhd *bh)
 	return 8;
 }
 
-#ifdef VENDOR_EDIT
 /* Anderson@, 2016/09/21, CD-ROM and VID customized */
 static void _lba_to_msf(u8 *buf, int lba)
 {
@@ -1482,7 +1479,6 @@ static int do_read_cd(struct fsg_common *common)
 
 	return -EIO; /* No default reply */
 }
-#endif
 
 static int do_read_toc(struct fsg_common *common, struct fsg_buffhd *bh)
 {
@@ -1491,10 +1487,8 @@ static int do_read_toc(struct fsg_common *common, struct fsg_buffhd *bh)
 	int		start_track = common->cmnd[6];
 	u8		*buf = (u8 *)bh->buf;
 
-#ifdef VENDOR_EDIT
 /* Anderson@, 2016/09/21, CD-ROM and VID customized */
 	int format = (common->cmnd[9] & 0xC0) >> 6;
-#endif
 
 	if ((common->cmnd[1] & ~0x02) != 0 ||	/* Mask away MSF */
 			start_track > 1) {
@@ -1502,11 +1496,9 @@ static int do_read_toc(struct fsg_common *common, struct fsg_buffhd *bh)
 		return -EINVAL;
 	}
 
-#ifdef VENDOR_EDIT
 /* Anderson@, 2016/09/21, CD-ROM and VID customized */
 	if (format == 2)
 		return _read_toc_raw(common, bh);
-#endif
 
 	memset(buf, 0, 20);
 	buf[1] = (20-2);		/* TOC data length */
@@ -2254,20 +2246,13 @@ static int do_scsi_command(struct fsg_common *common)
 		common->data_size_from_cmnd =
 			get_unaligned_be16(&common->cmnd[7]);
 
-#ifdef VENDOR_EDIT
 /* Anderson@, 2016/09/21, CD-ROM and VID customized */
 		reply = check_command(common, 10, DATA_DIR_TO_HOST,
 				      (0xf<<6) | (1<<1), 1,
 				      "READ TOC");
-#else
-		reply = check_command(common, 10, DATA_DIR_TO_HOST,
-				      (7<<6) | (1<<1), 1,
-				      "READ TOC");
-#endif
 		if (reply == 0)
 			reply = do_read_toc(common, bh);
 		break;
-#ifdef VENDOR_EDIT
 /* Anderson@, 2016/09/21, CD-ROM and VID customized */
 	case READ_CD:
 		common->data_size_from_cmnd = ((common->cmnd[6] << 16)
@@ -2279,7 +2264,6 @@ static int do_scsi_command(struct fsg_common *common)
 		if (reply == 0)
 			reply = do_read_cd(common);
 		break;
-#endif
 
 	case READ_FORMAT_CAPACITIES:
 		common->data_size_from_cmnd =
@@ -3292,12 +3276,10 @@ void fsg_common_set_inquiry_string(struct fsg_common *common, const char *vn,
 		     ? "File-CD Gadget"
 		     : "File-Stor Gadget"),
 		 i);
-#ifdef VENDOR_EDIT
 /* Anderson@, 2016/09/21, CD-ROM and VID customized */
 	snprintf(common->inquiry_string,
 		sizeof(common->inquiry_string),
 		"%s",  "OnePlus Device Driver");
-#endif
 }
 EXPORT_SYMBOL_GPL(fsg_common_set_inquiry_string);
 
@@ -3807,11 +3789,9 @@ static struct usb_function_instance *fsg_alloc_inst(void)
 
 	memset(&config, 0, sizeof(config));
 	config.removable = true;
-#ifdef VENDOR_EDIT
 /*enable cdrom config to read usb_driver.iso in PC;CD-ROM and VID customized*/
 	config.cdrom = true;
 	config.ro = true;
-#endif
 	rc = fsg_common_create_lun(opts->common, &config, 0, "lun.0",
 			(const char **)&opts->func_inst.group.cg_item.ci_name);
 	if (rc)

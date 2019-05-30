@@ -2875,9 +2875,7 @@ static int cgroup_procs_write_permission(struct task_struct *task,
 	 * need to check permissions on one of them.
 	 */
 	if (!uid_eq(cred->euid, GLOBAL_ROOT_UID) &&
-#ifdef VENDOR_EDIT
 	    !uid_eq(cred->euid, GLOBAL_SYSTEM_UID) &&
-#endif
 	    !uid_eq(cred->euid, tcred->uid) &&
 	    !uid_eq(cred->euid, tcred->suid) &&
 	    !ns_capable(tcred->user_ns, CAP_SYS_NICE))

@@ -19,7 +19,6 @@
 #elif defined(USE_PLATFORM_BUS)
 #include <linux/platform_device.h>
 #endif
-#ifdef VENDOR_EDIT
 #include <linux/oneplus/boot_mode.h>
 
 int gf_pinctrl_init(struct gf_dev* gf_dev)
@@ -57,7 +56,6 @@ err:
 	gf_dev->gpio_state_disable = NULL;
 	return ret;
 }
-#endif
 int gf_parse_dts(struct gf_dev* gf_dev)
 {
 	int rc = 0;
@@ -130,14 +128,12 @@ int gf_parse_dts(struct gf_dev* gf_dev)
 	if (rc)
 		pr_err("Regulator vdd enable failed rc=%d\n", rc);
 
-#ifdef VENDOR_EDIT
 	if (get_boot_mode() ==  MSM_BOOT_MODE__FACTORY)
 	{
 		rc = regulator_disable(gf_dev->vdd_3v2);
 		if (rc)
 			pr_err("Regulator vdd disable failed rc=%d\n", rc);
 	}
-#endif
 
 	return rc;
 

@@ -135,15 +135,10 @@ int xhci_halt(struct xhci_hcd *xhci)
 	if (!ret)
 		xhci->xhc_state |= XHCI_STATE_HALTED;
 	else
-#ifdef VENDOR_EDIT
 /* Anderson@, 2016/07/01, host controller halted for otg */
 		xhci_warn(xhci,
 			"Host not halted after %u ms. ret=%d\n",
 			XHCI_MAX_HALT_USEC, ret);
-#else
-		xhci_warn(xhci, "Host not halted after %u microseconds.\n",
-				XHCI_MAX_HALT_USEC);
-#endif
 
 	xhci->cmd_ring_state = CMD_RING_STATE_STOPPED;
 
@@ -1027,7 +1022,6 @@ int xhci_suspend(struct xhci_hcd *xhci, bool do_wakeup)
 		spin_unlock_irq(&xhci->lock);
 		return -ETIMEDOUT;
 	}
-#ifdef VENDOR_EDIT
 	if ((readl_relaxed(&xhci->op_regs->status) & STS_EINT) ||
 			(readl_relaxed(&xhci->op_regs->status) & STS_PORT)) {
 		xhci_warn(xhci, "WARN: xHC EINT/PCD set status:%x\n",
@@ -1041,7 +1035,6 @@ int xhci_suspend(struct xhci_hcd *xhci, bool do_wakeup)
 		spin_unlock_irq(&xhci->lock);
 		return -EBUSY;
 	}
-#endif
 	xhci_clear_command_ring(xhci);
 
 	/* step 3: save registers */
@@ -2878,13 +2871,11 @@ int xhci_check_bandwidth(struct usb_hcd *hcd, struct usb_device *udev)
 	xhci_dbg_ctx(xhci, virt_dev->in_ctx,
 		     LAST_CTX_TO_EP_NUM(le32_to_cpu(slot_ctx->dev_info)));
 
-#ifdef VENDOR_EDIT
 /* Anderson@, 2016/07/01, host controller halted for otg */
 	if (hcd->state == HC_STATE_QUIESCING) {
 		xhci_warn(xhci, "hcd->state=%d\n", hcd->state);
 		goto command_cleanup;
 	}
-#endif
 
 	ret = xhci_configure_endpoint(xhci, udev, command,
 			false, false);

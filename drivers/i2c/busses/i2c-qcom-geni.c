@@ -28,11 +28,9 @@
 #include <linux/ipc_logging.h>
 #include <linux/dmaengine.h>
 #include <linux/msm_gpi.h>
-#ifdef VENDOR_EDIT
 #include <linux/gpio.h>
 #define AP_BAT_SCL 56
 #define AP_BAT_SDA 55
-#endif
 #define SE_I2C_TX_TRANS_LEN		(0x26C)
 #define SE_I2C_RX_TRANS_LEN		(0x270)
 #define SE_I2C_SCL_COUNTERS		(0x278)
@@ -126,9 +124,7 @@ struct geni_i2c_dev {
 	struct msm_gpi_dma_async_tx_cb_param rx_cb;
 	enum i2c_se_mode se_mode;
 	bool autosuspend_disable;
-#ifdef VENDOR_EDIT
 	int reset_support;
-#endif
 };
 
 struct geni_i2c_err_log {
@@ -770,7 +766,6 @@ static int geni_i2c_xfer(struct i2c_adapter *adap,
 		}
 		ret = gi2c->err;
 		if (gi2c->err) {
-#ifdef VENDOR_EDIT
 			if (gi2c->err == -ETIMEDOUT && gi2c->reset_support) {
 				pinctrl_select_state(gi2c->i2c_rsc.geni_pinctrl,
 						gi2c->i2c_rsc.geni_gpio_reset);
@@ -790,7 +785,6 @@ static int geni_i2c_xfer(struct i2c_adapter *adap,
 				pinctrl_select_state(gi2c->i2c_rsc.geni_pinctrl,
 						gi2c->i2c_rsc.geni_gpio_active);
 			}
-#endif
 			dev_err(gi2c->dev, "i2c error :%d\n", gi2c->err);
 			break;
 		}
@@ -915,7 +909,6 @@ static int geni_i2c_probe(struct platform_device *pdev)
 		ret = PTR_ERR(gi2c->i2c_rsc.geni_gpio_sleep);
 		return ret;
 	}
-#ifdef VENDOR_EDIT
 	gi2c->i2c_rsc.geni_gpio_reset =
 		pinctrl_lookup_state(gi2c->i2c_rsc.geni_pinctrl,
 							PINCTRL_RESET);
@@ -937,7 +930,6 @@ static int geni_i2c_probe(struct platform_device *pdev)
 		gi2c->reset_support = true;
 		dev_err(&pdev->dev, "reset config specified\n");
 	}
-#endif
 	if (of_property_read_u32(pdev->dev.of_node, "qcom,clk-freq-out",
 				&gi2c->i2c_rsc.clk_freq_out)) {
 		dev_info(&pdev->dev,
@@ -977,11 +969,9 @@ static int geni_i2c_probe(struct platform_device *pdev)
 	gi2c->adap.dev.of_node = pdev->dev.of_node;
 
 	strlcpy(gi2c->adap.name, "Geni-I2C", sizeof(gi2c->adap.name));
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171208 Add I2C speed log */
 	dev_info(&pdev->dev, "%s speed=%d\n", gi2c->adap.name,
 		gi2c->i2c_rsc.clk_freq_out);
-#endif
 
 	pm_runtime_set_suspended(gi2c->dev);
 	if (!gi2c->autosuspend_disable) {

@@ -89,14 +89,10 @@
 #include <linux/posix-timers.h>
 #include <linux/cpufreq_times.h>
 
-#ifdef VENDOR_EDIT
 #include <linux/hotcount.h>
 #include <linux/rmap.h>
-#endif
 
-#ifdef VENDOR_EDIT
 #include <linux/adj_chain.h>
-#endif
 
 #ifdef CONFIG_HARDWALL
 #include <asm/hardwall.h>
@@ -1144,9 +1140,7 @@ static ssize_t oom_adj_write(struct file *file, const char __user *buf,
 
 	task->signal->oom_score_adj = oom_adj;
 
-#ifdef VENDOR_EDIT
 	adj_chain_update_oom_score_adj(task);
-#endif
 
 	trace_oom_score_adj_update(task);
 err_unlock:
@@ -1219,9 +1213,7 @@ static ssize_t oom_score_adj_write(struct file *file, const char __user *buf,
 
 	task->signal->oom_score_adj = (short)oom_score_adj;
 
-#ifdef VENDOR_EDIT
 	adj_chain_update_oom_score_adj(task);
-#endif
 
 	if (has_capability_noaudit(current, CAP_SYS_RESOURCE))
 		task->signal->oom_score_adj_min = (short)oom_score_adj;
@@ -2648,7 +2640,6 @@ static const struct file_operations proc_pid_set_timerslack_ns_operations = {
 	.release	= single_release,
 };
 
-#ifdef VENDOR_EDIT
 static ssize_t page_hot_count_read(struct file *file, char __user *buf,
 				size_t count, loff_t *ppos)
 {
@@ -2749,7 +2740,6 @@ static const struct file_operations proc_page_hot_count_operations = {
 	.read		= page_hot_count_read,
 	.write		= page_hot_count_write,
 };
-#endif
 
 static int proc_pident_instantiate(struct inode *dir,
 	struct dentry *dentry, struct task_struct *task, const void *ptr)
@@ -3387,9 +3377,7 @@ static const struct pid_entry tgid_base_stuff[] = {
 	REG("timers",	  S_IRUGO, proc_timers_operations),
 #endif
 	REG("timerslack_ns", S_IRUGO|S_IWUGO, proc_pid_set_timerslack_ns_operations),
-#ifdef VENDOR_EDIT
 	REG("page_hot_count", 0666, proc_page_hot_count_operations),
-#endif
 	REG("inode_index_disabled", 0666, proc_inode_index_disabled_operations),
 #ifdef CONFIG_CPU_FREQ_TIMES
 	ONE("time_in_state", 0444, proc_time_in_state_show),

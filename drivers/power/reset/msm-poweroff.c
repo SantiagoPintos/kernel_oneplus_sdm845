@@ -107,12 +107,10 @@ struct reset_attribute {
 module_param_call(download_mode, dload_set, param_get_int,
 			&download_mode, 0644);
 
-#ifdef VENDOR_EDIT
 int oem_get_download_mode(void)
 {
 	return download_mode && (dload_type & SCM_DLOAD_FULLDUMP);
 }
-#endif
 
 
 static int panic_prep_restart(struct notifier_block *this,
@@ -153,9 +151,7 @@ static void set_dload_mode(int on)
 {
 	int ret;
 
-	//#ifdef VENDOR_EDIT
 	pr_info("set_dload_mode %s\n", on ? "ON" : "OFF");
-	//#endif /* VENDOR_EDIT */
 
 	if (dload_mode_addr) {
 		__raw_writel(on ? 0xE47B337D : 0, dload_mode_addr);
@@ -326,7 +322,6 @@ static void msm_restart_prepare(const char *cmd)
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
 
 	if (cmd != NULL) {
-#ifdef VENDOR_EDIT
 		if (!strncmp(cmd, "rf", 2)) {
 			qpnp_pon_set_restart_reason(PON_RESTART_REASON_RF);
 			__raw_writel(RF_MODE, restart_reason);
@@ -352,7 +347,6 @@ static void msm_restart_prepare(const char *cmd)
 			qpnp_pon_set_restart_reason(PON_RESTART_REASON_AGING);
 			__raw_writel(AGING_MODE, restart_reason);
 		} else if (!strncmp(cmd, "bootloader", 10)) {
-#endif
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_BOOTLOADER);
 			__raw_writel(0x77665500, restart_reason);

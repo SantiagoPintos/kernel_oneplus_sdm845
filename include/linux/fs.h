@@ -1802,11 +1802,9 @@ struct inode_operations {
 			   umode_t create_mode, int *opened);
 	int (*tmpfile) (struct inode *, struct dentry *, umode_t);
 	int (*set_acl)(struct inode *, struct posix_acl *, int);
-#ifdef VENDOR_EDIT
 	/*Curtis, 2018/04/25 reset non-exist dcache*/
 	void (*settag)(void);
 	long long (*gettag)(void);
-#endif
 } ____cacheline_aligned;
 
 ssize_t rw_copy_check_uvector(int type, const struct iovec __user * uvector,
@@ -2579,10 +2577,8 @@ extern int invalidate_partition(struct gendisk *, int);
 #endif
 unsigned long invalidate_mapping_pages(struct address_space *mapping,
 					pgoff_t start, pgoff_t end);
-#ifdef VENDOR_EDIT
 unsigned long invalidate_mapping_pages_without_uidlru(struct address_space *mapping,
 					pgoff_t start, pgoff_t end);
-#endif
 static inline void invalidate_remote_inode(struct inode *inode)
 {
 	if (S_ISREG(inode->i_mode) || S_ISDIR(inode->i_mode) ||

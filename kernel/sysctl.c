@@ -268,16 +268,12 @@ static struct ctl_table sysctl_base_table[] = {
 	{ }
 };
 
-#if defined(CONFIG_SCHED_DEBUG) || defined(VENDOR_EDIT)
 static int min_sched_granularity_ns = 100000;		/* 100 usecs */
 static int max_sched_granularity_ns = NSEC_PER_SEC;	/* 1 second */
 static int min_wakeup_granularity_ns;			/* 0 usecs */
 static int max_wakeup_granularity_ns = NSEC_PER_SEC;	/* 1 second */
-#if defined(CONFIG_SMP) || defined(VENDOR_EDIT)
 static int min_sched_tunable_scaling = SCHED_TUNABLESCALING_NONE;
 static int max_sched_tunable_scaling = SCHED_TUNABLESCALING_END-1;
-#endif /* CONFIG_SMP || VENDOR_EDIT  */
-#endif /* CONFIG_SCHED_DEBUG || VENDOR_EDIT */
 
 #ifdef CONFIG_COMPACTION
 static int min_extfrag_threshold;
@@ -525,7 +521,6 @@ static struct ctl_table kern_table[] = {
 	},
 #endif /* CONFIG_NUMA_BALANCING */
 #else /* CONFIG_SCHED_DEBUG */
-#ifdef VENDOR_EDIT
 	{
 		.procname	= "sched_latency_ns",
 		.data		= &sysctl_sched_latency,
@@ -553,7 +548,6 @@ static struct ctl_table kern_table[] = {
 		.extra1		= &min_sched_tunable_scaling,
 		.extra2		= &max_sched_tunable_scaling,
 	},
-#endif /* VENDOR_EDIT */
 #endif /* CONFIG_SCHED_DEBUG */
 	{
 		.procname	= "sched_rt_period_us",
@@ -951,11 +945,7 @@ static struct ctl_table kern_table[] = {
 		.data		= &console_loglevel,
 		.maxlen		= 4*sizeof(int),
 		.mode		= 0644,
-        #ifndef VENDOR_EDIT
-		.proc_handler	= proc_dointvec,
-        #else
 		.proc_handler	= proc_dointvec_oem,
-        #endif
 	},
 	{
 		.procname	= "printk_ratelimit",
@@ -1432,7 +1422,6 @@ static struct ctl_table vm_table[] = {
 		.extra1		= &zero,
 		.extra2		= &two,
 	},
-#ifdef VENDOR_EDIT
 	{
 		.procname	= "page_cache_reside_switch",
 		.data		= &sysctl_page_cache_reside_switch,
@@ -1450,7 +1439,6 @@ static struct ctl_table vm_table[] = {
 		.proc_handler	= proc_dointvec_minmax,
 	},
 
-#endif
 
 	{
 		.procname	= "oom_kill_allocating_task",
@@ -2552,7 +2540,6 @@ int proc_dointvec(struct ctl_table *table, int write,
 {
 	return do_proc_dointvec(table, write, buffer, lenp, ppos, NULL, NULL);
 }
-#ifdef VENDOR_EDIT
 static unsigned int oem_en_chg_prk_lv = 1;
 module_param(oem_en_chg_prk_lv, uint, 0644);
 
@@ -2564,7 +2551,6 @@ int proc_dointvec_oem(struct ctl_table *table, int write,
     else
 		return -ENOSYS;
 }
-#endif
 
 /**
  * proc_douintvec - read a vector of unsigned integers

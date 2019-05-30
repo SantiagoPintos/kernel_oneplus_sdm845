@@ -78,12 +78,7 @@
 #else
 #define IF_HAVE_PG_IDLE(flag,string)
 #endif
-#ifdef VENDOR_EDIT
 #define IF_HAVE_PG_UIDRU(flag,string) ,{1UL << flag, string}
-#else
-#define IF_HAVE_PG_UIDRU(flag,string)
-
-#endif
 
 #define __def_pageflag_names						\
 	{1UL << PG_locked,		"locked"	},		\

@@ -640,8 +640,6 @@ static inline int thermal_generate_netlink_event(struct thermal_zone_device *tz,
 }
 #endif
 
-#ifdef VENDOR_EDIT
 extern void ht_register_thermal_zone_device(struct thermal_zone_device *tz);
-#endif
 
 #endif /* __THERMAL_H__ */

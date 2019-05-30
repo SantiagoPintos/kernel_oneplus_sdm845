@@ -21,7 +21,6 @@ static inline int page_is_file_cache(struct page *page)
 {
 	return !PageSwapBacked(page);
 }
-#ifdef VENDOR_EDIT
 static __always_inline void __update_lru_size(struct lruvec *lruvec,
 				enum lru_list lru, enum zone_type zid,
 				int nr_pages, bool is_uidlru)
@@ -70,50 +69,6 @@ static __always_inline void del_page_from_lru_list(struct page *page,
 	update_lru_size(lruvec, lru, page_zonenum(page), -hpage_nr_pages(page), is_uidlru);
 }
 
-#else
-static __always_inline void __update_lru_size(struct lruvec *lruvec,
-				enum lru_list lru, enum zone_type zid,
-				int nr_pages)
-{
-	struct pglist_data *pgdat = lruvec_pgdat(lruvec);
-
-	__mod_node_page_state(pgdat, NR_LRU_BASE + lru, nr_pages);
-	__mod_zone_page_state(&pgdat->node_zones[zid],
-				NR_ZONE_LRU_BASE + lru, nr_pages);
-}
-
-static __always_inline void update_lru_size(struct lruvec *lruvec,
-				enum lru_list lru, enum zone_type zid,
-				int nr_pages)
-{
-	__update_lru_size(lruvec, lru, zid, nr_pages);
-#ifdef CONFIG_MEMCG
-	mem_cgroup_update_lru_size(lruvec, lru, zid, nr_pages);
-#endif
-}
-
-static __always_inline void add_page_to_lru_list(struct page *page,
-				struct lruvec *lruvec, enum lru_list lru)
-{
-	update_lru_size(lruvec, lru, page_zonenum(page), hpage_nr_pages(page));
-	list_add(&page->lru, &lruvec->lists[lru]);
-}
-
-static __always_inline void add_page_to_lru_list_tail(struct page *page,
-				struct lruvec *lruvec, enum lru_list lru)
-{
-	update_lru_size(lruvec, lru, page_zonenum(page), hpage_nr_pages(page));
-	list_add_tail(&page->lru, &lruvec->lists[lru]);
-}
-
-static __always_inline void del_page_from_lru_list(struct page *page,
-				struct lruvec *lruvec, enum lru_list lru)
-{
-	list_del(&page->lru);
-	update_lru_size(lruvec, lru, page_zonenum(page), -hpage_nr_pages(page));
-}
-
-#endif
 
 /**
  * page_lru_base_type - which LRU list type should a page be on?

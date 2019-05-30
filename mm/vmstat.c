@@ -945,9 +945,7 @@ const char * const vmstat_text[] = {
 	"numa_local",
 	"numa_other",
 #endif
-#ifdef VENDOR_EDIT
 	"nr_uid_lru",
-#endif
 	"nr_free_cma",
 
 	/* Node-based counters */
@@ -1097,12 +1095,10 @@ const char * const vmstat_text[] = {
 #ifdef CONFIG_SPECULATIVE_PAGE_FAULT
 	"speculative_pgfault",
 #endif
-#ifdef VENDOR_EDIT
 	TEXTS_FOR_ZONES("allocstall_pri1")
 	TEXTS_FOR_ZONES("allocstall_pri2")
 	TEXTS_FOR_ZONES("allocstall_pri3")
 	TEXTS_FOR_ZONES("allocstall_pri4")
-#endif
 
 #endif /* CONFIG_VM_EVENT_COUNTERS */
 };
@@ -1480,7 +1476,6 @@ static const struct file_operations proc_zoneinfo_file_operations = {
 	.release	= seq_release,
 };
 
-#ifdef VENDOR_EDIT
 static void uid_lru_info_show_print(struct seq_file *m, pg_data_t *pgdat)
 {
 	int i;
@@ -1548,7 +1543,6 @@ static const struct file_operations proc_uid_lru_info_file_operations = {
 	.llseek		= seq_lseek,
 	.release	= seq_release,
 };
-#endif
 
 enum writeback_stat_item {
 	NR_DIRTY_THRESHOLD,
@@ -1877,10 +1871,8 @@ static int __init setup_vmstat(void)
 	proc_create("pagetypeinfo", S_IRUGO, NULL, &pagetypeinfo_file_ops);
 	proc_create("vmstat", S_IRUGO, NULL, &proc_vmstat_file_operations);
 	proc_create("zoneinfo", S_IRUGO, NULL, &proc_zoneinfo_file_operations);
-#ifdef VENDOR_EDIT
 	proc_create("uid_lru_info", 0444, NULL,
 				&proc_uid_lru_info_file_operations);
-#endif
 #endif
 	return 0;
 }

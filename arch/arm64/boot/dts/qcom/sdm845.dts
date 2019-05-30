@@ -13,9 +13,7 @@
 /dts-v1/;
 
 #include "sdm845.dtsi"
-//#ifdef VENDOR_EDIT
 #include "sdm845_enchilada_soc.dtsi"
-//#endif VENDOR_EDIT
 
 / {
 	model = "Qualcomm Technologies, Inc. SDM845 v1 SoC";

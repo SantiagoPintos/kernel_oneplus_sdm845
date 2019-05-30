@@ -1,6 +1,5 @@
 /************************************************************************************
  ** File: - /android/kernel/drivers/input/touchscreen/synaptic_s3320.c
- ** VENDOR_EDIT
  ** Copyright (C), 2008-2012, OEM Mobile Comm Corp., Ltd
  **
  ** Description:
@@ -65,7 +64,6 @@
 #include "synaptics_redremote.h"
 #include <linux/project_info.h>
 #include "synaptics_baseline.h"
-//#define VENDOR_EDIT
 #include "synaptics_dsx_core.h"
 #include <linux/oneplus/boot_mode.h>
 #include <linux/pm_qos.h>
@@ -113,14 +111,12 @@ struct test_header {
 	unsigned int array_limitcbc_size;
 };
 
-#ifdef VENDOR_EDIT /*collect tp information in touch hold mode*/
 struct fp_underscreen_info {
     uint8_t touch_state;
     uint8_t area_rate;
     uint16_t x;
     uint16_t y;
 };
-#endif
 
 #define PM_QOS_VALUE_TP 400
 struct pm_qos_request pm_qos_req_tp;
@@ -142,11 +138,9 @@ struct pm_qos_request pm_qos_req_tp;
 #define SWIPE_DETECT    0x07
 #define DTAP_DETECT     0x03
 
-#ifdef VENDOR_EDIT /*add for detect finger up and down*/
 #define FINGER_DOWN     0x0f
 #define FINGER_UP       0x1f
 #define SINGLE_TAP      0x10
-#endif
 
 #define UnkownGestrue       0
 #define DouTap              1   // double tap
@@ -165,8 +159,6 @@ struct pm_qos_request pm_qos_req_tp;
 #define Sgestrue            14  // S
 #define SingleTap           15  // single tap
 
-// carlo@oneplus.net 2015-05-25, begin.
-#ifdef VENDOR_EDIT_OXYGEN
 #define KEY_GESTURE_W          	246 //w
 #define KEY_GESTURE_M      		247 //m
 #define KEY_GESTURE_S			248 //s
@@ -176,11 +168,8 @@ struct pm_qos_request pm_qos_req_tp;
 #define KEY_GESTURE_V           252 // draw v to toggle flashlight
 #define KEY_GESTURE_LEFT_V      253 // draw left arrow for previous track
 #define KEY_GESTURE_RIGHT_V     254 // draw right arrow for next track
-#endif
-// carlo@oneplus.net 2015-05-25, end.
 
 //ruanbanmao@BSP add for tp gesture 2015-05-06, begin
-#ifdef VENDOR_EDIT
 #define BIT0 (0x1 << 0)
 #define BIT1 (0x1 << 1)
 #define BIT2 (0x1 << 2)
@@ -209,7 +198,6 @@ int Sgestrue_gesture =0;//"(S)"
 int Single_gesture = 0; //"(SingleTap)"
 int Enable_gesture =0;
 static int gesture_switch = 0;
-#endif
 //ruanbanmao@BSP add for tp gesture 2015-05-06, end
 #endif
 
@@ -379,11 +367,9 @@ static int synaptics_rmi4_i2c_read_word(struct i2c_client* client,
 static int synaptics_rmi4_i2c_write_word(struct i2c_client* client,
 		unsigned char addr,unsigned short data);
 static int synaptics_mode_change(int mode);
-#ifdef VENDOR_EDIT
 int tp_single_tap_en(struct synaptics_ts_data *ts, bool enable);
 int opticalfp_irq_handler(struct fp_underscreen_info* tp_info);
 int gf_opticalfp_irq_handler(int event);
-#endif
 
 #ifdef TPD_USE_EINT
 static irqreturn_t synaptics_irq_thread_fn(int irq, void *dev_id);
@@ -438,7 +424,6 @@ static const struct dev_pm_ops synaptic_pm_ops = {
 };
 
 //add by jiachenghui for boot time optimize 2015-5-13
-#ifdef VENDOR_EDIT
 static int probe_ret;
 struct synaptics_optimize_data{
 	struct delayed_work work;
@@ -475,17 +460,11 @@ static int oem_synaptics_ts_probe(struct i2c_client *client, const struct i2c_de
 
 	return probe_ret;
 }
-#endif /*VENDOR_EDIT*/
 //end add by jiachenghui for boot time optimize 2015-5-13
 
 static struct i2c_driver tpd_i2c_driver = {
 //add by jiachenghui for boot time optimize 2015-5-13
-#ifdef VENDOR_EDIT
 	.probe		= oem_synaptics_ts_probe,
-#else
-//end add by jiachenghui for boot time optimize 2015-5-13
-	.probe		= synaptics_ts_probe,
-#endif /*VENDOR_EDIT*///add by jiachenghui for boot time optimize 2015-5-13
 	.remove		= synaptics_ts_remove,
 	.id_table	= synaptics_ts_id,
 	.driver = {
@@ -571,13 +550,11 @@ struct synaptics_ts_data {
 #ifdef SUPPORT_VIRTUAL_KEY
 	struct kobject *properties_kobj;
 #endif
-	#ifdef VENDOR_EDIT /*liuyan 20171020 1:down 0:up*/
 	uint8_t fp_up_down;
 	unsigned int en_up_down;
 	unsigned int fp_aod_cnt;
 	unsigned int unlock_succes;
 	int project_version;
-	#endif /*liuyan add end*/
 };
 
 static struct device_attribute attrs_oem[] = {
@@ -587,7 +564,6 @@ static struct device_attribute attrs_oem[] = {
 
 static struct synaptics_rmi4_data *rmi4_data_s3706;
 
-#ifdef VENDOR_EDIT /*liuyan 20171020 add to detect finger*/
 static ssize_t fp_irq_get(struct device *device,
 			     struct device_attribute *attribute,
 			     char *buf)
@@ -598,7 +574,6 @@ static ssize_t fp_irq_get(struct device *device,
 }
 static DEVICE_ATTR(fp_irq, 0400, fp_irq_get, NULL);
 
-#endif /*liuyan add end*/
 
 static void touch_enable (struct synaptics_ts_data *ts)
 {
@@ -1242,7 +1217,6 @@ static void synaptics_get_coordinate_point(struct synaptics_ts_data *ts)
 		(coordinate_buf[24] & 0x20) ? 0 : 2; // 1--clockwise, 0--anticlockwise, not circle, report 2
 }
 
-#ifdef VENDOR_EDIT /*20180524 add for finger detect*/
 static int set_tp_info(struct synaptics_ts_data *ts, uint8_t up_down)
 {
 	int ret = 0;
@@ -1332,7 +1306,6 @@ static void fp_detect(struct synaptics_ts_data *ts)
 	ret = i2c_smbus_write_byte_data(
 		ts->client, 0xff, 0x00);
 }
-#endif
 
 static int time_recored(bool start_time)
 {
@@ -1450,7 +1423,6 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 	//detect the gesture mode
 	switch (gesture_sign) {
 		case DTAP_DETECT:
-			//#ifdef VENDOR_EDIT, ruanbanmao@bsp 2015-05-06, begin.
 			    gesture = DouTap;
 			break;
 		case SWIPE_DETECT:
@@ -1490,7 +1462,6 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 				(gesture_buffer[2] == 0x08) ? LeftVee  :
 				UnkownGestrue;
 			break;
-		#ifdef VENDOR_EDIT /*20180524 add for finger detect*/
 		case FINGER_DOWN:
 			if (ts->project_version == 0x03) {
 				ts->fp_up_down = 1;
@@ -1527,21 +1498,17 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 				gesture = SingleTap;
 			}
 			break;
-		#endif
 		case UNICODE_DETECT:
 			gesture = (gesture_buffer[2] == 0x77) ? Wgestrue :
 				(gesture_buffer[2] == 0x6d) ? Mgestrue :
 				(gesture_buffer[2] == 0x73) ? Sgestrue :
 				UnkownGestrue;
 			break;
-			//#endif, ruanbanmao@bsp 2015-05-06, end.
 		default:
 			gesture = UnkownGestrue;
 			break;
 		}
 
-// carlo@oneplus.net 2015-05-25, begin.
-#ifdef VENDOR_EDIT_OXYGEN
 	keyCode = UnkownGestrue;
 	// Get key code based on registered gesture.
 	switch (gesture) {
@@ -1578,8 +1545,6 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 		default:
 			break;
 	}
-#endif
-// carlo@oneplus.net 2015-05-25, end.
 
 	TPD_ERR("detect %s gesture\n", gesture == DouTap ? "(double tap)" :
 			gesture == UpVee ? "(V)" :
@@ -1596,12 +1561,8 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 			gesture == Sgestrue ? "(S)" :
 			gesture == Wgestrue ? "(W)" :
 			gesture == SingleTap ? "(single tap)" : "[unknown]");
-	#ifndef VENDOR_EDIT
-	synaptics_get_coordinate_point(ts);
-	#else
 	if ((gesture != SingleTap) && (gesture != DouTap))
 		synaptics_get_coordinate_point(ts);
-	#endif
 
     TPD_DEBUG("gesture suport LeftVee:%d RightVee:%d DouSwip:%d Circle:%d UpVee:%d DouTap:%d\n",\
         LeftVee_gesture,RightVee_gesture,DouSwip_gesture,Circle_gesture,UpVee_gesture,DouTap_gesture);
@@ -1787,7 +1748,6 @@ void int_touch(void)
 			//#ifdef REPORT_2D_W
 			input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, max(points.raw_x, points.raw_y));
 			input_report_abs(ts->input_dev, ABS_MT_TOUCH_MINOR, min(points.raw_x, points.raw_y));
-			//#endif
 #ifdef REPORT_2D_PRESSURE
             if (ts->support_ft){
                 input_report_abs(ts->input_dev,ABS_MT_PRESSURE,pres_value);
@@ -2000,12 +1960,10 @@ static void synaptics_ts_work_func(struct work_struct *work)
 
 	if( inte & 0x04 ) {
 
-	#ifdef VENDOR_EDIT /*20180524 add for finger detect*/
 	if (ts->project_version == 0x03) {
 		if (ts->en_up_down && ts->in_gesture_mode == 0)
 			fp_detect(ts);
 	}
-	#endif
 
 	if (ts->is_suspended == 1) {
 	#ifdef SUPPORT_GESTURE
@@ -2111,7 +2069,6 @@ static ssize_t tp_gesture_write_func(struct file *file, const char __user *buffe
 		return count;
 	}
 	//ruanbanmao@BSP add for tp gesture 2015-05-06, begin
-	#ifdef VENDOR_EDIT
 	TPD_ERR("%s write argc1[0x%x],argc2[0x%x]\n",__func__,buf[0],buf[1]);
 
 	UpVee_gesture = (buf[0] & BIT0)?1:0; //"V"
@@ -2138,7 +2095,6 @@ static ssize_t tp_gesture_write_func(struct file *file, const char __user *buffe
 	{
 		ts->gesture_enable = 0;
 	}
-	#endif
     //ruanbanmao@BSP add for tp gesture 2015-05-06, end
 	return count;
 }
@@ -2585,18 +2541,12 @@ static ssize_t tp_baseline_show(struct device_driver *ddri, char *buf)
 #endif
 	synaptics_init_panel(ts);
 //modify by zhouwenping for solve cat tp_baseline_image node cause touch disable 20160225 start
-#ifndef VENDOR_EDIT
-	synaptics_enable_interrupt(ts,1);
-	mutex_unlock(&ts->mutex);
-	touch_enable(ts);
-#else
 	synaptics_enable_interrupt(ts,1);
 	ret = synaptics_soft_reset(ts);
 	if (ret < 0){
            TPD_ERR("%s faile to reset device\n",__func__);
         }
 	mutex_unlock(&ts->mutex);
-#endif/*VENDOR_EDIT*/
 //modify by zhouwenping 20160225 end
 	return num_read_chars;
 
@@ -2680,9 +2630,7 @@ static ssize_t synaptics_rmi4_baseline_show_s3508(struct device *dev, char *buf,
 	struct rtc_time   rtc_now_time;
 	uint8_t  data_buf[64];
 	mm_segment_t old_fs;
-    #ifdef VENDOR_EDIT //check the firmware version @ shankai
     uint32_t CURRENT_FIRMWARE_ID = 0 ;
-    #endif
 	struct synaptics_ts_data *ts = dev_get_drvdata(dev);
 	/*
 	   const struct firmware *fw = NULL;
@@ -2699,14 +2647,12 @@ static ssize_t synaptics_rmi4_baseline_show_s3508(struct device *dev, char *buf,
 	//ph = (struct test_header *)(fw->data);
 	 */
 
-    #ifdef VENDOR_EDIT //check the firmware version @ shankai
     ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x0);
      synaptics_rmi4_i2c_read_block(ts->client, F34_FLASH_CTRL00, 4, buf);
      CURRENT_FIRMWARE_ID = (buf[0]<<24) | (buf[1]<<16) | (buf[2]<<8) | buf[3];
      TPD_ERR("[sk]CURRENT_FIRMWARE_ID = 0x%x\n", CURRENT_FIRMWARE_ID);
 	sprintf(ts->fw_id,"0x%x",CURRENT_FIRMWARE_ID);
 	push_component_info(TP, ts->fw_id, ts->manu_name);
-    #endif
 READDATA_AGAIN:
 	msleep(30);
 	mutex_lock(&ts->mutex);
@@ -2754,7 +2700,6 @@ TEST_WITH_CBC_s3508:
 		i2c_smbus_write_byte_data(ts->client, F54_ANALOG_CONTROL_BASE+27, tmp_new);
 		ret = i2c_smbus_write_word_data(ts->client, F54_ANALOG_COMMAND_BASE, 0x04);
 		TPD_DEBUG("Test open cbc\n");
-		#ifdef VENDOR_EDIT
 		if(CURRENT_FIRMWARE_ID == 0xAB056006)
 			baseline_data_test = (int16_t *)baseline_cap_data_old[0];
 		else {
@@ -2763,7 +2708,6 @@ TEST_WITH_CBC_s3508:
 			else
 				baseline_data_test = (int16_t *)baseline_cap_data[0];
 		}
-		#endif
 	}else{
 		TPD_DEBUG("ret = %x ,tmp_old =%x ,tmp_new = %x\n",ret,tmp_old,(tmp_old & 0xef));
 		ret = i2c_smbus_write_byte_data(ts->client,F54_ANALOG_CONTROL_BASE+23,(tmp_old & 0xef));
@@ -2773,7 +2717,6 @@ TEST_WITH_CBC_s3508:
 		i2c_smbus_write_byte_data(ts->client, F54_ANALOG_CONTROL_BASE+27, tmp_new);
 		ret = i2c_smbus_write_word_data(ts->client, F54_ANALOG_COMMAND_BASE, 0x04); // force update
 		ret = i2c_smbus_write_byte_data(ts->client, F54_ANALOG_CONTROL_BASE+7, 0x01);// Forbid NoiseMitigation
-        #ifdef VENDOR_EDIT //check the firmware version @ shankai
 		if(CURRENT_FIRMWARE_ID == 0xAB056006)
 			baseline_data_test = (int16_t *)baseline_cap_data_old[1];
 		else {
@@ -2782,7 +2725,6 @@ TEST_WITH_CBC_s3508:
 			else
 				baseline_data_test = (int16_t *)baseline_cap_data[1];
 		}
-		#endif
 	}
 	/******write No Relax to 1******/
 	ret = i2c_smbus_write_word_data(ts->client, F54_ANALOG_COMMAND_BASE, 0x04); // force update
@@ -3106,13 +3048,10 @@ static ssize_t synaptics_rmi4_baseline_show_s3706(
 	struct rtc_time   rtc_now_time;
 	uint8_t  data_buf[64];
 	mm_segment_t old_fs;
-	#ifdef VENDOR_EDIT
 	unsigned long int  CURRENT_FIRMWARE_ID = 0;
-	#endif
 
 	struct synaptics_ts_data *ts = dev_get_drvdata(dev);
 
-	 #ifdef VENDOR_EDIT
 	msm_cpuidle_set_sleep_disable(true);
 	ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x0);
 	synaptics_rmi4_i2c_read_block(ts->client,
@@ -3125,7 +3064,6 @@ static ssize_t synaptics_rmi4_baseline_show_s3706(
 			CURRENT_FIRMWARE_ID);
 	snprintf(ts->fw_id, 20, "0x%lx", CURRENT_FIRMWARE_ID);
 	push_component_info(TP, ts->fw_id, ts->manu_name);
-	#endif
 READDATA_AGAIN:
 	msleep(30);
 	mutex_lock(&ts->mutex);
@@ -3198,9 +3136,7 @@ TEST_WITH_CBC_s3508:
 			F54_ANALOG_COMMAND_BASE, 0x04);
 		checkCMD(30);
 		TPD_DEBUG("Test open cbc\n");
-		#ifdef VENDOR_EDIT
 		baseline_data_test = (int16_t *)baseline_cap_17819_data[0];
-		#endif
 	} else {
 		ret = i2c_smbus_write_word_data(ts->client,
 			F54_ANALOG_COMMAND_BASE, 0x04);
@@ -3217,9 +3153,7 @@ TEST_WITH_CBC_s3508:
 		ret = i2c_smbus_write_byte_data(ts->client,
 			F54_ANALOG_CONTROL_BASE+7, 0x01);
 		/* Forbid NoiseMitigation*/
-		#ifdef VENDOR_EDIT
 		baseline_data_test = (int16_t *)baseline_cap_17819_data[1];
-		#endif
 	}
 	/******write No Relax to 1******/
 	ret = i2c_smbus_write_word_data(ts->client,
@@ -3667,14 +3601,12 @@ static int	synaptics_input_init(struct synaptics_ts_data *ts)
 	set_bit(BTN_TOOL_FINGER, ts->input_dev->keybit);
 #ifdef SUPPORT_GESTURE
 	set_bit(KEY_F4 , ts->input_dev->keybit);//doulbe-tap resume
-#ifdef VENDOR_EDIT_OXYGEN
 	set_bit(KEY_DOUBLE_TAP, ts->input_dev->keybit);
 	set_bit(KEY_GESTURE_CIRCLE, ts->input_dev->keybit);
 	set_bit(KEY_GESTURE_V, ts->input_dev->keybit);
 	set_bit(KEY_GESTURE_TWO_SWIPE, ts->input_dev->keybit);
 	set_bit(KEY_GESTURE_LEFT_V, ts->input_dev->keybit);
 	set_bit(KEY_GESTURE_RIGHT_V, ts->input_dev->keybit);
-#endif
 	set_bit(KEY_APPSELECT, ts->input_dev->keybit);
 	set_bit(KEY_BACK, ts->input_dev->keybit);
 #endif
@@ -4028,7 +3960,6 @@ static ssize_t tp_doze_time_store(struct device *dev,
 	return size;
 }
 
-#ifdef VENDOR_EDIT /*20180523 add for finger detect*/
 static int touch_hold_en(struct synaptics_ts_data *ts, bool enable)
 {
 	int ret = 0;
@@ -4178,7 +4109,6 @@ static ssize_t tp_gesture_touch_hold_store(struct device *dev,
 
 	return size;
 }
-#endif
 
 //static DRIVER_ATTR(tp_baseline_image_with_cbc, 0664, tp_baseline_show_with_cbc, tp_test_store);
 static DEVICE_ATTR(test_limit, 0664, synaptics_test_limit_show, synaptics_test_limit_store);
@@ -4188,10 +4118,8 @@ static DRIVER_ATTR(tp_delta_image, 0664, tp_rawdata_show, NULL);
 static DRIVER_ATTR(tp_debug_log, 0664, tp_show, store_tp);
 static DEVICE_ATTR(tp_fw_update, 0664, synaptics_update_fw_show, synaptics_update_fw_store);
 static DEVICE_ATTR(tp_doze_time, 0664, tp_doze_time_show, tp_doze_time_store);
-#ifdef VENDOR_EDIT /*20180523 add for finger detect*/
 static DEVICE_ATTR(tp_gesture_touch_hold, 0664,
 	tp_gesture_touch_hold_show, tp_gesture_touch_hold_store);
-#endif
 static int synaptics_dsx_pinctrl_init(struct synaptics_ts_data *ts);
 
 static ssize_t tp_debug_log_write_func(
@@ -4518,10 +4446,8 @@ static int tp_baseline_get(struct synaptics_ts_data *ts, bool flag)
 	int x, y;
 	uint8_t *value;
 	int k = 0;
-	#ifdef VENDOR_EDIT /*liuyan 2018/01/27 add for fp detect*/
 	int touch_hold_enable = 0;
 	int touch_hold_retry = 0;
-	#endif
 
 	if(!ts)
 		return -1;
@@ -4588,7 +4514,6 @@ static int tp_baseline_get(struct synaptics_ts_data *ts, bool flag)
 #ifdef ENABLE_TPEDGE_LIMIT
 	synaptics_tpedge_limitfunc();
 #endif
-	#ifdef VENDOR_EDIT /*liuyan 2018/01/27 add for fp detect*/
 	if (ts->project_version == 0x03) {
 		ts->fp_up_down = 0;
 		TPD_DEBUG("%s:fp_down_up %d gesture %d, en_down_up %d\n",
@@ -4623,7 +4548,6 @@ static int tp_baseline_get(struct synaptics_ts_data *ts, bool flag)
 				break;
 		}
 	}
-	#endif
 	TPD_DEBUG("%s end! \n",__func__);
 	kfree(value);
 	return 0;
@@ -5908,11 +5832,9 @@ static int synaptics_ts_probe(struct i2c_client *client, const struct i2c_device
 	get_tp_base = 0;
 
 	synaptics_parse_dts(&client->dev, ts);
-	#ifdef VENDOR_EDIT //liuyan dd for distinguish project
 	ts->project_version = 0x00;
 	if (of_property_read_bool(ts->dev->of_node, "oem,fajta"))
 		ts->project_version = 0x03;
-	#endif
 	/***power_init*****/
 	ret = tpd_power(ts, 1);
 	if( ret < 0 )
@@ -6149,7 +6071,6 @@ static int synaptics_ts_probe(struct i2c_client *client, const struct i2c_device
 		TPDTM_DMESG("driver_create_file failt\n");
 		goto exit_init_failed;
 	}
-	#ifdef VENDOR_EDIT	/*liuyan 20171020 add to detect finger*/
 	if (ts->project_version == 0x03) {
 		if (device_create_file(&client->dev,
 			&dev_attr_tp_gesture_touch_hold)) {
@@ -6165,7 +6086,6 @@ static int synaptics_ts_probe(struct i2c_client *client, const struct i2c_device
 		ts->fp_aod_cnt = 0;
 		ts->unlock_succes = 0;
 	}
-	#endif /*liuyan add end*/
 
 #ifdef SUPPORT_VIRTUAL_KEY
 	synaptics_ts_init_virtual_key(ts);
@@ -6301,14 +6221,12 @@ static int synaptics_ts_suspend(struct device *dev)
 			TPD_ERR("enter gesture mode\n");
 		}
 		//set_doze_time(2);	/*change dozeinterval by firmware*/
-		#ifdef VENDOR_EDIT
 		//just for fajita
 		if (ts->project_version == 0x03) {
 			mutex_lock(&ts->mutex);
 			tp_single_tap_en(ts, true);
 			mutex_unlock(&ts->mutex);
 		}
-		#endif
 	}
 	else{
 		if (!ts->loading_fw) {
@@ -6407,7 +6325,6 @@ static int synaptics_i2c_suspend(struct device *dev)
 					ts->pinctrl_state_suspend);
 		}
 	}
-//#endif
 	return 0;
 }
 
@@ -6560,7 +6477,6 @@ static int msm_drm_notifier_callback(
 				TPD_DEBUG("%s:TP suspend end\n", __func__);
 			}
 		}
-#ifdef VENDOR_EDIT //report up
 		if (ts->project_version == 0x03)
 			if (*blank == MSM_DRM_BLANK_POWERDOWN &&
 				event == MSM_DRM_EVENT_BLANK &&
@@ -6568,7 +6484,6 @@ static int msm_drm_notifier_callback(
 					set_tp_info(ts, 0);
 					gf_opticalfp_irq_handler(0);
 				}
-#endif
 	}
 	return 0;
 

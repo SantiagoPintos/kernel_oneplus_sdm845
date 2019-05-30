@@ -129,7 +129,6 @@ static struct pm_qos_object memory_bandwidth_pm_qos = {
 	.name = "memory_bandwidth",
 };
 
-#ifdef VENDOR_EDIT
 static BLOCKING_NOTIFIER_HEAD(c0_cpufreq_max_notifier);
 static struct pm_qos_constraints c0_cpufreq_max_constraints = {
        .list = PLIST_HEAD_INIT(c0_cpufreq_max_constraints.list),
@@ -226,7 +225,6 @@ static struct pm_qos_object devfreq_min_pm_qos = {
         .constraints = &devfreq_min_constraints,
         .name = "devfreq_min",
 };
-#endif
 
 static struct pm_qos_object *pm_qos_array[] = {
 	&null_pm_qos,
@@ -234,14 +232,12 @@ static struct pm_qos_object *pm_qos_array[] = {
 	&network_lat_pm_qos,
 	&network_throughput_pm_qos,
 	&memory_bandwidth_pm_qos,
-#ifdef VENDOR_EDIT
 	&c0_cpufreq_max_pm_qos,
 	&c0_cpufreq_min_pm_qos,
 	&c1_cpufreq_max_pm_qos,
 	&c1_cpufreq_min_pm_qos,
 	&devfreq_max_pm_qos,
 	&devfreq_min_pm_qos,
-#endif
 };
 
 static ssize_t pm_qos_power_write(struct file *filp, const char __user *buf,
@@ -731,9 +727,6 @@ void pm_qos_add_request(struct pm_qos_request *req,
 		break;
 	}
 
-#ifndef VENDOR_EDIT
-	req->pm_qos_class = pm_qos_class;
-#endif
 	INIT_DELAYED_WORK(&req->work, pm_qos_work_fn);
 	trace_pm_qos_add_request(pm_qos_class, value);
 	pm_qos_update_target(pm_qos_array[pm_qos_class]->constraints,
@@ -757,10 +750,8 @@ void pm_qos_add_request(struct pm_qos_request *req,
 	}
 #endif
 
-#ifdef VENDOR_EDIT
 	/* Fixes rare panic */
 	req->pm_qos_class = pm_qos_class;
-#endif
 
 #ifdef CONFIG_SMP
        if (req->type == PM_QOS_REQ_AFFINE_IRQ &&

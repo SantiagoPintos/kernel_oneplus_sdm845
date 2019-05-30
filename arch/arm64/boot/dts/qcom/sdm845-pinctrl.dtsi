@@ -2598,7 +2598,6 @@
 					bias-pull-up;
 				};
 			};
-//#ifdef VENDOR_EDIT
 			qupv3_se10_i2c_reset: qupv3_se10_i2c_reset {
 				mux {
 					pins = "gpio55", "gpio56";
@@ -2612,7 +2611,6 @@
 				};
 			};
 		};
-//#endif VENDOR_EDIT
 		qupv3_se10_2uart_pins: qupv3_se10_2uart_pins {
 			qupv3_se10_2uart_active: qupv3_se10_2uart_active {
 				mux {

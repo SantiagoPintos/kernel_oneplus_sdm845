@@ -15,7 +15,6 @@
 #include "cam_sensor_soc.h"
 #include "cam_sensor_core.h"
 
-#ifdef VENDOR_EDIT /* longxiaowu@camera 2018-2-2 add for at camera test */
 struct cam_sensor_i2c_reg_setting_array {
 	struct cam_sensor_i2c_reg_array reg_setting[512];
 	unsigned short size;
@@ -33,7 +32,6 @@ struct cam_sensor_settings {
 struct cam_sensor_settings sensor_settings = {
 #include "CAM_SENSOR_SETTINGS.h"
 };
-#endif
 
 static long cam_sensor_subdev_ioctl(struct v4l2_subdev *sd,
 	unsigned int cmd, void *arg)
@@ -41,15 +39,12 @@ static long cam_sensor_subdev_ioctl(struct v4l2_subdev *sd,
 	int rc = 0;
 	struct cam_sensor_ctrl_t *s_ctrl =
 		v4l2_get_subdevdata(sd);
-#ifdef VENDOR_EDIT /* longxiaowu@camera 2018-2-2 add for at camera test */
 	struct cam_sensor_i2c_reg_setting sensor_setting;
-#endif
 
 	switch (cmd) {
 	case VIDIOC_CAM_CONTROL:
 		rc = cam_sensor_driver_cmd(s_ctrl, arg);
 		break;
-#ifdef VENDOR_EDIT /* longxiaowu@camera 2018-2-2 add for at camera test */
 	case VIDIOC_CAM_FTM_POWNER_DOWN:
 		CAM_INFO(CAM_SENSOR, "FTM power down");
 		return cam_sensor_power_down(s_ctrl);
@@ -89,7 +84,6 @@ static long cam_sensor_subdev_ioctl(struct v4l2_subdev *sd,
             CAM_ERR(CAM_SENSOR, "FTM successfully to write sensor setting");
         }
         break;
-#endif
 	default:
 		CAM_ERR(CAM_SENSOR, "Invalid ioctl cmd: %d", cmd);
 		rc = -EINVAL;

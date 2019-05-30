@@ -140,7 +140,6 @@ static int cam_flash_ops(struct cam_flash_ctrl *flash_ctrl,
 	soc_private = (struct cam_flash_private_soc *)
 		flash_ctrl->soc_info.soc_private;
 
-#ifdef VENDOR_EDIT /* add by likelong@camera 2017.11.20 force to turn on dual LED */
 	if (op == CAMERA_SENSOR_FLASH_OP_FIRELOW) {
 		for (i = 0; i < flash_ctrl->torch_num_sources; i++) {
 			if (flash_data->led_current_ma[i]) {
@@ -168,7 +167,6 @@ static int cam_flash_ops(struct cam_flash_ctrl *flash_ctrl,
 	} else {
 		CAM_ERR(CAM_FLASH, "Wrong Operation: %d", op);
 	}
-#endif
 
 	if (op == CAMERA_SENSOR_FLASH_OP_FIRELOW) {
 		for (i = 0; i < flash_ctrl->torch_num_sources; i++) {

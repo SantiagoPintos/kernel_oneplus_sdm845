@@ -514,9 +514,7 @@
 		pinctrl-names = "default", "sleep", "reset";
 		pinctrl-0 = <&qupv3_se10_i2c_active>;
 		pinctrl-1 = <&qupv3_se10_i2c_sleep>;
-//#ifdef VENDOR_EDIT
 		pinctrl-2 = <&qupv3_se10_i2c_reset>;
-//#endif VENDOR_EDIT
 		qcom,wrapper-core = <&qupv3_1>;
 		status = "disabled";
 	};

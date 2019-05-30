@@ -287,10 +287,8 @@ int mipi_dsi_dcs_set_display_brightness(struct mipi_dsi_device *dsi,
 int mipi_dsi_dcs_get_display_brightness(struct mipi_dsi_device *dsi,
 					u16 *brightness);
 
-//#ifdef VENDOR_EDIT
 int mipi_dsi_dcs_set_display_brightness_samsung(struct mipi_dsi_device *dsi,
 					u16 brightness);
-//#endif
 /**
  * struct mipi_dsi_driver - DSI driver
  * @driver: device driver model driver

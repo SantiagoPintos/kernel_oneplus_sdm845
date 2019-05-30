@@ -3176,9 +3176,7 @@ static int qpnp_adc_tm_probe(struct platform_device *pdev)
 				&qpnp_adc_tm_thermal_ops);
 			if (IS_ERR(chip->sensor[sen_idx].tz_dev))
 				pr_err("thermal device register failed.\n");
-#ifdef VENDOR_EDIT
 			ht_register_thermal_zone_device(chip->sensor[sen_idx].tz_dev);
-#endif
 		}
 		chip->sensor[sen_idx].req_wq = alloc_workqueue(
 				"qpnp_adc_notify_wq", WQ_HIGHPRI, 0);

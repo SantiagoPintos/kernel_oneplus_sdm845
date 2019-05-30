@@ -66,11 +66,7 @@ static void __page_cache_release(struct page *page)
 		lruvec = mem_cgroup_page_lruvec(page, zone->zone_pgdat);
 		VM_BUG_ON_PAGE(!PageLRU(page), page);
 		__ClearPageLRU(page);
-#ifdef VENDOR_EDIT
 		del_page_from_lru_list(page, lruvec, page_off_lru(page), PageUIDLRU(page)? true:false);
-#else
-		del_page_from_lru_list(page, lruvec, page_off_lru(page));
-#endif
 		spin_unlock_irqrestore(zone_lru_lock(zone), flags);
 	}
 	mem_cgroup_uncharge(page);
@@ -213,11 +209,7 @@ static void pagevec_move_tail_fn(struct page *page, struct lruvec *lruvec,
 	int *pgmoved = arg;
 
 	if (PageLRU(page) && !PageUnevictable(page)) {
-#ifdef VENDOR_EDIT
 		del_page_from_lru_list(page, lruvec, page_lru(page), PageUIDLRU(page)? true:false);
-#else
-		del_page_from_lru_list(page, lruvec, page_lru(page));
-#endif
 		ClearPageActive(page);
 		add_page_to_lru_list_tail(page, lruvec, page_lru(page));
 		(*pgmoved)++;
@@ -273,11 +265,7 @@ static void __activate_page(struct page *page, struct lruvec *lruvec,
 	if (PageLRU(page) && !PageActive(page) && !PageUnevictable(page)) {
 		int file = page_is_file_cache(page);
 		int lru = page_lru_base_type(page);
-#ifdef VENDOR_EDIT
 		del_page_from_lru_list(page, lruvec, lru, PageUIDLRU(page)? true:false);
-#else
-		del_page_from_lru_list(page, lruvec, lru);
-#endif
 		SetPageActive(page);
 		lru += LRU_ACTIVE;
 		add_page_to_lru_list(page, lruvec, lru);
@@ -400,7 +388,6 @@ void mark_page_accessed(struct page *page)
 }
 EXPORT_SYMBOL(mark_page_accessed);
 
-#ifdef VENDOR_EDIT
 static void __uid_lru_cache_add(struct page *page)
 {
 	struct pglist_data *pagepgdat = page_pgdat(page);
@@ -410,7 +397,6 @@ static void __uid_lru_cache_add(struct page *page)
 	_uid_lru_add_fn(page, lruvec);
 }
 
-#endif
 static void __lru_cache_add(struct page *page)
 {
 	struct pagevec *pvec = &get_cpu_var(lru_add_pvec);
@@ -449,7 +435,6 @@ EXPORT_SYMBOL(lru_cache_add_file);
  * pagevec is drained. This gives a chance for the caller of lru_cache_add()
  * have the page added to the active list using mark_page_accessed().
  */
-#ifdef VENDOR_EDIT
 void uid_lru_cache_add(struct page *page)
 {
 	VM_BUG_ON_PAGE(PageActive(page) && PageUnevictable(page), page);
@@ -457,7 +442,6 @@ void uid_lru_cache_add(struct page *page)
 	__uid_lru_cache_add(page);
 }
 
-#endif
 void lru_cache_add(struct page *page)
 {
 	VM_BUG_ON_PAGE(PageActive(page) && PageUnevictable(page), page);
@@ -563,11 +547,7 @@ static void lru_deactivate_file_fn(struct page *page, struct lruvec *lruvec,
 	active = PageActive(page);
 	file = page_is_file_cache(page);
 	lru = page_lru_base_type(page);
-#ifdef VENDOR_EDIT
 	del_page_from_lru_list(page, lruvec, lru + active, PageUIDLRU(page)? true:false);
-#else
-	del_page_from_lru_list(page, lruvec, lru + active);
-#endif
 	ClearPageActive(page);
 	ClearPageReferenced(page);
 	add_page_to_lru_list(page, lruvec, lru);
@@ -600,11 +580,7 @@ static void lru_deactivate_fn(struct page *page, struct lruvec *lruvec,
 	if (PageLRU(page) && PageActive(page) && !PageUnevictable(page)) {
 		int file = page_is_file_cache(page);
 		int lru = page_lru_base_type(page);
-#ifdef VENDOR_EDIT
 		del_page_from_lru_list(page, lruvec, lru + LRU_ACTIVE, PageUIDLRU(page)? true:false);
-#else
-		del_page_from_lru_list(page, lruvec, lru + LRU_ACTIVE);
-#endif
 		ClearPageActive(page);
 		ClearPageReferenced(page);
 		add_page_to_lru_list(page, lruvec, lru);
@@ -817,11 +793,7 @@ void release_pages(struct page **pages, int nr, bool cold)
 			lruvec = mem_cgroup_page_lruvec(page, locked_pgdat);
 			VM_BUG_ON_PAGE(!PageLRU(page), page);
 			__ClearPageLRU(page);
-#ifdef VENDOR_EDIT
 			del_page_from_lru_list(page, lruvec, page_off_lru(page), PageUIDLRU(page)? true:false);
-#else
-			del_page_from_lru_list(page, lruvec, page_off_lru(page));
-#endif
 		}
 
 		/* Clear Active bit in case of parallel mark_page_accessed */
@@ -896,7 +868,6 @@ void lru_add_page_tail(struct page *page, struct page *page_tail,
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
 
-#ifdef VENDOR_EDIT
 void _uid_lru_add_fn(struct page *page, struct lruvec *lruvec)
 {
 	struct uid_node *uid_nd;
@@ -922,7 +893,6 @@ void _uid_lru_add_fn(struct page *page, struct lruvec *lruvec)
 	put_page(page);
 }
 
-#endif
 static void __pagevec_lru_add_fn(struct page *page, struct lruvec *lruvec,
 				 void *arg)
 {

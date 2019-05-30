@@ -41,12 +41,10 @@
 
 #include "internal.h"
 #include "mount.h"
-#ifdef VENDOR_EDIT
 #include <uapi/linux/limits.h>
 static bool n_toggle = true;
 #define MISS_NUM 32
 #define ND_INODE(nd) nd->path.dentry->d_inode
-#endif
 
 /* [Feb-1997 T. Schoebel-Theuer]
  * Fundamental changes in the pathname lookup mechanisms (namei)
@@ -546,10 +544,8 @@ struct nameidata {
 	struct inode	*link_inode;
 	unsigned	root_seq;
 	int		dfd;
-#ifdef VENDOR_EDIT
 	/*Curtis, 2018/04/25 non-exist dcache lookup*/
 	bool	need_nedf;
-#endif
 };
 
 static void set_nameidata(struct nameidata *p, int dfd, struct filename *name)
@@ -561,9 +557,7 @@ static void set_nameidata(struct nameidata *p, int dfd, struct filename *name)
 	p->total_link_count = old ? old->total_link_count : 0;
 	p->saved = old;
 	current->nameidata = p;
-#ifdef VENDOR_EDIT
 	p->need_nedf = true;
-#endif
 }
 
 static void restore_nameidata(void)
@@ -1814,7 +1808,6 @@ static inline int should_follow_link(struct nameidata *nd, struct path *link,
 
 enum {WALK_GET = 1, WALK_PUT = 2};
 
-#ifdef VENDOR_EDIT
 static inline int lookup_nedf(
 	struct nedf_node *nn,
 	const char *name, size_t len)
@@ -1827,7 +1820,6 @@ static inline int lookup_nedf(
 			return -ENCACHE;
 	return 0;
 }
-#endif
 
 static int walk_component(struct nameidata *nd, int flags)
 {
@@ -1835,11 +1827,9 @@ static int walk_component(struct nameidata *nd, int flags)
 	struct inode *inode;
 	unsigned seq;
 	int err;
-#ifdef VENDOR_EDIT
 	size_t len;
 	static int miss_cnt = 0;
 	struct nedf_node *nn;
-#endif
 	/*
 	 * "." and ".." are special - ".." especially so because it has
 	 * to be able to know about the current root directory and
@@ -1855,7 +1845,6 @@ static int walk_component(struct nameidata *nd, int flags)
 	if (unlikely(err <= 0)) {
 		if (err < 0)
 			return err;
-#ifdef VENDOR_EDIT
 		/*Curtis, 2018/04/25 non-exist dcache lookup*/
 		if (n_toggle && nd->need_nedf &&
 		    ND_INODE(nd)->i_op->gettag) {
@@ -1886,7 +1875,6 @@ static int walk_component(struct nameidata *nd, int flags)
 			}
 			rcu_read_unlock();
 		}
-#endif
 		path.dentry = lookup_slow(&nd->last, nd->path.dentry,
 					  nd->flags);
 		if (IS_ERR(path.dentry))
@@ -2156,10 +2144,8 @@ static inline u64 hash_name(const void *salt, const char *name)
 static int link_path_walk(const char *name, struct nameidata *nd)
 {
 	int err;
-#ifdef VENDOR_EDIT
 	uint16_t nf_index;
 	struct nedf_node *nn;
-#endif
 
 	while (*name=='/')
 		name++;
@@ -2230,7 +2216,6 @@ OK:
 			err = walk_component(nd, WALK_GET);
 		}
 
-#ifdef VENDOR_EDIT
 		/*Curtis, 2018/04/25 create/insert non-exist dcache*/
 		if (err < 0) {
 			if (err == -ENOENT && ND_INODE(nd) &&
@@ -2265,10 +2250,6 @@ OK:
 				return -ENOENT;
 			return err;
 		}
-#else
-		if (err < 0)
-			return err;
-#endif
 
 		if (err) {
 			const char *s = get_link(nd);

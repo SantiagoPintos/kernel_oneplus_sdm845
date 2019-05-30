@@ -87,9 +87,7 @@ static int lowmem_minfree_size = 4;
 static int lmk_fast_run = 1;
 
 static unsigned long lowmem_deathpending_timeout;
-#ifdef VENDOR_EDIT
 unsigned long killed_num;
-#endif
 
 #define lowmem_print(level, x...)			\
 	do {						\
@@ -161,7 +159,6 @@ static int adjust_minadj(short *min_score_adj)
 	return ret;
 }
 
-#ifdef VENDOR_EDIT
 static int batch_kill = 1;
 module_param(batch_kill, int, 0644);
 MODULE_PARM_DESC(batch_kill, "lowmemorykiller kill more strategy");
@@ -180,7 +177,6 @@ static inline void batch_kill_adjust(unsigned long pressure)
 			batch_kill_cnt = 1; // normal
 	}
 }
-#endif
 
 static int lmk_vmpressure_notifier(struct notifier_block *nb,
 				   unsigned long action, void *data)
@@ -189,9 +185,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 	unsigned long pressure = action;
 	int array_size = ARRAY_SIZE(lowmem_adj);
 
-#ifdef VENDOR_EDIT
 	batch_kill_adjust(pressure);
-#endif
 
 	if (!enable_adaptive_lmk)
 		return 0;
@@ -476,7 +470,6 @@ static void mark_lmk_victim(struct task_struct *tsk)
 	}
 }
 
-#ifdef VENDOR_EDIT
 #include <linux/adj_chain.h>
 
 static bool selftest_running = false;
@@ -922,9 +915,7 @@ static unsigned long lowmem_batch_kill(
 				continue;
 			}
 
-#ifdef VENDOR_EDIT
 			killed_num++;
-#endif
 			task_lock(selected);
 			send_sig(SIGKILL, selected, 0);
 			signaled = true;
@@ -941,9 +932,7 @@ static unsigned long lowmem_batch_kill(
 			lowmem_print(1, "batch Killing '%s' (%d) (tgid %d), adj %hd,\n"
 					"to free %ldkB on behalf of '%s' (%d) because\n"
 					"cache %ldkB is below limit %ldkB for oom score %hd\n"
-#ifdef VENDOR_EDIT
 					"uid_lru_list size %ld pages\n"
-#endif
 					"Free memory is %ldkB above reserved.\n"
 					"Free CMA is %ldkB\n"
 					"Total reserve is %ldkB\n"
@@ -958,9 +947,7 @@ static unsigned long lowmem_batch_kill(
 					current->comm, current->pid,
 					cache_size, cache_limit,
 					min_score_adj,
-#ifdef VENDOR_EDIT
 					uid_lru_size(),
-#endif
 					free,
 					global_page_state(NR_FREE_CMA_PAGES) *
 					(long)(PAGE_SIZE / 1024),
@@ -995,7 +982,6 @@ static unsigned long lowmem_batch_kill(
 	mutex_unlock(&scan_mutex);
 	return rem;
 }
-#endif
 
 static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 {
@@ -1012,11 +998,8 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free;
 	int other_file;
-#ifdef VENDOR_EDIT
 	unsigned long uid_lru_total;
-#endif
 
-#ifdef VENDOR_EDIT
 	bool quick_select_enable = quick_select;
 	bool batch_kill_enable = batch_kill;
 	struct batch_kill_wrapper bkws[BATCH_KILL_MAX_CNT];
@@ -1025,11 +1008,8 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 #endif
 
 	batch_kill_init(bkws);
-#endif
 
-#ifdef VENDOR_EDIT
 	uid_lru_total = uid_lru_size();
-#endif
 
 	if (!mutex_trylock(&scan_mutex))
 		return 0;
@@ -1067,12 +1047,10 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		     sc->nr_to_scan, sc->gfp_mask, other_free,
 		     other_file, min_score_adj);
 
-#ifdef VENDOR_EDIT
 	if (unlikely(selftest_running)) {
 		min_score_adj = selftest_min_score_adj;
 		goto selftest_bypass;
 	}
-#endif
 
 	if (min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
 		trace_almk_shrink(0, ret, other_free, other_file, 0);
@@ -1082,14 +1060,11 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		return 0;
 	}
 
-#ifdef VENDOR_EDIT
 selftest_bypass:
-#endif
 	selected_oom_score_adj = min_score_adj;
 
 	rcu_read_lock();
 
-#ifdef VENDOR_EDIT
 	/* record for each time lmk scan's min_score_adj */
 	bkws[0].min_score_adj = min_score_adj;
 
@@ -1122,16 +1097,13 @@ selftest_bypass:
 			return rem;
 		}
 	}
-#endif
 
 	for_each_process(tsk) {
 		struct task_struct *p;
 		short oom_score_adj;
 
-#ifdef VENDOR_EDIT
 		/* record for scan cnt */
 		++bkws[0].scan;
-#endif
 
 		if (tsk->flags & PF_KTHREAD)
 			continue;
@@ -1194,7 +1166,6 @@ selftest_bypass:
 			     p->comm, p->pid, oom_score_adj, tasksize);
 	}
 
-#ifdef VENDOR_EDIT
 #ifdef CONFIG_ADJ_CHAIN
 	/* adj chain diagnose */
 	if (!selected) {
@@ -1290,7 +1261,6 @@ quick_select_fast:
 	if (batch_kill_enable && !batch_kill_empty(bkws))
 		return lowmem_batch_kill(bkws, sc, minfree, other_file,
 						other_free, min_score_adj);
-#endif
 
 	if (selected) {
 		long cache_size = other_file * (long)(PAGE_SIZE / 1024);
@@ -1322,9 +1292,7 @@ quick_select_fast:
 		lowmem_print(1, "Killing '%s' (%d) (tgid %d), adj %hd,\n"
 			"to free %ldkB on behalf of '%s' (%d) because\n"
 			"cache %ldkB is below limit %ldkB for oom score %hd\n"
-#ifdef VENDOR_EDIT
 			"uid_lru_list size %ld pages\n"
-#endif
 			"Free memory is %ldkB above reserved.\n"
 			"Free CMA is %ldkB\n"
 			"Total reserve is %ldkB\n"
@@ -1339,9 +1307,7 @@ quick_select_fast:
 			current->comm, current->pid,
 			cache_size, cache_limit,
 			min_score_adj,
-#ifdef VENDOR_EDIT
 			uid_lru_size(),
-#endif
 			free,
 			global_page_state(NR_FREE_CMA_PAGES) *
 			(long)(PAGE_SIZE / 1024),
@@ -1490,7 +1456,6 @@ module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 module_param_named(lmk_fast_run, lmk_fast_run, int, S_IRUGO | S_IWUSR);
 
-#ifdef VENDOR_EDIT
 static int selftest_store(const char *buf, const struct kernel_param *kp)
 {
 	unsigned int val;
@@ -1530,4 +1495,3 @@ static struct kernel_param_ops selftest_ops = {
 	.set = selftest_store,
 };
 module_param_cb(selftest, &selftest_ops, NULL, 0200);
-#endif

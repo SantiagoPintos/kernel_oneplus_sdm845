@@ -73,11 +73,9 @@ int sched_proc_update_handler(struct ctl_table *table, int write,
 		void __user *buffer, size_t *length,
 		loff_t *ppos);
 #else
-#ifdef VENDOR_EDIT
 int sched_proc_update_handler(struct ctl_table *table, int write,
 		void __user *buffer, size_t *length,
 		loff_t *ppos);
-#endif /* #ifdef VENDOR_EDIT */
 #endif
 
 extern int sched_migrate_notify_proc_handler(struct ctl_table *table,

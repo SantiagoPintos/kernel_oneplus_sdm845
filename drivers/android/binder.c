@@ -72,9 +72,7 @@
 #include <linux/spinlock.h>
 
 // neiltsai, 20161115, add for oemlogkit used
-#ifdef VENDOR_EDIT
 #include <linux/proc_fs.h>
-#endif
 // neiltsai end
 
 #ifdef CONFIG_ANDROID_BINDER_IPC_32BIT
@@ -84,10 +82,8 @@
 #include <uapi/linux/android/binder.h>
 #include "binder_alloc.h"
 #include "binder_trace.h"
-#ifdef VENDOR_EDIT
 /* curtis, 20180111, opchain*/
 #include <../drivers/oneplus/coretech/opchain/opchain_binder.h>
-#endif
 
 static HLIST_HEAD(binder_deferred_list);
 static DEFINE_MUTEX(binder_deferred_lock);
@@ -3198,12 +3194,10 @@ static void binder_transaction(struct binder_proc *proc,
 	sg_bufp = (u8 *)(PTR_ALIGN(off_end, sizeof(void *)));
 	sg_buf_end = sg_bufp + extra_buffers_size;
 	off_min = 0;
-#ifdef VENDOR_EDIT
 	/* curtis, 20180111, opchain*/
 	opc_binder_pass(
 		t->buffer->data_size,
 		(uint32_t *)t->buffer->data, 1);
-#endif
 	for (; offp < off_end; offp++) {
 		struct binder_object_header *hdr;
 		size_t object_size = binder_validate_object(t->buffer, *offp);
@@ -5875,7 +5869,6 @@ static int __init init_binder_device(const char *name)
 }
 
 // neiltsai, 20161115, add for oemlogkit used
-#ifdef VENDOR_EDIT
 static int proc_state_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, binder_state_show, NULL);
@@ -5924,7 +5917,6 @@ static int binder_proc_init(void)
 			&proc_transaction_log_operations);
 	return 0;
 }
-#endif
 // neiltsai end
 
 static int __init binder_init(void)
@@ -5992,9 +5984,7 @@ static int __init binder_init(void)
 			goto err_init_binder_device_failed;
 	}
 	// neiltsai, 20161115, add for oemlogkit used
-#ifdef VENDOR_EDIT
 		binder_proc_init();
-#endif
 	// neiltsai end
 
 	return ret;

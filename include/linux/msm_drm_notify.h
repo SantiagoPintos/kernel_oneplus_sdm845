@@ -25,7 +25,6 @@ enum {
 	MSM_DRM_BLANK_UNBLANK,
 	/* panel: power off */
 	MSM_DRM_BLANK_POWERDOWN,
-	/*#ifdef VENDOR_EDIT*/
 	/* panel: power on for tp*/
 	MSM_DRM_BLANK_UNBLANK_CUST,
 	/* panel: lcd doze mode */

@@ -81,7 +81,6 @@ reserved-memory {
 		};
 	};
 
-	//#ifdef VENDOR_EDIT
 
 	qcom,qbt1000 {
 	status = "disabled";
@@ -135,9 +134,7 @@ reserved-memory {
 		pinctrl-0 = <&tri_state_key_active>;
 		pinctrl-1 = <&tri_state_key_suspend>;
 	};
-	//#endif VENDOR_EDIT
 
-//#ifdef VENDOR_EDIT
 	dsi_panel_pwr_supply_no_labibb_2: dsi_panel_pwr_supply_no_labibb_2 {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -253,7 +250,6 @@ dsi_samsung_dsc_cmd_display: qcom,dsi-display@22 {
 		qcom,platform-te-gpio = <&tlmm 30 0>;
 	};
 
-//#endif VENDOR_EDIT
 
 	oem_serial_pinctrl {
 		compatible = "oem,oem_serial_pinctrl";
@@ -317,7 +313,6 @@ dsi_samsung_dsc_cmd_display: qcom,dsi-display@22 {
 };
 
 &pm8998_gpios {
-	//#ifdef VENDOR_EDIT
 	key_vol_down {
 		key_vol_down_default: key_vol_down_default {
 			pins = "gpio5";
@@ -327,7 +322,6 @@ dsi_samsung_dsc_cmd_display: qcom,dsi-display@22 {
 			power-source = <0>;
 		};
 	};
-	//#endif VENDOR_EDIT
 };
 
 //add for volume down function ,and we do not use qbt1000 fingerprint sensor.
@@ -991,7 +985,6 @@ status = "disabled";
 			};
 
 
-//#ifdef VENDOR_EDIT
 &tlmm {
 	goodixfp_enable_init: goodixfp_enable_init {
 		mux {
@@ -1212,7 +1205,6 @@ status = "disabled";
 			};
 		};
 };
-//#endif VENDOR_EDIT
 
 //overlay for camera start
 &tlmm {

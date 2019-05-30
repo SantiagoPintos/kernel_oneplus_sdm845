@@ -441,12 +441,10 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 	struct cam_ois_soc_private     *soc_private =
 		(struct cam_ois_soc_private *)o_ctrl->soc_info.soc_private;
 	struct cam_sensor_power_ctrl_t  *power_info = &soc_private->power_info;
-#ifdef VENDOR_EDIT
 	struct cam_sensor_i2c_reg_setting hhk_add_setting;//add by hhk
 	struct cam_sensor_i2c_reg_array hhk_add_reg[3];//add by hhk
 	int32_t                         j = 0;
 	uint32_t						red_reg_data=0;
-#endif
 	ioctl_ctrl = (struct cam_control *)arg;
 
 	if (copy_from_user(&dev_config, (void __user *) ioctl_ctrl->handle,
@@ -581,7 +579,6 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 		}
 
 		if (o_ctrl->is_ois_calib) {
-#ifdef VENDOR_EDIT
 			//modify by huanghongkun begin
 			//for debug
 			rc = camera_io_dev_read(&(o_ctrl->io_master_info),
@@ -607,7 +604,6 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 				CAM_ERR(CAM_OIS,
 				"WA ois calib data invalid,ignore it.");
 			}
-#endif
 		}
 
 		rc = delete_request(&o_ctrl->i2c_init_data);
@@ -616,14 +612,12 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 				"Fail deleting Init data: rc: %d", rc);
 			rc = 0;
 		}
-#ifdef VENDOR_EDIT
 		if (o_ctrl->is_ois_calib
 			&& o_ctrl->i2c_calib_data.is_settings_valid == 1){
 			o_ctrl->isPollNeeded = true;
 			CAM_ERR(CAM_OIS,
 				"WA calib data invalid,ignore poll.");
 		}
-#endif
 		rc = delete_request(&o_ctrl->i2c_calib_data);
 		if (rc < 0) {
 			CAM_WARN(CAM_OIS,
@@ -640,7 +634,6 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 			return rc;
 		}
 
-#ifdef VENDOR_EDIT
 		if(o_ctrl->isPollNeeded == true)
 		{
 			red_reg_data=0;
@@ -724,7 +717,6 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 			//modify by huanghongkun end
 			o_ctrl->isPollNeeded = false;
 		}
-#endif
 
 		offset = (uint32_t *)&csl_packet->payload;
 		offset += (csl_packet->cmd_buf_offset / sizeof(uint32_t));

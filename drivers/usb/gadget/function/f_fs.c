@@ -34,10 +34,8 @@
 #include <linux/mmu_context.h>
 #include <linux/poll.h>
 #include <linux/eventfd.h>
-#ifdef VENDOR_EDIT
 #include <linux/pm_qos.h>
 #include <linux/hrtimer.h>
-#endif
 
 #include "u_fs.h"
 #include "u_f.h"
@@ -48,7 +46,6 @@
 
 #define NUM_PAGES	10 /* # of pages for ipc logging */
 
-#ifdef VENDOR_EDIT
 #define PM_QOS_REQUEST_SIZE	0xF000 /* > 4096*/
 #define ADB_QOS_TIMEOUT		500000
 #define ADB_PULL_PUSH_TIMEOUT	1000
@@ -57,7 +54,6 @@ static struct pm_qos_request adb_little_cpu_qos;
 static struct hrtimer ffs_op_timer;
 static bool lpm_flg = true;
 static bool ffs_op_flg = true;
-#endif
 
 static void *ffs_ipc_log;
 #define ffs_log(fmt, ...) do { \
@@ -698,7 +694,6 @@ static int ffs_ep0_open(struct inode *inode, struct file *file)
 
 	/* to get updated opened atomic variable value */
 	smp_mb__before_atomic();
-#ifdef VENDOR_EDIT
 /* xianglin@bsp, 20170104 Add log to check ep0 status */
 	if (atomic_read(&ffs->opened)) {
 		pr_err("ep0 is already opened!\n");
@@ -713,16 +708,6 @@ static int ffs_ep0_open(struct inode *inode, struct file *file)
 	file->private_data = ffs;
 	ffs_data_opened(ffs);
 	pr_info("ep0_open success!\n");
-#else
-	if (atomic_read(&ffs->opened))
-		return -EBUSY;
-
-	if (unlikely(ffs->state == FFS_CLOSING))
-		return -EBUSY;
-
-	file->private_data = ffs;
-	ffs_data_opened(ffs);
-#endif
 
 	return 0;
 }
@@ -1284,7 +1269,6 @@ error:
 	return ret;
 }
 
-#ifdef VENDOR_EDIT
 static enum hrtimer_restart ffs_op_timeout(struct hrtimer *timer)
 {
 	static int cnt;
@@ -1305,7 +1289,6 @@ static enum hrtimer_restart ffs_op_timeout(struct hrtimer *timer)
 		HRTIMER_MODE_REL);
 	return HRTIMER_RESTART;
 }
-#endif
 
 static int
 ffs_epfile_open(struct inode *inode, struct file *file)
@@ -1373,10 +1356,8 @@ static ssize_t ffs_epfile_write_iter(struct kiocb *kiocb, struct iov_iter *from)
 {
 	struct ffs_io_data io_data, *p = &io_data;
 	ssize_t res;
-#ifdef VENDOR_EDIT
 	struct ffs_epfile *epfile = kiocb->ki_filp->private_data;
 	bool adb_write_flag = false;
-#endif
 
 	ENTER();
 
@@ -1398,7 +1379,6 @@ static ssize_t ffs_epfile_write_iter(struct kiocb *kiocb, struct iov_iter *from)
 
 	kiocb->private = p;
 
-#ifdef VENDOR_EDIT
 	if (p->aio) {
 		kiocb_set_cancel_fn(kiocb, ffs_aio_cancel);
 	} else {
@@ -1419,16 +1399,10 @@ static ssize_t ffs_epfile_write_iter(struct kiocb *kiocb, struct iov_iter *from)
 				(MAX_CPUFREQ - 4), ADB_QOS_TIMEOUT);
 		}
 	}
-#else
-	if (p->aio)
-		kiocb_set_cancel_fn(kiocb, ffs_aio_cancel);
-#endif
 
 	res = ffs_epfile_io(kiocb->ki_filp, p);
-#ifdef VENDOR_EDIT
 	if (ffs_op_flg)
 		ffs_op_flg = false;
-#endif
 	if (res == -EIOCBQUEUED)
 		return res;
 	if (p->aio)
@@ -1445,10 +1419,8 @@ static ssize_t ffs_epfile_read_iter(struct kiocb *kiocb, struct iov_iter *to)
 {
 	struct ffs_io_data io_data, *p = &io_data;
 	ssize_t res;
-#ifdef VENDOR_EDIT
 	struct ffs_epfile *epfile = kiocb->ki_filp->private_data;
 	bool adb_read_flag = false;
-#endif
 
 	ENTER();
 
@@ -1479,7 +1451,6 @@ static ssize_t ffs_epfile_read_iter(struct kiocb *kiocb, struct iov_iter *to)
 
 	kiocb->private = p;
 
-#ifdef VENDOR_EDIT
 	if (p->aio) {
 		kiocb_set_cancel_fn(kiocb, ffs_aio_cancel);
 	} else {
@@ -1501,16 +1472,10 @@ static ssize_t ffs_epfile_read_iter(struct kiocb *kiocb, struct iov_iter *to)
 				(MAX_CPUFREQ - 4), ADB_QOS_TIMEOUT);
 		}
 	}
-#else
-	if (p->aio)
-		kiocb_set_cancel_fn(kiocb, ffs_aio_cancel);
-#endif
 
 	res = ffs_epfile_io(kiocb->ki_filp, p);
-#ifdef VENDOR_EDIT
 	if (ffs_op_flg)
 		ffs_op_flg = false;
-#endif
 	if (res == -EIOCBQUEUED)
 		return res;
 
@@ -2270,10 +2235,8 @@ static int ffs_epfiles_create(struct ffs_data *ffs)
 
 	ffs->epfiles = epfiles;
 
-#ifdef VENDOR_EDIT
 	pm_qos_add_request(&adb_little_cpu_qos, PM_QOS_C0_CPUFREQ_MIN,
 		MIN_CPUFREQ);
-#endif
 
 	ffs_log("exit: eps_count %u state %d setup_state %d flag %lu",
 		count, ffs->state, ffs->setup_state, ffs->flags);
@@ -2300,9 +2263,7 @@ static void ffs_epfiles_destroy(struct ffs_epfile *epfiles, unsigned count)
 	}
 
 	kfree(epfiles);
-#ifdef VENDOR_EDIT
 	pm_qos_remove_request(&adb_little_cpu_qos);
-#endif
 
 	ffs_log("exit");
 }
@@ -3720,12 +3681,10 @@ static int ffs_func_bind(struct usb_configuration *c,
 	if (ret && !--ffs_opts->refcnt)
 		functionfs_unbind(func->ffs);
 
-#ifdef VENDOR_EDIT
 	lpm_flg = false;
 	ffs_op_flg = false;
 	hrtimer_init(&ffs_op_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	ffs_op_timer.function = ffs_op_timeout;
-#endif
 	ffs_log("exit: ret %d", ret);
 
 	return ret;
@@ -4315,13 +4274,11 @@ static void ffs_func_unbind(struct usb_configuration *c,
 	func->interfaces_nums = NULL;
 
 	ffs_event_add(ffs, FUNCTIONFS_UNBIND);
-#ifdef VENDOR_EDIT
 	hrtimer_cancel(&ffs_op_timer);
 	if (lpm_flg)
 		msm_cpuidle_set_sleep_disable(false);
 	lpm_flg = false;
 	ffs_op_flg = false;
-#endif
 
 	ffs_log("exit: state %d setup_state %d flag %lu", ffs->state,
 	ffs->setup_state, ffs->flags);

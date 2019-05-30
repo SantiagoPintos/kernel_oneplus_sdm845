@@ -529,7 +529,6 @@ unsigned long invalidate_mapping_pages(struct address_space *mapping,
 }
 EXPORT_SYMBOL(invalidate_mapping_pages);
 
-#ifdef VENDOR_EDIT
 unsigned long invalidate_mapping_pages_without_uidlru(struct address_space *mapping,
 		pgoff_t start, pgoff_t end)
 {
@@ -595,7 +594,6 @@ unsigned long invalidate_mapping_pages_without_uidlru(struct address_space *mapp
 	return count;
 }
 EXPORT_SYMBOL(invalidate_mapping_pages_without_uidlru);
-#endif
 
 /*
  * This is like invalidate_complete_page(), except it ignores the page's

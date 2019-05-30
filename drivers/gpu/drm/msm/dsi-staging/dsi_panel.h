@@ -113,9 +113,7 @@ struct dsi_backlight_config {
 	u32 pwm_pmic_bank;
 	u32 pwm_period_usecs;
 	int pwm_gpio;
-//#ifdef VENDOR_EDIT
     bool bl_high2bit;
-//#endif
 	/* WLED params */
 	struct led_trigger *wled;
 	struct backlight_device *bd;
@@ -133,10 +131,8 @@ struct dsi_panel_reset_config {
 	int reset_gpio;
 	int disp_en_gpio;
 	int lcd_mode_sel_gpio;
-	//VENDOR_EDIT
     int vci_gpio;
 	int poc_gpio;
-    //VENDOR_EDIT
 	u32 mode_sel_state;
 };
 
@@ -196,7 +192,6 @@ struct dsi_panel {
 	struct dsi_pinctrl_info pinctrl;
 	struct drm_panel_hdr_properties hdr_props;
 	struct drm_panel_esd_config esd_config;
-//#ifdef VENDOR_EDIT
 	int panel_year;
 	int panel_mon;
 	int panel_day;
@@ -228,7 +223,6 @@ struct dsi_panel {
 	bool is_hbm_enabled;
 	int op_force_screenfp;
 	bool dim_status;
-//#endif
 	bool lp11_init;
 	bool ulps_enabled;
 	bool ulps_suspend_enabled;
@@ -342,7 +336,6 @@ int dsi_panel_parse_esd_reg_read_configs(struct dsi_panel *panel,
 				struct device_node *of_node);
 
 void dsi_panel_ext_bridge_put(struct dsi_panel *panel);
-//#ifdef VENDOR_EDIT
 int dsi_panel_set_acl_mode(struct dsi_panel *panel, int level);
 int dsi_panel_set_hbm_mode(struct dsi_panel *panel, int level);
 int dsi_panel_op_set_hbm_mode(struct dsi_panel *panel, int level);
@@ -353,6 +346,5 @@ int dsi_panel_set_dci_p3_mode(struct dsi_panel *panel, int level);
 int dsi_panel_set_night_mode(struct dsi_panel *panel, int level);
 int dsi_panel_set_oneplus_mode(struct dsi_panel *panel, int level);
 int dsi_panel_set_adaption_mode(struct dsi_panel *panel, int level);
-//#endif
 
 #endif /* _DSI_PANEL_H_ */

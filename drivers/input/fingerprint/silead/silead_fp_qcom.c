@@ -40,7 +40,6 @@ static irqreturn_t silfp_irq_handler(int irq, void *dev_id);
 static void silfp_work_func(struct work_struct *work);
 static int silfp_input_init(struct silfp_data *fp_dev);
 
-#ifdef VENDOR_EDIT
 int sl_pinctrl_init(struct silfp_data *fp_dev)
 {
 	int ret = 0;
@@ -74,7 +73,6 @@ err:
 	fp_dev->gpio_state_enable = NULL;
 	return ret;
 }
-#endif
 
 /* -------------------------------------------------------------------- */
 /*                            power supply                              */
@@ -89,12 +87,10 @@ static void silfp_hw_poweron(struct silfp_data *fp_dev)
     if ( fp_dev->avdd_ldo ) {
 	err = regulator_set_voltage(fp_dev->avdd_ldo,
 		AVDD_MIN, AVDD_MAX);	/*set 2.8v*/
-        #ifdef VENDOR_EDIT
  		err = regulator_set_load(fp_dev->avdd_ldo, CURRENT);
 		if (err < 0)
 			LOG_MSG_DEBUG(INFO_LOG,
 				"poweron: vreg mode(err:%d)\n", err);
-	#endif
 	err = regulator_enable(fp_dev->avdd_ldo);	/*enable regulator*/
 	//pmic_set_register_value(PMIC_RG_VCAMA_CAL,0x0A);
 	}
@@ -568,12 +564,10 @@ static int silfp_resource_init(struct silfp_data *fp_dev, struct fp_dev_init_t *
         dev_info->dev_id = fp_dev->pin.qup_id;
         strncpy(dev_info->ta,TANAME,sizeof(dev_info->ta));
     }
-#ifdef VENDOR_EDIT
 	status = sl_pinctrl_init(fp_dev);
 	if (status < 0)
 		LOG_MSG_DEBUG(ERR_LOG, "[%s] Failed init gpio %d",
 			__func__, status);
-#endif
     return status;
 
 err_input:

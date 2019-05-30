@@ -592,7 +592,6 @@ static void pstore_console_write(struct console *con, const char *s, unsigned c)
 	}
 }
 
-#ifdef VENDOR_EDIT /*pstore memset befor use*/
 static void  pstore_console_init(void )
 {
     size_t oldsize;
@@ -623,7 +622,6 @@ static void  pstore_console_init(void )
 
     psinfo->bufsize = oldsize ;
 }
-#endif
 
 static struct console pstore_console = {
 	.name	= "pstore",
@@ -634,9 +632,7 @@ static struct console pstore_console = {
 
 static void pstore_register_console(void)
 {
-#ifdef VENDOR_EDIT /*pstore memset befor use*/
     pstore_console_init();
-#endif
 	register_console(&pstore_console);
 }
 

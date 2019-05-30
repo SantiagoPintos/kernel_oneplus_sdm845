@@ -14,10 +14,8 @@
  */
 #define pr_fmt(fmt)		KBUILD_MODNAME ": " fmt
 
-#ifdef VENDOR_EDIT
 #define CONFIG_MSM_RDM_NOTIFY
 #undef CONFIG_FB
-#endif
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -46,9 +44,7 @@
 #include <linux/pm_qos.h>
 #include <linux/cpufreq.h>
 //#include <linux/wakelock.h>
-#ifdef VENDOR_EDIT
 #include <linux/oneplus/boot_mode.h>
-#endif
 #include "gf_spi.h"
 
 #if defined(USE_SPI_BUS)
@@ -93,19 +89,8 @@ struct gf_key_map maps[] = {
 	{ EV_KEY, GF_NAV_INPUT_DOWN },
 	{ EV_KEY, GF_NAV_INPUT_RIGHT },
 	{ EV_KEY, GF_NAV_INPUT_LEFT },
-#ifndef VENDOR_EDIT
-	{ EV_KEY, GF_KEY_INPUT_CAMERA },
-	{ EV_KEY, GF_KEY_INPUT_LONG_PRESS },
-	{ EV_KEY, GF_NAV_INPUT_CLICK },
-	{ EV_KEY, GF_NAV_INPUT_DOUBLE_CLICK },
-#endif
 	{ EV_KEY, GF_NAV_INPUT_LONG_PRESS },
-#ifndef VENDOR_EDIT
-	{ EV_KEY, GF_NAV_INPUT_HEAVY },
-#endif
-#ifdef VENDOR_EDIT
 	{ EV_KEY, GF_NAV_INPUT_F2},
-#endif
 #endif
 };
 
@@ -317,12 +302,10 @@ static void nav_event_input(struct gf_dev *gf_dev, gf_nav_event_t nav_event)
 		nav_input = GF_NAV_INPUT_DOUBLE_CLICK;
 		pr_debug("%s nav double click\n", __func__);
 		break;
-#ifdef VENDOR_EDIT
 	case GF_NAV_F2:
 		nav_input = GF_NAV_INPUT_F2;
 		pr_debug("%s nav f2\n", __func__);
 		break;
-#endif
 	default:
 		pr_warn("%s unknown nav event: %d\n", __func__, nav_event);
 		break;
@@ -658,7 +641,6 @@ static const struct file_operations gf_fops = {
 #endif
 };
 
-#ifdef VENDOR_EDIT
 static ssize_t screen_state_get(struct device *device,
 			     struct device_attribute *attribute,
 			     char *buffer)
@@ -701,9 +683,7 @@ int gf_opticalfp_irq_handler(int event)
 	return 0;
 }
 EXPORT_SYMBOL(gf_opticalfp_irq_handler);
-#endif
 
-#ifdef VENDOR_EDIT
 #if defined(CONFIG_FB)
 static int goodix_fb_state_chg_callback(struct notifier_block *nb,
 		unsigned long val, void *data)
@@ -777,7 +757,6 @@ static int goodix_fb_state_chg_callback(
 
 	pr_info("[info] %s go to the msm_drm_notifier_callback value = %d\n",
 			__func__, (int)val);
-#ifdef VENDOR_EDIT
 	blank = *(int *)(evdata->data);
 	if (val == MSM_DRM_ONSCREENFINGERPRINT_EVENT) {
 		pr_info("[%s] UI ready enter\n", __func__);
@@ -799,7 +778,6 @@ static int goodix_fb_state_chg_callback(
 		}
 		return 0;
 	}
-#endif
 	gf_dev = container_of(nb, struct gf_dev, msm_drm_notif);
 	if (evdata && evdata->data && val ==
 		MSM_DRM_EARLY_EVENT_BLANK && gf_dev) {
@@ -818,11 +796,9 @@ static int goodix_fb_state_chg_callback(
 				}
 #endif
 			}
-			#ifdef VENDOR_EDIT /*20180517 add for optical fp*/
 			gf_dev->screen_state = 0;
 			sysfs_notify(&gf_dev->spi->dev.kobj,
 				NULL, dev_attr_screen_state.attr.name);
-			#endif
 			break;
 		case MSM_DRM_BLANK_UNBLANK:
 			if (gf_dev->device_available == 1) {
@@ -836,11 +812,9 @@ static int goodix_fb_state_chg_callback(
 						SIGIO, POLL_IN);
 #endif
 			}
-			#ifdef VENDOR_EDIT /*20180517 add for optical fp*/
 			gf_dev->screen_state = 1;
 			sysfs_notify(&gf_dev->spi->dev.kobj,
 				NULL, dev_attr_screen_state.attr.name);
-			#endif
 			break;
 		default:
 			pr_info("%s defalut\n", __func__);
@@ -849,7 +823,6 @@ static int goodix_fb_state_chg_callback(
 	}
 	return NOTIFY_OK;
 }
-#endif
 #endif
 
 static struct class *gf_class;
@@ -915,7 +888,6 @@ static int gf_probe(struct platform_device *pdev)
 	if (status)
 		goto err_irq;
 
-#ifdef VENDOR_EDIT
 	status = gf_pinctrl_init(gf_dev);
 	if (status)
 		goto err_irq;
@@ -934,7 +906,6 @@ static int gf_probe(struct platform_device *pdev)
 			goto error_hw;
 		}
 	}
-#endif
 	if (status == 0) {
 		/*input device subsystem */
 		gf_dev->input = input_allocate_device();
@@ -965,7 +936,6 @@ static int gf_probe(struct platform_device *pdev)
 	spi_clock_set(gf_dev, 1000000);
 #endif
 
-#ifdef VENDOR_EDIT
 #if defined(CONFIG_FB)
 	gf_dev->notifier = goodix_noti_block;
 	fb_register_client(&gf_dev->notifier);
@@ -975,9 +945,7 @@ static int gf_probe(struct platform_device *pdev)
 	if (status)
 		pr_err("Unable to register msm_drm_notifier: %d\n", status);
 #endif
-#endif
 
-#ifdef VENDOR_EDIT /*20180517 add for optical fingerprint*/
 	#ifdef USE_SPI_BUS
 		spi_set_drvdata(spi, gf_dev);
 	#else
@@ -989,7 +957,6 @@ static int gf_probe(struct platform_device *pdev)
 		pr_err("%s:could not create sysfs\n", __func__);
 		goto error_input;
 	}
-#endif
 	pr_info("version V%d.%d.%02d\n", VER_MAJOR, VER_MINOR, PATCH_LEVEL);
 
 	return status;
@@ -1031,13 +998,11 @@ static int gf_remove(struct platform_device *pdev)
 
 	wakeup_source_trash(&fp_wakelock);
 
-#ifdef VENDOR_EDIT
 #if defined(CONFIG_FB)
 	fb_unregister_client(&gf_dev->notifier);
 #elif defined(CONFIG_MSM_RDM_NOTIFY)
 	if (msm_drm_unregister_client(&gf_dev->msm_drm_notif))
 		pr_err("Error occurred while unregistering msm_drm_notifier.\n");
-#endif
 #endif
 	if (gf_dev->input)
 		input_unregister_device(gf_dev->input);

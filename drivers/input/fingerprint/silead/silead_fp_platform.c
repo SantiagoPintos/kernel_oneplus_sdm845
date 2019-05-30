@@ -71,12 +71,10 @@
 #endif
 
 #include "silead_fp.h"
-#ifdef VENDOR_EDIT
 #include <linux/msm_drm_notify.h>
 #include <linux/oneplus/boot_mode.h>
 #include "../fingerprint_detect/fingerprint_detect.h"
 #include "../../../gpu/drm/msm/sde/sde_trace.h"
-#endif
 
 #define FP_DEV_NAME "silead_fp"
 #define FP_DEV_MAJOR 0	/* assigned */
@@ -139,11 +137,7 @@ struct silfp_data {
 #ifdef CONFIG_HAS_EARLYSUSPEND
     struct early_suspend es;
 #else
-#ifndef VENDOR_EDIT
-    struct notifier_block notif;
-#else
 	struct notifier_block msm_drm_notif;
-#endif
 #endif /* CONFIG_HAS_EARLYSUSPEND */
 
     /* for power supply */
@@ -166,10 +160,8 @@ struct silfp_data {
     struct fp_plat_t pin;
 
     atomic_t  init;
-#ifdef VENDOR_EDIT
 	struct pinctrl *sl_pinctrl;
 	struct pinctrl_state *gpio_state_enable;
-#endif
 };
 
 typedef enum _fp_spi_speet_t {
@@ -485,7 +477,6 @@ static ssize_t silfp_read(struct file *fd, char __user *buf, size_t len,loff_t *
 }
 #endif /* BSP_SIL_NETLINK */
 
-#ifdef VENDOR_EDIT
 /*liuyan 2017/12/7 add for detect screen state*/
 static ssize_t screen_state_get(struct device *device,
 			     struct device_attribute *attribute,
@@ -506,7 +497,6 @@ static struct attribute *sl_attributes[] = {
 static const struct attribute_group sl_attribute_group = {
 	.attrs = sl_attributes,
 };
-#endif
 
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -526,63 +516,6 @@ static void silfp_late_resume(struct early_suspend *es)
     LOG_MSG_DEBUG(INFO_LOG, "[%s] enter\n", __func__);
     fp_dev->scr_off = 0;
     silfp_netlink_send(fp_dev, SIFP_NETLINK_SCR_ON);
-}
-#else
-#ifndef VENDOR_EDIT
-static int silfp_fb_callback(struct notifier_block *notif,
-                             unsigned long event, void *data)
-{
-    struct silfp_data *fp_dev = container_of(notif, struct silfp_data, notif);
-    struct msm_drm_notifier *evdata = data;
-    unsigned int blank = 0;
-    int retval = 0;
-	LOG_MSG_DEBUG(INFO_LOG, "[%s] silfp_fb_callback\n", __func__);
-	blank = *(int *)evdata->data;
-#ifndef VENDOR_EDIT
-    if (event == MSM_DRM_ONSCREENFINGERPRINT_EVENT ) {
-		LOG_MSG_DEBUG(INFO_LOG, "[%s] UI ready enter\n", __func__);
-
-		switch (blank) {
-		case 0:
-            LOG_MSG_DEBUG(INFO_LOG, "[%s] UI disappear\n", __func__);
-            //silfp_netlink_send(fp_dev, SIFP_NETLINK_UI_OFF);//SIFP_NETLINK_UI_OFF donothing now
-            break;
-		case 1:
-            LOG_MSG_DEBUG(INFO_LOG, "[%s] UI ready \n", __func__);
-            silfp_netlink_send(fp_dev, SIFP_NETLINK_UI_READY);
-            break;
-		default:
-            LOG_MSG_DEBUG(INFO_LOG, "[%s] Unknown MSM_DRM_ONSCREENFINGERPRINT_EVENT\n", __func__);
-            break;
-		}
-		return retval;
-    }
-#endif
-    /* If we aren't interested in this event, skip it immediately ... */
-    if (event != FB_EVENT_BLANK /* FB_EARLY_EVENT_BLANK */) {
-        return 0;
-	}
-
-    LOG_MSG_DEBUG(INFO_LOG, "[%s] enter, blank=0x%x\n", __func__, blank);
-
-    switch (blank) {
-    case FB_BLANK_UNBLANK:
-        LOG_MSG_DEBUG(INFO_LOG, "[%s] LCD ON\n", __func__);
-        fp_dev->scr_off = 0;
-        silfp_netlink_send(fp_dev, SIFP_NETLINK_SCR_ON);
-        break;
-
-    case FB_BLANK_POWERDOWN:
-        LOG_MSG_DEBUG(INFO_LOG, "[%s] LCD OFF\n", __func__);
-        fp_dev->scr_off = 1;
-        silfp_netlink_send(fp_dev, SIFP_NETLINK_SCR_OFF);
-        break;
-
-    default:
-        LOG_MSG_DEBUG(INFO_LOG, "[%s] Unknown notifier\n", __func__);
-        break;
-    }
-    return retval;
 }
 #else
 static int silfp_fb_callback(struct notifier_block *notif,
@@ -608,7 +541,6 @@ static int silfp_fb_callback(struct notifier_block *notif,
 	//printk(KERN_ERR"GZM FP1 event = %ld\n",event);
 	//printk(KERN_ERR"GZM FP1 evdata->id = %d\n",evdata->id);
 
-#ifdef VENDOR_EDIT
     if (event == MSM_DRM_ONSCREENFINGERPRINT_EVENT ) {
 		LOG_MSG_DEBUG(INFO_LOG, "[%s] UI ready enter\n", __func__);
 	//printk(KERN_ERR"GZM FP2 blank =%d\n",blank);	
@@ -632,7 +564,6 @@ static int silfp_fb_callback(struct notifier_block *notif,
 		}
 		return retval;
     }
-#endif
     LOG_MSG_DEBUG(INFO_LOG, "[%s] enter, blank=0x%x\n", __func__, blank);
 
     switch (blank) {
@@ -640,16 +571,16 @@ static int silfp_fb_callback(struct notifier_block *notif,
         LOG_MSG_DEBUG(INFO_LOG, "[%s] LCD ON\n", __func__);
         fp_dev->scr_off = 0;
         silfp_netlink_send(fp_dev, SIFP_NETLINK_SCR_ON);
-		sysfs_notify(&fp_dev->spi->dev.kobj,
-				NULL, dev_attr_screen_state.attr.name);
+               sysfs_notify(&fp_dev->spi->dev.kobj,
+                               NULL, dev_attr_screen_state.attr.name);
         break;
 
     case MSM_DRM_BLANK_POWERDOWN:
         LOG_MSG_DEBUG(INFO_LOG, "[%s] LCD OFF\n", __func__);
         fp_dev->scr_off = 1;
         silfp_netlink_send(fp_dev, SIFP_NETLINK_SCR_OFF);
-		sysfs_notify(&fp_dev->spi->dev.kobj,
-				NULL, dev_attr_screen_state.attr.name);
+               sysfs_notify(&fp_dev->spi->dev.kobj,
+                               NULL, dev_attr_screen_state.attr.name);
         break;
 
     default:
@@ -657,11 +588,10 @@ static int silfp_fb_callback(struct notifier_block *notif,
         break;
     }
     return retval;
-	}
-	else
-		return 0;
+       }
+       else
+               return 0;
 }
-#endif
 #endif /* CONFIG_HAS_EARLYSUSPEND */
 
 /* -------------------------------------------------------------------- */
@@ -961,9 +891,7 @@ static int silfp_input_init(struct silfp_data *fp_dev)
     __set_bit(KEY_BACK, fp_dev->input->keybit);
     __set_bit(KEY_CAMERA, fp_dev->input->keybit);
 
-#ifdef VENDOR_EDIT
 	__set_bit(KEY_F2, fp_dev->input->keybit);
-#endif
 
     for ( i = 0; i < ARRAY_SIZE(keymap); i++ ) {
         if ( keymap[i].key_new != KEY_RESERVED ) {
@@ -1026,20 +954,12 @@ static int silfp_init(struct silfp_data *fp_dev)
     fp_dev->es.resume = silfp_late_resume;
     register_early_suspend(&fp_dev->es);
 #else
-#ifndef VENDOR_EDIT
-    /* register screen on/off callback */
-    fp_dev->notif.notifier_call = silfp_fb_callback;
-    LOG_MSG_DEBUG(INFO_LOG, "[%s] msm_drm_register_client\n", __func__);
-    //fb_register_client(&fp_dev->notif);
-    status = msm_drm_register_client(&fp_dev->notif);
-#else
 	fp_dev->msm_drm_notif.notifier_call = silfp_fb_callback;
 	status = msm_drm_register_client(&fp_dev->msm_drm_notif);
 	if (status)
 		LOG_MSG_DEBUG(INFO_LOG,"Unable to register msm_drm_notifier: %d\n", status);
 	else
 		LOG_MSG_DEBUG(INFO_LOG,"register msm_drm_notifier: %d\n", status);
-#endif
 #endif /* CONFIG_HAS_EARLYSUSPEND */
 
     atomic_set(&fp_dev->spionoff_count,0);
@@ -1089,12 +1009,8 @@ static void silfp_exit(struct silfp_data *fp_dev)
         unregister_early_suspend(&fp_dev->es);
     }
 #else
-#ifndef VENDOR_EDIT
-    fb_unregister_client(&fp_dev->notif);
-#else
 	if (msm_drm_unregister_client(&fp_dev->msm_drm_notif))
 		pr_err("Error occurred while unregistering msm_drm_notifier.\n");
-#endif
 #endif /* CONFIG_HAS_EARLYSUSPEND */
 
     silfp_set_spi(fp_dev, false); /* release SPI resources */
@@ -1346,7 +1262,6 @@ silfp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	}
         break;
 
-#ifdef VENDOR_EDIT
     case SIFP_IOC_REPORT_KEY:
         LOG_MSG_DEBUG(INFO_LOG, "[SIFP_IOC_REPORT_KEY]enter,arg =%d\n", (int)arg);
         input_report_key(fp_dev->input, KEY_F2, 1);
@@ -1354,7 +1269,6 @@ silfp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		input_report_key(fp_dev->input, KEY_F2, 0);
 		input_sync(fp_dev->input);
         break;
-#endif
     default:
         retval = -ENOTTY;
         break;
@@ -1519,12 +1433,10 @@ static int silfp_probe(struct platform_device *spi)
     platform_set_drvdata(spi, fp_dev);
 	optical_fp = fp_dev;
 
-#ifdef VENDOR_EDIT
 	status = sysfs_create_group(&spi->dev.kobj,
 			&sl_attribute_group);
 	if (status)
 		pr_err("%s:could not create sysfs\n", __func__);
-#endif
     return status;
 
 err_cdev:

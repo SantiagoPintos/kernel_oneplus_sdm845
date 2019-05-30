@@ -37,12 +37,10 @@
 #include "walt.h"
 #include <trace/events/sched.h>
 
-#ifdef VENDOR_EDIT
 /* Curtis, 20180111, ux realm*/
 #include <../drivers/oneplus/coretech/opchain/opchain_helper.h>
 
 #define opc_claim_bit_test(claim, cpu) (claim & ((1 << cpu) | (1 << (cpu + num_present_cpus()))))
-#endif
 
 #ifdef CONFIG_SCHED_WALT
 
@@ -658,7 +656,6 @@ static struct sched_entity *__pick_next_entity(struct sched_entity *se)
 	return rb_entry(next, struct sched_entity, run_node);
 }
 
-#if defined(CONFIG_SCHED_DEBUG) || defined(VENDOR_EDIT)
 struct sched_entity *__pick_last_entity(struct cfs_rq *cfs_rq)
 {
 	struct rb_node *last = rb_last(&cfs_rq->tasks_timeline);
@@ -695,7 +692,6 @@ int sched_proc_update_handler(struct ctl_table *table, int write,
 
 	return 0;
 }
-#endif /* CONFIG_SCHED_DEBUG || VENDOR_EDIT */
 
 /*
  * delta /= w
@@ -4895,10 +4891,8 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	int task_new = flags & ENQUEUE_WAKEUP_NEW;
 #endif
 
-#ifdef VENDOR_EDIT
 /* Curtis, 20180111, ux realm*/
 	opc_task_switch(true, cpu_of(rq), p, 0);
-#endif
 
 #ifdef CONFIG_SCHED_WALT
 	p->misfit = !task_fits_max(p, rq->cpu);
@@ -4994,10 +4988,8 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	struct sched_entity *se = &p->se;
 	int task_sleep = flags & DEQUEUE_SLEEP;
 
-#ifdef VENDOR_EDIT
 	/* Curtis, 20180111, ux realm*/
 	opc_task_switch(false, cpu_of(rq), p, rq->clock);
-#endif
 	for_each_sched_entity(se) {
 		cfs_rq = cfs_rq_of(se);
 		dequeue_entity(cfs_rq, se, flags);
@@ -6861,10 +6853,8 @@ struct find_best_target_env {
 	bool need_idle;
 	int placement_boost;
 	bool avoid_prev_cpu;
-#ifdef VENDOR_EDIT
 	/* Curtis, 20180111, ux realm*/
 	int op_path;
-#endif
 };
 
 #ifdef CONFIG_SCHED_WALT
@@ -7027,13 +7017,9 @@ retry:
 			 * so prev_cpu will receive a negative bias due to the double
 			 * accounting. However, the blocked utilization may be zero.
 			 */
-#ifdef VENDOR_EDIT
 			/* Curtis, 20180111, ux realm*/
 			wake_util = opc_cpu_util(cpu_util_wake(i, p),
 						i, p, fbt_env->op_path);
-#else
-			wake_util = cpu_util_wake(i, p);
-#endif
 			new_util = wake_util + task_util(p);
 			spare_cap = capacity_orig_of(i) - wake_util;
 
@@ -7479,7 +7465,6 @@ static int select_energy_cpu_brute(struct task_struct *p, int prev_cpu, int sync
 	struct find_best_target_env fbt_env;
 	u64 start_t = 0;
 	int fastpath = 0;
-#ifdef VENDOR_EDIT
 	/* Curtis, 20180111, ux realm*/
 	bool is_uxtop = is_opc_task(p, UT_FORE);
 
@@ -7487,7 +7472,6 @@ static int select_energy_cpu_brute(struct task_struct *p, int prev_cpu, int sync
 
 	if (fbt_env.op_path >= 0)
 		prev_cpu = fbt_env.op_path;
-#endif
 
 	if (trace_sched_task_util_enabled())
 		start_t = sched_clock();
@@ -7498,10 +7482,8 @@ static int select_energy_cpu_brute(struct task_struct *p, int prev_cpu, int sync
 #ifdef CONFIG_CGROUP_SCHEDTUNE
 	boosted = schedtune_task_boost(p) > 0;
 	prefer_idle = schedtune_prefer_idle(p) > 0;
-#ifdef VENDOR_EDIT
 	/* Curtis, 20180111, ux realm*/
 	boosted |= (fbt_env.op_path >= 4);
-#endif
 #else
 	boosted = get_sysctl_sched_cfs_boost() > 0;
 	prefer_idle = 0;
@@ -7523,7 +7505,6 @@ static int select_energy_cpu_brute(struct task_struct *p, int prev_cpu, int sync
 
 	if (sysctl_sched_sync_hint_enable && sync) {
 		int cpu = smp_processor_id();
-#ifdef VENDOR_EDIT
 		/* Curtis, 20180111, ux realm*/
 		if (bias_to_waker_cpu(p, cpu, rtg_target) &&
 			(!is_uxtop || cpu >= FIRST_BIG_CORE)) {
@@ -7533,15 +7514,6 @@ static int select_energy_cpu_brute(struct task_struct *p, int prev_cpu, int sync
 			fastpath = SYNC_WAKEUP;
 			goto out;
 		}
-#else
-		if (bias_to_waker_cpu(p, cpu, rtg_target)) {
-			schedstat_inc(p->se.statistics.nr_wakeups_secb_sync);
-			schedstat_inc(this_rq()->eas_stats.secb_sync);
-			target_cpu = cpu;
-			fastpath = SYNC_WAKEUP;
-			goto out;
-		}
-#endif
 	}
 
 	if (bias_to_prev_cpu(p, rtg_target)) {
@@ -7550,12 +7522,10 @@ static int select_energy_cpu_brute(struct task_struct *p, int prev_cpu, int sync
 		goto out;
 	}
 
-#ifdef VENDOR_EDIT
 	/* Curtis, 20180111, ux realm*/
 	if (fbt_env.op_path >= 0)
 		sd = rcu_dereference(per_cpu(sd_ea, fbt_env.op_path));
 	else
-#endif
 	sd = rcu_dereference(per_cpu(sd_ea, prev_cpu));
 
 	if (!sd) {
@@ -8486,14 +8456,12 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 		return 0;
 #endif
 
-#ifdef VENDOR_EDIT
 	/* Curtis, 20180111, ux realm*/
 	if (env->flags & LBF_IGNORE_UX_TOP && is_opc_task(p, UT_FORE))
 		return 0;
 
 	if (env->flags & LBF_IGNORE_SLAVE && p->utask_slave)
 		return 0;
-#endif
 
 	if (task_running(env->src_rq, p)) {
 		schedstat_inc(p->se.statistics.nr_failed_migrations_running);
@@ -8585,10 +8553,8 @@ static int detach_tasks(struct lb_env *env)
 	unsigned long load;
 	int detached = 0;
 	int orig_loop = env->loop;
-#ifdef VENDOR_EDIT
 	/* Curtis, 20180111, ux realm*/
 	int src_claim = opc_get_claim_on_cpu(env->src_cpu);
-#endif
 	lockdep_assert_held(&env->src_rq->lock);
 
 	if (env->imbalance <= 0)
@@ -8596,7 +8562,6 @@ static int detach_tasks(struct lb_env *env)
 
 	if (!same_cluster(env->dst_cpu, env->src_cpu))
 		env->flags |= LBF_IGNORE_PREFERRED_CLUSTER_TASKS;
-#ifdef VENDOR_EDIT
 	/* Curtis, 20180111, ux realm*/
 	if (cpu_capacity(env->dst_cpu) < cpu_capacity(env->src_cpu)) {
 		env->flags |= LBF_IGNORE_BIG_TASKS;
@@ -8605,10 +8570,6 @@ static int detach_tasks(struct lb_env *env)
 		else if (src_claim == -1)
 			env->flags |= LBF_IGNORE_SLAVE;
 	}
-#else
-	if (cpu_capacity(env->dst_cpu) < cpu_capacity(env->src_cpu))
-		env->flags |= LBF_IGNORE_BIG_TASKS;
-#endif
 
 redo:
 	while (!list_empty(tasks)) {

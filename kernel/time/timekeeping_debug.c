@@ -76,9 +76,5 @@ void tk_debug_account_sleep_time(struct timespec64 *t)
 
 	sleep_time_bin[bin]++;
 
-#ifndef VENDOR_EDIT
-	printk_deferred(KERN_INFO "Suspended for %lld.%03lu seconds\n",
-			(s64)t->tv_sec, t->tv_nsec / NSEC_PER_MSEC);
-#endif
 }
 

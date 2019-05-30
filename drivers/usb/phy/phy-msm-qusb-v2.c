@@ -145,11 +145,9 @@ struct qusb_phy {
 	int			vdd_levels[3]; /* none, low, high */
 	int			init_seq_len;
 	int			*qusb_phy_init_seq;
-#ifdef VENDOR_EDIT
 /*2018/03/31 @BSP add host mode phy init parameters*/
 	int			ophost_init_seq_len;
 	int			*qusb_phy_ophost_init_seq;
-#endif
 	int			host_init_seq_len;
 	int			*qusb_phy_host_init_seq;
 
@@ -157,10 +155,8 @@ struct qusb_phy {
 	int			qusb_phy_reg_offset_cnt;
 
 	u32			tune_val;
-#ifdef VENDOR_EDIT
 /*2018/02/21 BSP@Infi do not need override the bias2 value*/
 	bool		overwrite_bias2_disable;
-#endif
 	int			efuse_bit_pos;
 	int			efuse_num_of_bits;
 
@@ -181,12 +177,10 @@ struct qusb_phy {
 	struct pinctrl_state	*atest_usb_suspend;
 	struct pinctrl_state	*atest_usb_active;
 
-#ifdef VENDOR_EDIT
 /*2018/06/28 @BSP Add HW-SW WR to optimize the usb diagram*/
 	struct pinctrl_state	*usb_oe_active;
 	struct pinctrl_state	*usb_oe_suspend;
 	bool			usb_oe_exist;
-#endif
 	/* emulation targets specific */
 	void __iomem		*emu_phy_base;
 	bool			emulation;
@@ -656,7 +650,6 @@ static int qusb_phy_init(struct usb_phy *phy)
 			PWR_CTRL1_POWR_DOWN,
 			qphy->base + qphy->phy_reg[PWR_CTRL1]);
 
-#ifdef VENDOR_EDIT
 /*2018/03/31 @BSP add host mode phy init parameters*/
 	if (qphy->qusb_phy_init_seq || qphy->qusb_phy_ophost_init_seq){
 		if ((qphy->phy.flags & PHY_HOST_MODE) && qphy->qusb_phy_ophost_init_seq){
@@ -668,11 +661,6 @@ static int qusb_phy_init(struct usb_phy *phy)
 			qusb_phy_write_seq(qphy->base, qphy->qusb_phy_init_seq,
 					qphy->init_seq_len, 0);
 	}
-#else
-	if (qphy->qusb_phy_init_seq)
-		qusb_phy_write_seq(qphy->base, qphy->qusb_phy_init_seq,
-				qphy->init_seq_len, 0);
-#endif
 
 	if (qphy->efuse_reg) {
 		if (!qphy->tune_val)
@@ -698,7 +686,6 @@ static int qusb_phy_init(struct usb_phy *phy)
 	if (qphy->bias_ctrl2)
 		writel_relaxed(qphy->bias_ctrl2,
 				qphy->base + qphy->phy_reg[BIAS_CTRL_2]);
-#ifdef VENDOR_EDIT
 /*2018/02/21 BSP@Infi do not need override the bias2 value*/
 	if (qphy->refgen_north_bg_reg && !qphy->overwrite_bias2_disable)
 		if (readl_relaxed(qphy->refgen_north_bg_reg) & BANDGAP_BYPASS){
@@ -706,14 +693,6 @@ static int qusb_phy_init(struct usb_phy *phy)
 			writel_relaxed(BIAS_CTRL_2_OVERRIDE_VAL,
 				qphy->base + qphy->phy_reg[BIAS_CTRL_2]);
 		}
-#else
-	if (qphy->refgen_north_bg_reg)
-		if (readl_relaxed(qphy->refgen_north_bg_reg) & BANDGAP_BYPASS){
-			pr_debug("%s(): overwrite bias2\n", __func__);
-			writel_relaxed(BIAS_CTRL_2_OVERRIDE_VAL,
-				qphy->base + qphy->phy_reg[BIAS_CTRL_2]);
-		}
-#endif
 	/* if soc revision is mentioned override DEBUG_CTRL1 value */
 	if (qphy->soc_min_rev)
 		writel_relaxed(DEBUG_CTRL1_OVERRIDE_VAL,
@@ -802,7 +781,6 @@ static enum hrtimer_restart qusb_dis_ext_pulldown_timer(struct hrtimer *timer)
 		if (ret < 0)
 			dev_err(qphy->phy.dev,
 				"pinctrl state suspend select failed\n");
-#ifdef VENDOR_EDIT
 /*2018/06/28 @BSP Add HW-SW WR to optimize the usb diagram*/
 		if (qphy->usb_oe_exist && qphy->usb_oe_active) {
 			ret = pinctrl_select_state(qphy->pinctrl,
@@ -811,7 +789,6 @@ static enum hrtimer_restart qusb_dis_ext_pulldown_timer(struct hrtimer *timer)
 				dev_err(qphy->phy.dev,
 					"pinctrl state usb_oe_active select failed\n");
 		}
-#endif
 	}
 
 	return HRTIMER_NORESTART;
@@ -832,7 +809,6 @@ static void qusb_phy_enable_ext_pulldown(struct usb_phy *phy)
 					"pinctrl state active select failed\n");
 			return;
 		}
-#ifdef VENDOR_EDIT
 /*2018/06/28 @BSP Add HW-SW WR to optimize the usb diagram*/
 		if (qphy->usb_oe_exist && qphy->usb_oe_suspend) {
 			ret = pinctrl_select_state(qphy->pinctrl,
@@ -841,12 +817,10 @@ static void qusb_phy_enable_ext_pulldown(struct usb_phy *phy)
 				dev_err(phy->dev,
 					"pinctrl state usb_oe_suspend select failed\n");
 		}
-#endif
 		hrtimer_start(&qphy->timer, ms_to_ktime(10), HRTIMER_MODE_REL);
 	}
 }
 
-#ifdef VENDOR_EDIT
 /*2018/06/28 @BSP Add HW-SW WR to optimize the usb diagram*/
 static void qusb_phy_enable_usb_oe(struct usb_phy *phy)
 {
@@ -863,7 +837,6 @@ static void qusb_phy_enable_usb_oe(struct usb_phy *phy)
 				"pinctrl state usb_oe_active select failed\n");
 	}
 }
-#endif
 
 
 static void qusb_phy_shutdown(struct usb_phy *phy)
@@ -1229,11 +1202,9 @@ static int qusb_phy_probe(struct platform_device *pdev)
 		qphy->efuse_reg = devm_ioremap_nocache(dev, res->start,
 							resource_size(res));
 		if (!IS_ERR_OR_NULL(qphy->efuse_reg)) {
-#ifdef VENDOR_EDIT
 /*2018/02/21 BSP@Infi do not need override the bias2 value*/
 			qphy->overwrite_bias2_disable = of_property_read_bool(dev->of_node,
 					"qcom,overwrite-bias2-disable");
-#endif
 			ret = of_property_read_u32(dev->of_node,
 					"qcom,efuse-bit-pos",
 					&qphy->efuse_bit_pos);
@@ -1415,7 +1386,6 @@ static int qusb_phy_probe(struct platform_device *pdev)
 		}
 	}
 
-#ifdef VENDOR_EDIT
 /*2018/03/31 @BSP add host mode phy init parameters*/
 	size = 0;
 	of_get_property(dev->of_node, "qcom,qusb-phy-ophost-init-seq", &size);
@@ -1440,7 +1410,6 @@ static int qusb_phy_probe(struct platform_device *pdev)
 			"error allocating memory for phy_ophost_init_seq\n");
 		}
 	}
-#endif
 
 	qphy->host_init_seq_len = of_property_count_elems_of_size(dev->of_node,
 				"qcom,qusb-phy-host-init-seq",
@@ -1527,7 +1496,6 @@ static int qusb_phy_probe(struct platform_device *pdev)
 			dev_err(dev, "pinctrl lookup active failed\n");
 	}
 
-#ifdef VENDOR_EDIT
 /*2018/06/28 @BSP Add HW-SW WR to optimize the usb diagram*/
 	qphy->usb_oe_exist = of_property_read_bool(dev->of_node,
 							"qcom,usb-oe-exist");
@@ -1543,7 +1511,6 @@ static int qusb_phy_probe(struct platform_device *pdev)
 		if (IS_ERR(qphy->usb_oe_active))
 			dev_err(dev, "pinctrl lookup usb_oe_active failed\n");
 	}
-#endif
 
 	hrtimer_init(&qphy->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	qphy->timer.function = qusb_dis_ext_pulldown_timer;
@@ -1576,11 +1543,9 @@ skip_pinctrl_config:
 	ret = qusb_phy_regulator_init(qphy);
 	if (ret)
 		usb_remove_phy(&qphy->phy);
-#ifdef VENDOR_EDIT
 /*2018/06/28 @BSP Add HW-SW WR to optimize the usb diagram*/
 	if (qphy->usb_oe_exist)
 		qusb_phy_enable_usb_oe(&qphy->phy);
-#endif
 	qusb_phy_create_debugfs(qphy);
 
 	return ret;

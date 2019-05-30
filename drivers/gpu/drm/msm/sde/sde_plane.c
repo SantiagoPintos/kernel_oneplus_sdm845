@@ -2844,7 +2844,6 @@ void sde_plane_clear_multirect(const struct drm_plane_state *drm_state)
 	pstate->multirect_mode = SDE_SSPP_MULTIRECT_NONE;
 }
 
-#ifdef VENDOR_EDIT
 //xiaoxiaohuan@OnePlus.MultiMediaService, add for fingerprint
 int sde_plane_check_fingerprint_layer(const struct drm_plane_state *drm_state)
 {
@@ -2857,7 +2856,6 @@ int sde_plane_check_fingerprint_layer(const struct drm_plane_state *drm_state)
 
 	return sde_plane_get_property(pstate, PLANE_PROP_CUSTOM);
 }
-#endif
 
 /**
  * multi_rect validate API allows to validate only R0 and R1 RECT
@@ -4307,11 +4305,9 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 	msm_property_install_range(&psde->property_info, "zpos",
 		0x0, 0, zpos_max, zpos_def, PLANE_PROP_ZPOS);
 
-#ifdef VENDOR_EDIT
 	//xiaoxiaohuan@OnePlus.MultiMediaService, add for fingerprint
 	msm_property_install_range(&psde->property_info, "PLANE_CUST",
 			0x0, 0, INT_MAX, 0, PLANE_PROP_CUSTOM);
-#endif
 
 	msm_property_install_range(&psde->property_info, "alpha",
 		0x0, 0, 255, 255, PLANE_PROP_ALPHA);

@@ -1736,7 +1736,6 @@ struct tlbflush_unmap_batch {
 	bool writable;
 };
 
-#ifdef VENDOR_EDIT
 /*Ted, 20180425, non-exist dcache*/
 #define FILE_MAP_NUM            0x20
 #define FILE_MAP_MAX_INDEX	0x1F
@@ -1753,7 +1752,6 @@ struct nedf_node {
 	uint16_t nf_index;
 	bool is_valid;
 };
-#endif
 
 struct task_struct {
 #ifdef CONFIG_THREAD_INFO_IN_TASK
@@ -1768,13 +1766,11 @@ struct task_struct {
 	atomic_t usage;
 	unsigned int flags;	/* per process flags, defined below */
 	unsigned int ptrace;
-#ifdef VENDOR_EDIT
 	//huruihuan add for kill task in D status
 	unsigned int kill_flag;
 	struct timespec ttu;
 	int compensate_time;
 	int compensate_need;
-#endif
 	unsigned int inode_index_disabled;
 
 	//Display, add for fd leak debug
@@ -2284,7 +2280,6 @@ struct task_struct {
 	/* A live task holds one reference. */
 	atomic_t stack_refcount;
 #endif
-#ifdef VENDOR_EDIT
 	/* Curtis, 20180109, opchain*/
 	u64 utask_tag;
 	u64 utask_tag_base;
@@ -2293,10 +2288,7 @@ struct task_struct {
 	bool utask_slave;
 	/* Ted, 20180425, non-exist dcache*/
 	struct nedf_node *nn;
-#endif
-#ifdef VENDOR_EDIT
 	int hot_count;
-#endif
 /* CPU-specific state of this task */
 	struct thread_struct thread;
 /*

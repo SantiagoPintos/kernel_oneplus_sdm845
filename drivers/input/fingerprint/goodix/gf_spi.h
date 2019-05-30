@@ -6,12 +6,10 @@
 #ifndef __GF_SPI_H
 #define __GF_SPI_H
 
-#ifdef VENDOR_EDIT
 #define CONFIG_MSM_RDM_NOTIFY
 #undef CONFIG_FB
 #if defined(CONFIG_MSM_RDM_NOTIFY)
 #include <linux/msm_drm_notify.h>
-#endif
 #endif
 
 #include <linux/types.h>
@@ -34,12 +32,8 @@ enum FP_MODE{
 #define GF_NAV_INPUT_RIGHT		KEY_RIGHT
 #define GF_NAV_INPUT_CLICK		KEY_VOLUMEDOWN
 #define GF_NAV_INPUT_DOUBLE_CLICK	KEY_VOLUMEUP
-#ifndef VENDOR_EDIT
-#define GF_NAV_INPUT_LONG_PRESS		KEY_SEARCH
-#else
 #define GF_NAV_INPUT_LONG_PRESS BTN_B
 #define GF_NAV_INPUT_F2 KEY_F2
-#endif
 #define GF_NAV_INPUT_HEAVY		KEY_CHAT
 #endif
 
@@ -64,9 +58,7 @@ typedef enum gf_nav_event {
 	GF_NAV_HEAVY,
 	GF_NAV_LONG_PRESS,
 	GF_NAV_DOUBLE_CLICK,
-#ifdef VENDOR_EDIT
 	GF_NAV_F2,
-#endif
 } gf_nav_event_t;
 #endif
 
@@ -128,12 +120,10 @@ struct gf_ioc_chip_info {
 #define GF_NET_EVENT_IRQ 1
 #define GF_NET_EVENT_FB_BLACK 2
 #define GF_NET_EVENT_FB_UNBLACK 3
-#ifdef VENDOR_EDIT
 #define GF_NET_EVENT_TP_TOUCHDOWN 4
 #define GF_NET_EVENT_TP_TOUCHUP 5
 #define GF_NET_EVENT_UI_READY 6
 #define GF_NET_EVENT_UI_DISAPPEAR 7
-#endif
 #define NETLINK_TEST 25
 
 struct gf_dev {
@@ -165,26 +155,20 @@ struct gf_dev {
 #ifdef GF_FASYNC
 	struct fasync_struct *async;
 #endif
-#ifdef VENDOR_EDIT
 #if defined(CONFIG_FB)
 	struct notifier_block notifier;
 #elif defined(CONFIG_MSM_RDM_NOTIFY)
 	struct notifier_block msm_drm_notif;
 #endif
-#endif
 	char device_available;
 	char fb_black;
-#ifdef VENDOR_EDIT
 	struct pinctrl         *gf_pinctrl;
 	struct pinctrl_state   *gpio_state_enable;
 	struct pinctrl_state   *gpio_state_disable;
 	signed enable_gpio;
 	int screen_state;
-#endif
 };
-#ifdef VENDOR_EDIT
 int gf_pinctrl_init(struct gf_dev* gf_dev);
-#endif
 int gf_parse_dts(struct gf_dev* gf_dev);
 void gf_cleanup(struct gf_dev *gf_dev);
 
@@ -197,7 +181,5 @@ int gf_irq_num(struct gf_dev *gf_dev);
 void sendnlmsg(char *msg);
 int netlink_init(void);
 void netlink_exit(void);
-#ifdef VENDOR_EDIT
 extern int gf_opticalfp_irq_handler(int event);
-#endif
 #endif /*__GF_SPI_H*/

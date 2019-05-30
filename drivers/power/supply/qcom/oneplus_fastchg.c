@@ -541,7 +541,6 @@ update_fw_err:
 }
 
 
-#ifdef VENDOR_EDIT
 static struct external_battery_gauge *bq27541_data;
 void bq27541_information_register(
 	struct external_battery_gauge *fast_chg)
@@ -677,7 +676,6 @@ static struct external_battery_gauge fastcharge_information  = {
 	.is_enhance_dash = enhance_dash_on,
 	.clean_enhache = clean_enhache_status,
 };
-#endif
 
 static struct notify_dash_event *notify_event;
 

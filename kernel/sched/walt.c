@@ -29,9 +29,7 @@
 #include "walt.h"
 
 #include <trace/events/sched.h>
-#ifdef VENDOR_EDIT
 #include "../drivers/oneplus/coretech/opchain/opchain_helper.h"
-#endif
 
 const char *task_event_names[] = {"PUT_PREV_TASK", "PICK_NEXT_TASK",
 				  "TASK_WAKE", "TASK_MIGRATE", "TASK_UPDATE",
@@ -1728,12 +1726,8 @@ static void update_history(struct rq *rq, struct task_struct *p,
 
 	if (sched_window_stats_policy == WINDOW_STATS_RECENT) {
 		demand = runtime;
-#ifdef VENDOR_EDIT
 	} else if (sched_window_stats_policy == WINDOW_STATS_MAX ||
 	    ((likely(opc_boost_tl) && *opc_boost_tl) && task_cpu(p) >= 4)) {
-#else
-	} else if (sched_window_stats_policy == WINDOW_STATS_MAX) {
-#endif
 		demand = max;
 	} else {
 		avg = div64_u64(sum, sched_ravg_hist_size);
@@ -1774,13 +1768,11 @@ done:
 
 static u64 add_to_task_demand(struct rq *rq, struct task_struct *p, u64 delta)
 {
-#ifdef VENDOR_EDIT
 	if (p->compensate_need) {
 		delta += p->compensate_time;
 		p->compensate_time = 0;
 		p->compensate_need = 0;
 	}
-#endif
 	delta = scale_exec_time(delta, rq);
 	p->ravg.sum += delta;
 	if (unlikely(p->ravg.sum > sched_ravg_window))

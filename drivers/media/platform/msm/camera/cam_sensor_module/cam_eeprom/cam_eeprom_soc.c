@@ -184,7 +184,6 @@ int cam_eeprom_parse_dt_memory_map(struct device_node *node,
 		data->num_data += map[i].mem.valid_size;
 	}
 
-#ifdef VENDOR_EDIT
 	if (data->num_data < PAGE_SIZE) {
 		data->mapdata = kzalloc(data->num_data, GFP_KERNEL);
 		if (!data->mapdata) {
@@ -198,13 +197,6 @@ int cam_eeprom_parse_dt_memory_map(struct device_node *node,
 			goto ERROR;
 		}
 	}
-#else
-	data->mapdata = kzalloc(data->num_data, GFP_KERNEL);
-	if (!data->mapdata) {
-		rc = -ENOMEM;
-		goto ERROR;
-	}
-#endif
 	return rc;
 
 ERROR:

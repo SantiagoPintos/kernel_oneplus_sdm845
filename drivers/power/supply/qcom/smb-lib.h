@@ -18,10 +18,8 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/consumer.h>
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #include <linux/power/oem_external_fg.h>
-#endif
 #include <linux/extcon.h>
 #include "storm-watch.h"
 
@@ -31,13 +29,10 @@ enum print_reason {
 	PR_MISC		= BIT(2),
 	PR_PARALLEL	= BIT(3),
 	PR_OTG		= BIT(4),
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	PR_OP_DEBUG	= BIT(5),
-#endif
 };
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #define BATT_TYPE_FCC_VOTER "BATT_TYPE_FCC_VOTER"
 #define PSY_ICL_VOTER		"PSY_ICL_VOTER"
@@ -53,7 +48,6 @@ enum print_reason {
 
 #define TIME_3S 3000
 
-#endif
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
 #define USER_VOTER			"USER_VOTER"
 #define HW_DETECT_VOTER			"HW_DETECT_VOTER"
@@ -287,15 +281,11 @@ struct smb_charger {
 	struct mutex		ps_change_lock;
 	struct mutex		otg_oc_lock;
 	struct mutex		vconn_oc_lock;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	struct mutex		sw_dash_lock;
-#endif
-#ifdef VENDOR_EDIT
 /*yangfb@bsp, 20180302,enable stm6620 sheepmode */
 	struct pinctrl_state *pinctrl_state_default;
 	struct pinctrl *pinctrl;
-#endif
 	/* power supplies */
 	struct power_supply		*batt_psy;
 	struct power_supply		*usb_psy;
@@ -308,13 +298,11 @@ struct smb_charger {
 
 	/* notifiers */
 	struct notifier_block	nb;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 #if defined(CONFIG_FB)
 	struct notifier_block		fb_notif;
 #elif defined(CONFIG_MSM_RDM_NOTIFY)
 	struct notifier_block		msm_drm_notifier;
-#endif
 #endif
 
 	/* parallel charging */
@@ -327,10 +315,8 @@ struct smb_charger {
 
 	/* votables */
 	struct votable		*dc_suspend_votable;
-#ifdef VENDOR_EDIT
 /*infi@bsp, 2018/07/10 Add otg toggle vote optimize otg_switch set flow*/
 	struct votable		*otg_toggle_votable;
-#endif
 	struct votable		*fcc_votable;
 	struct votable		*fv_votable;
 	struct votable		*usb_icl_votable;
@@ -355,7 +341,6 @@ struct smb_charger {
 	struct work_struct	rdstd_cc2_detach_work;
 	struct delayed_work	hvdcp_detect_work;
 	struct delayed_work	ps_change_timeout_work;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	struct delayed_work rechk_sw_dsh_work;
 	struct delayed_work	re_kick_work;
@@ -373,7 +358,6 @@ struct smb_charger {
 	struct delayed_work	op_icl_set_work;
 	struct work_struct	otg_switch_work;
 	struct wakeup_source	chg_wake_lock;
-#endif
 	struct delayed_work	clear_hdc_work;
 	struct work_struct	otg_oc_work;
 	struct work_struct	vconn_oc_work;
@@ -385,7 +369,6 @@ struct smb_charger {
 	struct delayed_work	bb_removal_work;
 
 	/* cached status */
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	int				BATT_TEMP_T0;
 	int				BATT_TEMP_T1;
@@ -466,7 +449,6 @@ struct smb_charger {
 	short				mBattTempBoundT5;
 	short				mBattTempBoundT6;
 	uint32_t			bus_client;
-#endif
 	int			voltage_min_uv;
 	int			voltage_max_uv;
 	int			pd_active;
@@ -486,19 +468,15 @@ struct smb_charger {
 	bool			otg_en;
 	bool			vconn_en;
 	bool			suspend_input_on_debug_batt;
-#ifdef VENDOR_EDIT
 	/*yangfb@bsp, 20181023 icl set 1A if battery lower than 15%*/
 	bool			OTG_ICL_CTRL;
 	int			OTG_LOW_BAT;
 	int			OTG_LOW_BAT_ICL;
 	int			OTG_NORMAL_BAT_ICL;
-#endif
-#ifdef VENDOR_EDIT
 	int			connecter_temp;
 	int			connecter_voltage;
 	int			disconnect_vbus;
 	int			vbus_ctrl;
-#endif
 	int			otg_attempts;
 	int			vconn_attempts;
 	int			default_icl_ua;
@@ -547,7 +525,6 @@ struct smb_charger {
 	int			die_health;
 };
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 int smblib_set_prop_charge_parameter_set(struct smb_charger *chg);
 extern void set_mcu_en_gpio_value(int value);
@@ -556,7 +533,6 @@ extern bool op_set_fast_chg_allow(struct smb_charger *chg, bool enable);
 extern bool get_prop_fast_chg_started(struct smb_charger *chg);
 extern void mcu_en_gpio_set(int value);
 extern void switch_mode_to_normal(void);
-#endif
 int smblib_read(struct smb_charger *chg, u16 addr, u8 *val);
 int smblib_masked_write(struct smb_charger *chg, u16 addr, u8 mask, u8 val);
 int smblib_write(struct smb_charger *chg, u16 addr, u8 val);
@@ -632,7 +608,6 @@ int smblib_set_prop_batt_status(struct smb_charger *chg,
 				const union power_supply_propval *val);
 int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 				const union power_supply_propval *val);
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 void op_bus_vote(int disable);
 int get_prop_fast_adapter_update(struct smb_charger *chg);
@@ -659,7 +634,6 @@ int op_usb_icl_set(struct smb_charger *chg, int icl_ua);
 int op_get_aicl_result(struct smb_charger *chg);
 void op_disconnect_vbus(struct smb_charger *chg, bool enable);
 int plugin_update(struct smb_charger *chg);
-#endif
 int smblib_set_prop_input_current_limited(struct smb_charger *chg,
 				const union power_supply_propval *val);
 

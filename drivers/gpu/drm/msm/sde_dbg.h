@@ -53,7 +53,6 @@ enum sde_dbg_dump_flag {
 //#define SDE_EVTLOG_DEFAULT_ENABLE (SDE_EVTLOG_CRITICAL | SDE_EVTLOG_IRQ)
 //#else
 //#define SDE_EVTLOG_DEFAULT_ENABLE 0
-//#endif
 
 #define SDE_EVTLOG_DEFAULT_ENABLE 0
 

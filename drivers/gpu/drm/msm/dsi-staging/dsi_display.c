@@ -33,16 +33,13 @@
 #include "sde_dbg.h"
 #include <linux/of_gpio.h>
 
-#ifdef VENDOR_EDIT
 #include <linux/msm_drm_notify.h>
 #include <linux/notifier.h>
 #include <linux/sched.h>
 #include <linux/pm_qos.h>
 #include <linux/cpufreq.h>
 #include <linux/pm_wakeup.h>
-#endif
 
-#ifdef VENDOR_EDIT
 #define BIG_CPU_NUMBER 4
 #if defined(CONFIG_ARCH_SDM845)
 #define LCDSPEEDUP_BIG_CPU_QOS_FREQ    2649600
@@ -56,11 +53,8 @@
 
 static struct pm_qos_request lcdspeedup_little_cpu_qos;
 static struct pm_qos_request lcdspeedup_big_cpu_qos;
-#endif
 
-//#ifdef VENDOR_EDIT
 #define to_dsi_bridge(x)  container_of((x), struct dsi_bridge, base)
-//#endif
 
 #define to_dsi_display(x) container_of(x, struct dsi_display, host)
 #define INT_BASE_10 10
@@ -570,7 +564,6 @@ static bool dsi_display_validate_reg_read(struct dsi_panel *panel)
 
 		if (i == len)
 			return true;
-//#ifdef VENDOR_EDIT
 		if (panel->status_value != 0) {
 			for (i = 0; i < len; ++i) {
 				if (config->return_buf[i] !=
@@ -580,7 +573,6 @@ static bool dsi_display_validate_reg_read(struct dsi_panel *panel)
 			if (i == len)
 				return true;
 		}
-//#endif
 		group += len;
 	}
 
@@ -690,66 +682,6 @@ static int dsi_display_validate_status(struct dsi_display_ctrl *ctrl,
 exit:
 	return rc;
 }
-#ifndef VENDOR_EDIT
-static int dsi_display_status_reg_read(struct dsi_display *display)
-{
-	int rc = 0, i, cmd_channel_idx = DSI_CTRL_LEFT;
-	struct dsi_display_ctrl *m_ctrl, *ctrl;
-
-	pr_debug(" ++\n");
-
-	/*
-	 * Check the Panel DSI command channel.
-	 * If the cmd_channel is set, then we should
-	 * choose the right DSI(DSI1) controller to send command,
-	 * else we choose the left(DSI0) controller.
-	 */
-	if (display->panel->esd_config.cmd_channel)
-		cmd_channel_idx = DSI_CTRL_RIGHT;
-	m_ctrl = &display->ctrl[cmd_channel_idx];
-
-	if (display->tx_cmd_buf == NULL) {
-		rc = dsi_host_alloc_cmd_tx_buffer(display);
-		if (rc) {
-			pr_err("failed to allocate cmd tx buffer memory\n");
-			goto done;
-		}
-	}
-
-	rc = dsi_display_cmd_engine_enable(display);
-	if (rc) {
-		pr_err("cmd engine enable failed\n");
-		return -EPERM;
-	}
-
-	rc = dsi_display_validate_status(m_ctrl, display->panel);
-	if (rc <= 0) {
-		pr_err("[%s] read status failed on master,rc=%d\n",
-		       display->name, rc);
-		goto exit;
-	}
-
-	if (!display->panel->sync_broadcast_en)
-		goto exit;
-
-	for (i = 0; i < display->ctrl_count; i++) {
-		ctrl = &display->ctrl[i];
-		if (ctrl == m_ctrl)
-			continue;
-
-		rc = dsi_display_validate_status(ctrl, display->panel);
-		if (rc <= 0) {
-			pr_err("[%s] read status failed on slave,rc=%d\n",
-			       display->name, rc);
-			goto exit;
-		}
-	}
-exit:
-	dsi_display_cmd_engine_disable(display);
-done:
-	return rc;
-}
-#else
 
 static int dsi_panel_tx_cmd_set_op(struct dsi_panel *panel,
 				enum dsi_cmd_set_type type)
@@ -934,7 +866,6 @@ done:
 	return rc;
 }
 
-#endif
 static int dsi_display_status_bta_request(struct dsi_display *display)
 {
 	int rc = 0;
@@ -1213,10 +1144,8 @@ int dsi_display_set_power(struct drm_connector *connector,
 {
 	struct dsi_display *display = disp;
 	int rc = 0;
-	#ifdef VENDOR_EDIT
 	struct msm_drm_notifier notifier_data;
 	int blank;
-	#endif
 	if (!display || !display->panel) {
 		pr_err("invalid display/panel\n");
 		return -EINVAL;
@@ -1233,7 +1162,6 @@ int dsi_display_set_power(struct drm_connector *connector,
 		rc = dsi_panel_set_nolp(display->panel);
 		break;
 	}
-	#ifdef VENDOR_EDIT
 	if (power_mode == SDE_MODE_DPMS_ON) {
 		blank = MSM_DRM_BLANK_UNBLANK_CUST;
 		notifier_data.data = &blank;
@@ -1253,7 +1181,6 @@ int dsi_display_set_power(struct drm_connector *connector,
 		msm_drm_notifier_call_chain(MSM_DRM_EARLY_EVENT_BLANK,
 					    &notifier_data);
 	}
-	#endif
 	return rc;
 }
 
@@ -5170,7 +5097,6 @@ static int dsi_display_bind(struct device *dev,
 			goto error;
 		}
 	}
-	//#ifdef VENDOR_EDIT
 	if (dsi_display_is_te_based_esd(display)) {
 		init_completion(&display->esd_te_gate);
 		if (gpio_is_valid(display->disp_te_gpio)) {
@@ -5180,7 +5106,6 @@ static int dsi_display_bind(struct device *dev,
 					 rc);
 		}
 	}
-	//#endif
 	/* register te irq handler */
 	if (dsi_display_is_te_based_esd(display))
 		dsi_display_register_te_irq(display);
@@ -7095,7 +7020,6 @@ int dsi_display_update_pps(char *pps_cmd, void *disp)
 	return 0;
 }
 
-//#ifdef VENDOR_EDIT
 int dsi_display_set_acl_mode(struct drm_connector *connector, int level)
 {
 	struct dsi_display *dsi_display = NULL;
@@ -8173,7 +8097,6 @@ int dsi_display_panel_mismatch(struct drm_connector *connector)
 
 	return dsi_display->panel->panel_mismatch;
 }
-//#endif
 
 int dsi_display_unprepare(struct dsi_display *display)
 {
@@ -8245,14 +8168,12 @@ int dsi_display_unprepare(struct dsi_display *display)
 	SDE_EVT32(SDE_EVTLOG_FUNC_EXIT);
 	return rc;
 }
-#ifdef VENDOR_EDIT
 //*mark.yao@PSW.MM.Display.LCD.Stabilityadd for support aod,hbm,seed*/
 struct dsi_display *get_main_display(void)
 {
 		return primary_display;
 }
 EXPORT_SYMBOL(get_main_display);
-#endif
 
 static int __init dsi_display_register(void)
 {
@@ -8278,7 +8199,6 @@ MODULE_PARM_DESC(dsi_display1,
 module_init(dsi_display_register);
 module_exit(dsi_display_unregister);
 
-#ifdef VENDOR_EDIT
 static int msm_drm_buffer_state_change(struct notifier_block *nb,
         unsigned long val, void *data)
 {
@@ -8358,4 +8278,3 @@ static int __init lcdscreen_speedup_init_pm_qos(void)
         return 0;
 }
 late_initcall(lcdscreen_speedup_init_pm_qos);
-#endif

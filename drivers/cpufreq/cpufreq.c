@@ -33,14 +33,10 @@
 #ifdef CONFIG_SMP
 #include <linux/sched.h>
 #endif
-#ifdef VENDOR_EDIT
 #include <linux/pm_qos.h>
-#endif
 #include <trace/events/power.h>
 
-#ifdef VENDOR_EDIT
 #define BIG_CPU_NUMBER 4
-#endif
 
 static LIST_HEAD(cpufreq_policy_list);
 
@@ -67,7 +63,6 @@ static LIST_HEAD(cpufreq_governor_list);
 #define for_each_governor(__governor)				\
 	list_for_each_entry(__governor, &cpufreq_governor_list, governor_list)
 
-#ifdef VENDOR_EDIT
 struct qos_request_value {
        bool flag;
        unsigned int max_cpufreq;
@@ -85,7 +80,6 @@ static struct qos_request_value c1_qos_request_value = {
 };
 static bool c1_cpufreq_update_flag;
 unsigned int cluster1_first_cpu = BIG_CPU_NUMBER;
-#endif
 
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
@@ -2016,11 +2010,7 @@ static int __target_intermediate(struct cpufreq_policy *policy,
 	return ret;
 }
 
-#ifdef VENDOR_EDIT
 static int __target_index(struct cpufreq_policy *policy, int index, unsigned int target_freq, unsigned int relation)
-#else
-static int __target_index(struct cpufreq_policy *policy, int index)
-#endif
 {
 	struct cpufreq_freqs freqs = {.old = policy->cur, .flags = 0};
 	unsigned int intermediate_freq = 0;
@@ -2028,7 +2018,6 @@ static int __target_index(struct cpufreq_policy *policy, int index)
 	int retval = -EINVAL;
 	bool notify;
 
-#ifdef VENDOR_EDIT
 	struct qos_request_value *qos;
 
 	if (newfreq == policy->cur) {
@@ -2045,10 +2034,6 @@ static int __target_index(struct cpufreq_policy *policy, int index)
 
 	index = cpufreq_frequency_table_target(policy, target_freq, relation);
 	target_freq = policy->freq_table[index].frequency;
-#else
-	if (newfreq == policy->cur)
-		return 0;
-#endif
 
 	notify = !(cpufreq_driver->flags & CPUFREQ_ASYNC_NOTIFICATION);
 	if (notify) {
@@ -2063,11 +2048,7 @@ static int __target_index(struct cpufreq_policy *policy, int index)
 			if (intermediate_freq)
 				freqs.old = freqs.new;
 		}
-#ifdef VENDOR_EDIT
 		freqs.new = target_freq;
-#else
-		freqs.new = newfreq;
-#endif
 		pr_debug("%s: cpu: %d, oldfreq: %u, new freq: %u\n",
 			 __func__, policy->cpu, freqs.old, freqs.new);
 
@@ -2090,11 +2071,7 @@ static int __target_index(struct cpufreq_policy *policy, int index)
 		 */
 		if (unlikely(retval && intermediate_freq)) {
 			freqs.old = intermediate_freq;
-#ifdef VENDOR_EDIT
 			freqs.new = target_freq;
-#else
-			freqs.new = policy->restore_freq;
-#endif
 			cpufreq_freq_transition_begin(policy, &freqs);
 			cpufreq_freq_transition_end(policy, &freqs, 0);
 		}
@@ -2130,11 +2107,7 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 
 	index = cpufreq_frequency_table_target(policy, target_freq, relation);
 
-#ifdef VENDOR_EDIT
 	return __target_index(policy, index, target_freq, relation);
-#else
-	return __target_index(policy, index);
-#endif
 }
 EXPORT_SYMBOL_GPL(__cpufreq_driver_target);
 
@@ -2769,7 +2742,6 @@ static int __init cpufreq_core_init(void)
 }
 core_initcall(cpufreq_core_init);
 
-#ifdef VENDOR_EDIT
 static int get_c0_available_cpufreq(struct cpufreq_policy *policy)
 {
        int max_cpufreq_index = -1, min_cpufreq_index = -1;
@@ -2958,4 +2930,3 @@ static int __init pm_qos_notifier_init(void)
        return 0;
 }
 subsys_initcall(pm_qos_notifier_init);
-#endif

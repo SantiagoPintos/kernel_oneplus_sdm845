@@ -421,7 +421,6 @@ static inline long get_nr_swap_pages(void)
 	return atomic_long_read(&nr_swap_pages);
 }
 
-#ifdef VENDOR_EDIT
 extern int sysctl_page_cache_reside_switch;
 extern int sysctl_page_cache_reside_max;
 extern unsigned long uid_lru_size(void);
@@ -437,7 +436,6 @@ extern unsigned long active_nr;
 extern atomic_t vmpress[];
 extern unsigned long priority_nr[];
 extern unsigned long alloc_slow_nr;
-#endif
 extern void si_swapinfo(struct sysinfo *);
 extern swp_entry_t get_swap_page(void);
 extern swp_entry_t get_swap_page_of_type(int);

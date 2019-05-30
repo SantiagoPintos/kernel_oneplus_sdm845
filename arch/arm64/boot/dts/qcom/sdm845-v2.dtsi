@@ -12,9 +12,7 @@
 
 #include "sdm845.dtsi"
 #include "sdm845-v2-camera.dtsi"
-//ifdef VENDOR_EDIT
 #include "sdm845_enchilada_soc.dtsi"
-//endif VENDOR_EDIT
 
 / {
 	model = "Qualcomm Technologies, Inc. SDM845 V2";
