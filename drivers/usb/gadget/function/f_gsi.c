@@ -712,10 +712,10 @@ static void ipa_data_path_enable(struct gsi_data_port *d_port)
 		usb_gsi_ep_op(gsi->d_port.out_ep,
 				&gsi->d_port.out_request,
 				GSI_EP_OP_STORE_DBL_INFO);
-
-		usb_gsi_ep_op(gsi->d_port.out_ep, &gsi->d_port.out_request,
-				GSI_EP_OP_ENABLE_GSI);
 	}
+
+	usb_gsi_ep_op(gsi->d_port.in_ep, &gsi->d_port.in_request,
+				GSI_EP_OP_ENABLE_GSI);
 
 	/* Unblock doorbell to GSI */
 	usb_gsi_ep_op(d_port->in_ep, (void *)&block_db,
@@ -897,10 +897,12 @@ static void ipa_work_handler(struct work_struct *w)
 								__func__);
 				break;
 			}
-			ipa_connect_channels(d_port);
+
 			d_port->sm_state = STATE_CONNECT_IN_PROGRESS;
 			log_event_dbg("%s: ST_INIT_EVT_CONN_IN_PROG",
 					__func__);
+			if (peek_event(d_port) != EVT_DISCONNECTED)
+				ipa_connect_channels(d_port);
 		} else if (event == EVT_HOST_READY) {
 			/*
 			 * When in a composition such as RNDIS + ADB,
@@ -936,8 +938,9 @@ static void ipa_work_handler(struct work_struct *w)
 			log_event_dbg("%s: ST_CON_IN_PROG_EVT_HOST_READY",
 					 __func__);
 		} else if (event == EVT_CONNECTED) {
-			if (peek_event(d_port) == EVT_SUSPEND) {
-				log_event_dbg("%s: ST_CON_IN_PROG_EVT_SUSPEND",
+			if (peek_event(d_port) == EVT_SUSPEND ||
+				peek_event(d_port) == EVT_DISCONNECTED) {
+				log_event_dbg("%s: NO_OP CONN_SUS CONN_DIS",
 					 __func__);
 				break;
 			}
