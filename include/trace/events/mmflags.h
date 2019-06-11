@@ -72,6 +72,11 @@
 #else
 #define IF_HAVE_PG_HWPOISON(flag,string)
 #endif
+#ifdef CONFIG_MEMPLUS
+#define IF_HAVE_PG_WILLNEED(flag, string) ,{1UL << flag, string}
+#else
+#define IF_HAVE_PG_WILLNEED(flag, string)
+#endif
 
 #if defined(CONFIG_IDLE_PAGE_TRACKING) && defined(CONFIG_64BIT)
 #define IF_HAVE_PG_IDLE(flag,string) ,{1UL << flag, string}
@@ -106,7 +111,9 @@ IF_HAVE_PG_UNCACHED(PG_uncached,	"uncached"	)		\
 IF_HAVE_PG_HWPOISON(PG_hwpoison,	"hwpoison"	)		\
 IF_HAVE_PG_IDLE(PG_young,		"young"		)		\
 IF_HAVE_PG_IDLE(PG_idle,		"idle"		)			\
-IF_HAVE_PG_UIDRU(PG_uidlru,	"uidlru")
+IF_HAVE_PG_UIDRU(PG_uidlru,	"uidlru")				\
+/* CONFIG_MEMPLUS add by bin.zhong@ASTI */	\
+IF_HAVE_PG_WILLNEED(PG_willneed,	"willneed")
 
 
 #define show_page_flags(flags)						\

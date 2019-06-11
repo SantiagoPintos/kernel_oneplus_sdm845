@@ -126,6 +126,10 @@ enum zone_stat_item {
 	NR_ZONE_ACTIVE_ANON,
 	NR_ZONE_INACTIVE_FILE,
 	NR_ZONE_ACTIVE_FILE,
+#ifdef CONFIG_MEMPLUS
+	NR_ZONE_INACTIVE_ANON_SWAPCACHE,
+	NR_ZONE_ACTIVE_ANON_SWAPCACHE,
+#endif
 	NR_ZONE_UNEVICTABLE,
 	NR_ZONE_WRITE_PENDING,	/* Count of dirty, writeback and unstable pages */
 	NR_MLOCK,		/* mlock()ed pages found and moved off LRU */
@@ -158,6 +162,10 @@ enum node_stat_item {
 	NR_ACTIVE_ANON,		/*  "     "     "   "       "         */
 	NR_INACTIVE_FILE,	/*  "     "     "   "       "         */
 	NR_ACTIVE_FILE,		/*  "     "     "   "       "         */
+#ifdef CONFIG_MEMPLUS
+	NR_INACTIVE_ANON_SWAPCACHE,	/*  "     "     "   "       "         */
+	NR_ACTIVE_ANON_SWAPCACHE,	/*  "     "     "   "       "         */
+#endif
 	NR_UNEVICTABLE,		/*  "     "     "   "       "         */
 	NR_ISOLATED_ANON,	/* Temporary isolated pages from anon lru */
 	NR_ISOLATED_FILE,	/* Temporary isolated pages from file lru */
@@ -202,13 +210,22 @@ enum lru_list {
 	LRU_ACTIVE_ANON = LRU_BASE + LRU_ACTIVE,
 	LRU_INACTIVE_FILE = LRU_BASE + LRU_FILE,
 	LRU_ACTIVE_FILE = LRU_BASE + LRU_FILE + LRU_ACTIVE,
+#ifdef CONFIG_MEMPLUS
+	LRU_INACTIVE_ANON_SWPCACHE,
+	LRU_ACTIVE_ANON_SWPCACHE,
+#endif
 	LRU_UNEVICTABLE,
 	NR_LRU_LISTS
 };
 
 #define for_each_lru(lru) for (lru = 0; lru < NR_LRU_LISTS; lru++)
 
+#ifdef CONFIG_MEMPLUS
+#define for_each_evictable_lru(lru)	\
+	for (lru = 0; lru <= LRU_ACTIVE_ANON_SWPCACHE; lru++)
+#else
 #define for_each_evictable_lru(lru) for (lru = 0; lru <= LRU_ACTIVE_FILE; lru++)
+#endif
 
 static inline int is_file_lru(enum lru_list lru)
 {
@@ -217,7 +234,12 @@ static inline int is_file_lru(enum lru_list lru)
 
 static inline int is_active_lru(enum lru_list lru)
 {
+#ifdef CONFIG_MEMPLUS
+	return (lru == LRU_ACTIVE_ANON ||
+		lru == LRU_ACTIVE_FILE || lru == LRU_ACTIVE_ANON_SWPCACHE);
+#else
 	return (lru == LRU_ACTIVE_ANON || lru == LRU_ACTIVE_FILE);
+#endif
 }
 
 struct zone_reclaim_stat {
@@ -254,7 +276,14 @@ struct lruvec {
 
 /* Mask used at gathering information at once (see memcontrol.c) */
 #define LRU_ALL_FILE (BIT(LRU_INACTIVE_FILE) | BIT(LRU_ACTIVE_FILE))
+#ifdef CONFIG_MEMPLUS
+#define LRU_ALL_ANON (BIT(LRU_INACTIVE_ANON) |	\
+	BIT(LRU_ACTIVE_ANON) |	\
+	BIT(LRU_INACTIVE_ANON_SWPCACHE) |	\
+	BIT(LRU_ACTIVE_ANON_SWPCACHE))
+#else
 #define LRU_ALL_ANON (BIT(LRU_INACTIVE_ANON) | BIT(LRU_ACTIVE_ANON))
+#endif
 #define LRU_ALL	     ((1 << NR_LRU_LISTS) - 1)
 
 /* Isolate unmapped file */
