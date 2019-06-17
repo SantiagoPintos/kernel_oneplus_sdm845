@@ -159,16 +159,6 @@ struct pm_qos_request pm_qos_req_tp;
 #define Sgestrue            14  // S
 #define SingleTap           15  // single tap
 
-#define KEY_GESTURE_W          	246 //w
-#define KEY_GESTURE_M      		247 //m
-#define KEY_GESTURE_S			248 //s
-#define KEY_DOUBLE_TAP          249 // double tap to wake
-#define KEY_GESTURE_CIRCLE      250 // draw circle to lunch camera
-#define KEY_GESTURE_TWO_SWIPE	251 // swipe two finger vertically to play/pause
-#define KEY_GESTURE_V           252 // draw v to toggle flashlight
-#define KEY_GESTURE_LEFT_V      253 // draw left arrow for previous track
-#define KEY_GESTURE_RIGHT_V     254 // draw right arrow for next track
-
 //ruanbanmao@BSP add for tp gesture 2015-05-06, begin
 #define BIT0 (0x1 << 0)
 #define BIT1 (0x1 << 1)
@@ -1508,43 +1498,6 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 			gesture = UnkownGestrue;
 			break;
 		}
-
-	keyCode = UnkownGestrue;
-	// Get key code based on registered gesture.
-	switch (gesture) {
-		case DouTap:
-			keyCode = KEY_DOUBLE_TAP;
-			break;
-		case UpVee:
-			keyCode = KEY_GESTURE_V;
-			break;
-		case DownVee:
-			keyCode = KEY_GESTURE_V;
-			break;
-		case LeftVee:
-			keyCode = KEY_GESTURE_RIGHT_V;
-			break;
-		case RightVee:
-			keyCode = KEY_GESTURE_LEFT_V;
-			break;
-		case Circle:
-			keyCode = KEY_GESTURE_CIRCLE;
-			break;
-		case DouSwip:
-			keyCode = KEY_GESTURE_TWO_SWIPE;
-			break;
-		case Wgestrue:
-			keyCode = KEY_GESTURE_W;
-			break;
-		case Mgestrue:
-			keyCode = KEY_GESTURE_M;
-			break;
-		case Sgestrue:
-			keyCode = KEY_GESTURE_S;
-			break;
-		default:
-			break;
-	}
 
 	TPD_ERR("detect %s gesture\n", gesture == DouTap ? "(double tap)" :
 			gesture == UpVee ? "(V)" :
@@ -3601,12 +3554,6 @@ static int	synaptics_input_init(struct synaptics_ts_data *ts)
 	set_bit(BTN_TOOL_FINGER, ts->input_dev->keybit);
 #ifdef SUPPORT_GESTURE
 	set_bit(KEY_F4 , ts->input_dev->keybit);//doulbe-tap resume
-	set_bit(KEY_DOUBLE_TAP, ts->input_dev->keybit);
-	set_bit(KEY_GESTURE_CIRCLE, ts->input_dev->keybit);
-	set_bit(KEY_GESTURE_V, ts->input_dev->keybit);
-	set_bit(KEY_GESTURE_TWO_SWIPE, ts->input_dev->keybit);
-	set_bit(KEY_GESTURE_LEFT_V, ts->input_dev->keybit);
-	set_bit(KEY_GESTURE_RIGHT_V, ts->input_dev->keybit);
 	set_bit(KEY_APPSELECT, ts->input_dev->keybit);
 	set_bit(KEY_BACK, ts->input_dev->keybit);
 #endif
