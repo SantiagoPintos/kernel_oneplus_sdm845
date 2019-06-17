@@ -97,7 +97,6 @@ volatile unsigned long latent_entropy __latent_entropy;
 EXPORT_SYMBOL(latent_entropy);
 #endif
 
-unsigned long alloc_slow_nr;
 /*
  * Array of node states.
  */
@@ -4468,7 +4467,6 @@ void show_free_areas(unsigned int filter)
 		global_page_state(NR_FREE_PAGES),
 		free_pcp,
 		global_page_state(NR_FREE_CMA_PAGES));
-	printk(" ramboost:%lu\n", global_page_state(NR_ZONE_UID_LRU));
 
 	for_each_online_pgdat(pgdat) {
 		printk("Node %d"
@@ -4537,7 +4535,6 @@ void show_free_areas(unsigned int filter)
 			" inactive_anon:%lukB"
 			" active_file:%lukB"
 			" inactive_file:%lukB"
-			" ramboost:%lukB"
 			" unevictable:%lukB"
 			" writepending:%lukB"
 			" present:%lukB"
@@ -4561,7 +4558,6 @@ void show_free_areas(unsigned int filter)
 			K(zone_page_state(zone, NR_ZONE_INACTIVE_ANON)),
 			K(zone_page_state(zone, NR_ZONE_ACTIVE_FILE)),
 			K(zone_page_state(zone, NR_ZONE_INACTIVE_FILE)),
-			K(zone_page_state(zone, NR_ZONE_UID_LRU)),
 			K(zone_page_state(zone, NR_ZONE_UNEVICTABLE)),
 			K(zone_page_state(zone, NR_ZONE_WRITE_PENDING)),
 			K(zone->present_pages),

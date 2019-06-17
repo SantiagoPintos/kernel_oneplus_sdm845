@@ -87,7 +87,6 @@ static int lowmem_minfree_size = 4;
 static int lmk_fast_run = 1;
 
 static unsigned long lowmem_deathpending_timeout;
-unsigned long killed_num;
 
 #define lowmem_print(level, x...)			\
 	do {						\
@@ -95,10 +94,6 @@ unsigned long killed_num;
 			pr_info(x);			\
 	} while (0)
 
-unsigned long get_max_minfree(void)
-{
-	return lowmem_minfree[lowmem_minfree_size - 1];
-}
 static unsigned long lowmem_count(struct shrinker *s,
 				  struct shrink_control *sc)
 {
@@ -915,7 +910,6 @@ static unsigned long lowmem_batch_kill(
 				continue;
 			}
 
-			killed_num++;
 			task_lock(selected);
 			send_sig(SIGKILL, selected, 0);
 			signaled = true;
@@ -932,7 +926,6 @@ static unsigned long lowmem_batch_kill(
 			lowmem_print(1, "batch Killing '%s' (%d) (tgid %d), adj %hd,\n"
 					"to free %ldkB on behalf of '%s' (%d) because\n"
 					"cache %ldkB is below limit %ldkB for oom score %hd\n"
-					"uid_lru_list size %ld pages\n"
 					"Free memory is %ldkB above reserved.\n"
 					"Free CMA is %ldkB\n"
 					"Total reserve is %ldkB\n"
@@ -947,7 +940,6 @@ static unsigned long lowmem_batch_kill(
 					current->comm, current->pid,
 					cache_size, cache_limit,
 					min_score_adj,
-					uid_lru_size(),
 					free,
 					global_page_state(NR_FREE_CMA_PAGES) *
 					(long)(PAGE_SIZE / 1024),
@@ -998,7 +990,6 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free;
 	int other_file;
-	unsigned long uid_lru_total;
 
 	bool quick_select_enable = quick_select;
 	bool batch_kill_enable = batch_kill;
@@ -1008,8 +999,6 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 #endif
 
 	batch_kill_init(bkws);
-
-	uid_lru_total = uid_lru_size();
 
 	if (!mutex_trylock(&scan_mutex))
 		return 0;
@@ -1032,7 +1021,6 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		array_size = lowmem_adj_size;
 	if (lowmem_minfree_size < array_size)
 		array_size = lowmem_minfree_size;
-
 	for (i = 0; i < array_size; i++) {
 		minfree = lowmem_minfree[i];
 		if (other_free < minfree && other_file < minfree) {
@@ -1292,7 +1280,6 @@ quick_select_fast:
 		lowmem_print(1, "Killing '%s' (%d) (tgid %d), adj %hd,\n"
 			"to free %ldkB on behalf of '%s' (%d) because\n"
 			"cache %ldkB is below limit %ldkB for oom score %hd\n"
-			"uid_lru_list size %ld pages\n"
 			"Free memory is %ldkB above reserved.\n"
 			"Free CMA is %ldkB\n"
 			"Total reserve is %ldkB\n"
@@ -1307,7 +1294,6 @@ quick_select_fast:
 			current->comm, current->pid,
 			cache_size, cache_limit,
 			min_score_adj,
-			uid_lru_size(),
 			free,
 			global_page_state(NR_FREE_CMA_PAGES) *
 			(long)(PAGE_SIZE / 1024),

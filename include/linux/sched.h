@@ -2294,7 +2294,6 @@ struct task_struct {
 	bool utask_slave;
 	/* Ted, 20180425, non-exist dcache*/
 	struct nedf_node *nn;
-	int hot_count;
 /* CPU-specific state of this task */
 	struct thread_struct thread;
 /*

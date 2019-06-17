@@ -2049,9 +2049,6 @@ long _do_fork(unsigned long clone_flags,
 
 		trace_sched_process_fork(current, p);
 
-		if (!(clone_flags & CLONE_VM))
-			p->hot_count = 0;
-
 		pid = get_task_pid(p, PIDTYPE_PID);
 		nr = pid_vnr(pid);
 

@@ -151,8 +151,8 @@ __always_inline void ctech_memplus_move_swapcache_to_anon_lru(struct page *page)
 			lru = page_lru(page);
 			lruvec = mem_cgroup_page_lruvec(page, zone->zone_pgdat);
 			list_move(&page->lru, &lruvec->lists[lru]);
-			update_lru_size(lruvec, oldlru, page_zonenum(page), -hpage_nr_pages(page), false);
-			update_lru_size(lruvec, lru, page_zonenum(page), hpage_nr_pages(page), false);
+			update_lru_size(lruvec, oldlru, page_zonenum(page), -hpage_nr_pages(page));
+			update_lru_size(lruvec, lru, page_zonenum(page), hpage_nr_pages(page));
 		} else
 			clear_bit(PG_swapcache, &(PF_NO_TAIL(page, 1))->flags);
 		spin_unlock_irqrestore(zone_lru_lock(zone), flag);
@@ -177,8 +177,8 @@ __always_inline void ctech_memplus_move_anon_to_swapcache_lru(struct page *page)
 			lru = page_lru(page);
 			lruvec = mem_cgroup_page_lruvec(page, zone->zone_pgdat);
 			list_move(&page->lru, &lruvec->lists[lru]);
-			update_lru_size(lruvec, oldlru, page_zonenum(page), -hpage_nr_pages(page), false);
-			update_lru_size(lruvec, lru, page_zonenum(page), hpage_nr_pages(page), false);
+			update_lru_size(lruvec, oldlru, page_zonenum(page), -hpage_nr_pages(page));
+			update_lru_size(lruvec, lru, page_zonenum(page), hpage_nr_pages(page));
 		}
 		spin_unlock_irqrestore(zone_lru_lock(zone), flag);
 	} else

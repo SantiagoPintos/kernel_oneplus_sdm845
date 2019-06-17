@@ -89,9 +89,6 @@
 #include <linux/posix-timers.h>
 #include <linux/cpufreq_times.h>
 
-#include <linux/hotcount.h>
-#include <linux/rmap.h>
-
 #include <linux/adj_chain.h>
 
 #ifdef CONFIG_HARDWALL
@@ -2643,107 +2640,6 @@ static const struct file_operations proc_pid_set_timerslack_ns_operations = {
 	.release	= single_release,
 };
 
-static ssize_t page_hot_count_read(struct file *file, char __user *buf,
-				size_t count, loff_t *ppos)
-{
-	struct task_struct *task = get_proc_task(file_inode(file));
-	char buffer[PROC_NUMBUF];
-	size_t len;
-	int page_hot_count;
-
-	if (!task)
-		return -ESRCH;
-
-	page_hot_count = task->hot_count;
-
-	put_task_struct(task);
-
-	len = snprintf(buffer, sizeof(buffer), "%d\n", page_hot_count);
-	return simple_read_from_buffer(buf, count, ppos, buffer, len);
-}
-
-static struct cgroup_subsys_state *
-task_get_css_noretry(struct task_struct *task, int subsys_id)
-{
-	struct cgroup_subsys_state *css;
-
-	rcu_read_lock();
-	css = task_css(task, subsys_id);
-	if (unlikely(!css_tryget_online(css))) {
-		rcu_read_unlock();
-		return NULL;
-	}
-	rcu_read_unlock();
-	return css;
-}
-
-static ssize_t page_hot_count_write(struct file *file, const char __user *buf,
-				size_t count, loff_t *ppos)
-{
-	struct task_struct *task;
-	char buffer[PROC_NUMBUF];
-	int page_hot_count;
-	int err;
-	uid_t uid;
-
-	memset(buffer, 0, sizeof(buffer));
-
-	if (count > sizeof(buffer) - 1)
-		count = sizeof(buffer) - 1;
-	if (copy_from_user(buffer, buf, count)) {
-		err = -EFAULT;
-		goto out;
-	}
-
-	err = kstrtoint(strstrip(buffer), 0, &page_hot_count);
-	if (err)
-		goto out;
-
-	task = get_proc_task(file_inode(file));
-	if (!task) {
-		err = -ESRCH;
-		goto out;
-	}
-
-	task->hot_count = page_hot_count;
-	uid = __task_cred(task)->user->uid.val;
-
-	if (!page_hot_count) {
-		struct cgroup_subsys_state *pos;
-		struct css_task_iter it;
-		struct task_struct *tsk;
-		struct cgroup_subsys_state *parent;
-		struct cgroup_subsys_state * css;
-
-		css = task_get_css_noretry(task, cpuacct_cgrp_id);
-		if (css) {
-			parent = css->parent;
-			rcu_read_lock();
-			css_for_each_child(pos, parent) {
-				css_task_iter_start(&pos->cgroup->self, &it);
-				while ((tsk = css_task_iter_next(&it)))
-					tsk->hot_count = 0;
-				css_task_iter_end(&it);
-			}
-			rcu_read_unlock();
-		}
-		reclaim_pages_from_uid_list(uid);
-		delete_prio_node(uid);
-	} else {
-		insert_prio_node(page_hot_count, uid);
-	}
-
-	put_task_struct(task);
-
-out:
-	return err < 0 ? err : count;
-}
-
-static const struct file_operations proc_page_hot_count_operations = {
-	.read		= page_hot_count_read,
-	.write		= page_hot_count_write,
-};
-
 static int proc_pident_instantiate(struct inode *dir,
 	struct dentry *dentry, struct task_struct *task, const void *ptr)
 {
@@ -3444,8 +3340,6 @@ static const struct pid_entry tgid_base_stuff[] = {
 	REG("timers",	  S_IRUGO, proc_timers_operations),
 #endif
 	REG("timerslack_ns", S_IRUGO|S_IWUGO, proc_pid_set_timerslack_ns_operations),
-	REG("page_hot_count", 0666, proc_page_hot_count_operations),
-	REG("inode_index_disabled", 0666, proc_inode_index_disabled_operations),
 #ifdef CONFIG_CPU_FREQ_TIMES
 	ONE("time_in_state", 0444, proc_time_in_state_show),
 #endif
