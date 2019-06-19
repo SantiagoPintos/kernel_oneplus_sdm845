@@ -3676,9 +3676,6 @@ sub process {
 				fix_insert_line($fixlinenr, $fixedline);
 			}
 		}
-
-		}
-
 #
 # Checks which are anchored on the added line.
 #
