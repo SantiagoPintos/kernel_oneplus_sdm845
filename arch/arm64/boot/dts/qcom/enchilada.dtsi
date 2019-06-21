@@ -2075,6 +2075,7 @@ status = "disabled";
         compatible = "nxp,p61";
         reg = <0>;
         spi-max-frequency = <8000000>;
+        nxp,nfcc = "1-0028";
     };
 };
 
