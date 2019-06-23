@@ -899,6 +899,7 @@ static void send_file_work(struct work_struct *data)
 	}
 
 	mtp_log("(%lld %lld)\n", offset, count);
+<<<<<<< HEAD
 
 	if (dev->xfer_file_length >= FILE_LENGTH) {
 		pm_qos_update_request(&devfreq_mtp_request, MAX_CPUFREQ);
@@ -912,6 +913,8 @@ static void send_file_work(struct work_struct *data)
 		pm_qos_update_request_timeout(&big_cpu_mtp_freq,
 		MAX_CPUFREQ-1, PM_QOS_TIMEOUT);
 	}
+=======
+>>>>>>> origin/sdm845_Q
 
 	if (dev->xfer_send_header) {
 		hdr_size = sizeof(struct mtp_data_header);
@@ -1000,6 +1003,7 @@ static void send_file_work(struct work_struct *data)
 	if (req)
 		mtp_req_put(dev, &dev->tx_idle, req);
 
+<<<<<<< HEAD
 	if (dev->xfer_file_length >= FILE_LENGTH) {
 		pm_qos_update_request(&devfreq_mtp_request, MIN_CPUFREQ);
 		pm_qos_update_request(&little_cpu_mtp_freq, MIN_CPUFREQ);
@@ -1007,6 +1011,9 @@ static void send_file_work(struct work_struct *data)
 	}
 	mtp_log("returning %d state:%d\n", r, dev->state);
 
+=======
+	mtp_log("returning %d state:%d\n", r, dev->state);
+>>>>>>> origin/sdm845_Q
 	/* write the result */
 	dev->xfer_result = r;
 	smp_wmb();
@@ -1151,8 +1158,11 @@ static void receive_file_work(struct work_struct *data)
 		}
 	}
 
+<<<<<<< HEAD
 	queue_delayed_work(cpu_freq_qos_queue, &cpu_freq_qos_work,
 		msecs_to_jiffies(1000)*3);
+=======
+>>>>>>> origin/sdm845_Q
 	mtp_log("returning %d\n", r);
 	/* write the result */
 	dev->xfer_result = r;

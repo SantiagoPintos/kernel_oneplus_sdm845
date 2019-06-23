@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,6 +18,37 @@
 #include "cam_trace.h"
 #include "cam_debug_util.h"
 
+<<<<<<< HEAD
+=======
+static void cam_node_print_ctx_state(
+	struct cam_node *node)
+{
+	int i;
+	struct cam_context *ctx;
+
+	CAM_INFO(CAM_CORE, "[%s] state=%d, ctx_size %d",
+		node->name, node->state, node->ctx_size);
+
+	mutex_lock(&node->list_mutex);
+	for (i = 0; i < node->ctx_size; i++) {
+		ctx = &node->ctx_list[i];
+
+		spin_lock(&ctx->lock);
+		CAM_INFO(CAM_CORE,
+			"[%s][%d] : state=%d, refcount=%d, active_req_list=%d, pending_req_list=%d, wait_req_list=%d, free_req_list=%d",
+			ctx->dev_name,
+			i, ctx->state,
+			atomic_read(&(ctx->refcount.refcount)),
+			list_empty(&ctx->active_req_list),
+			list_empty(&ctx->pending_req_list),
+			list_empty(&ctx->wait_req_list),
+			list_empty(&ctx->free_req_list));
+		spin_unlock(&ctx->lock);
+	}
+	mutex_unlock(&node->list_mutex);
+}
+
+>>>>>>> origin/sdm845_Q
 static struct cam_context *cam_node_get_ctxt_from_free_list(
 		struct cam_node *node)
 {
@@ -125,6 +156,12 @@ static int __cam_node_handle_start_dev(struct cam_node *node,
 		return -EINVAL;
 	}
 
+	if (strcmp(node->name, ctx->dev_name)) {
+		CAM_ERR(CAM_CORE, "node name %s dev name:%s not matching",
+			node->name, ctx->dev_name);
+		return -EINVAL;
+	}
+
 	rc = cam_context_handle_start_dev(ctx, start);
 	if (rc)
 		CAM_ERR(CAM_CORE, "Start failure for node %s", node->name);
@@ -155,6 +192,12 @@ static int __cam_node_handle_stop_dev(struct cam_node *node,
 	if (!ctx) {
 		CAM_ERR(CAM_CORE, "Can not get context for handle %d",
 			stop->dev_handle);
+		return -EINVAL;
+	}
+
+	if (strcmp(node->name, ctx->dev_name)) {
+		CAM_ERR(CAM_CORE, "node name %s dev name:%s not matching",
+			node->name, ctx->dev_name);
 		return -EINVAL;
 	}
 
@@ -191,6 +234,12 @@ static int __cam_node_handle_config_dev(struct cam_node *node,
 		return -EINVAL;
 	}
 
+	if (strcmp(node->name, ctx->dev_name)) {
+		CAM_ERR(CAM_CORE, "node name %s dev name:%s not matching",
+			node->name, ctx->dev_name);
+		return -EINVAL;
+	}
+
 	rc = cam_context_handle_config_dev(ctx, config);
 	if (rc)
 		CAM_ERR(CAM_CORE, "Config failure for node %s", node->name);
@@ -221,6 +270,12 @@ static int __cam_node_handle_flush_dev(struct cam_node *node,
 	if (!ctx) {
 		CAM_ERR(CAM_CORE, "Can not get context for handle %d",
 			flush->dev_handle);
+		return -EINVAL;
+	}
+
+	if (strcmp(node->name, ctx->dev_name)) {
+		CAM_ERR(CAM_CORE, "node name %s dev name:%s not matching",
+			node->name, ctx->dev_name);
 		return -EINVAL;
 	}
 
@@ -260,9 +315,31 @@ static int __cam_node_handle_release_dev(struct cam_node *node,
 		return -EINVAL;
 	}
 
+<<<<<<< HEAD
 	rc = cam_context_handle_release_dev(ctx, release);
 	if (rc)
 		CAM_ERR(CAM_CORE, "context release failed node %s", node->name);
+=======
+	if (strcmp(node->name, ctx->dev_name)) {
+		CAM_ERR(CAM_CORE, "node name %s dev name:%s not matching",
+			node->name, ctx->dev_name);
+		return -EINVAL;
+	}
+
+	if (ctx->state > CAM_CTX_UNINIT && ctx->state < CAM_CTX_STATE_MAX) {
+		rc = cam_context_handle_release_dev(ctx, release);
+		if (rc)
+			CAM_ERR(CAM_CORE, "context release failed for node %s",
+				node->name);
+	} else {
+		CAM_WARN(CAM_CORE,
+			"node %s context id %u state %d invalid to release hdl",
+			node->name, ctx->ctx_id, ctx->state);
+		goto destroy_dev_hdl;
+	}
+
+	cam_context_putref(ctx);
+>>>>>>> origin/sdm845_Q
 
 	rc = cam_destroy_device_hdl(release->dev_handle);
 	if (rc)

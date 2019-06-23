@@ -507,7 +507,12 @@
 					dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/vendor";
 					type = "ext4";
 					mnt_flags = "ro,barrier=1,discard";
+<<<<<<< HEAD
 					fsmgr_flags = "wait,slotselect";
+=======
+					fsmgr_flags = "wait,slotselect,avb";
+					status = "ok";
+>>>>>>> origin/sdm845_Q
 				};
 			};
 		};
