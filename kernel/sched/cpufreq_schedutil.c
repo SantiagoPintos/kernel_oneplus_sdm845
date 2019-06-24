@@ -140,14 +140,11 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 	if (policy->cur == next_freq) {
 		sg_policy->next_freq = next_freq;
 		return;
-<<<<<<< HEAD
 	}
-=======
 
 	if (sugov_up_down_rate_limit(sg_policy, time, next_freq))
 		return;
 
->>>>>>> origin/sdm845_Q
 	sg_policy->next_freq = next_freq;
 	sg_policy->last_freq_update_time = time;
 

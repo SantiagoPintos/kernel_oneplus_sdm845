@@ -4403,13 +4403,10 @@ static enum power_supply_property fg_psy_props[] = {
 	POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE,
 	POWER_SUPPLY_PROP_CC_STEP,
 	POWER_SUPPLY_PROP_CC_STEP_SEL,
-<<<<<<< HEAD
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	POWER_SUPPLY_PROP_SET_ALLOW_READ_EXTERN_FG_IIC,
 	POWER_SUPPLY_PROP_BQ_SOC,
-=======
 	POWER_SUPPLY_PROP_REAL_CAPACITY,
->>>>>>> origin/sdm845_Q
 };
 
 static const struct power_supply_desc fg_psy_desc = {

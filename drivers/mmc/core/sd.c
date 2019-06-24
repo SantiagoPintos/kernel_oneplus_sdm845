@@ -1384,7 +1384,6 @@ static int mmc_sd_resume(struct mmc_host *host)
 			mmc_card_set_removed(host->card);
 		}
 	}
-<<<<<<< HEAD
 
 	if (err != -ENOMEDIUM) {
 		pm_runtime_set_active(&host->card->dev);
@@ -1392,15 +1391,6 @@ static int mmc_sd_resume(struct mmc_host *host)
 		pm_runtime_enable(&host->card->dev);
 	}
 
-=======
-
-	if (err != -ENOMEDIUM) {
-		pm_runtime_set_active(&host->card->dev);
-		pm_runtime_mark_last_busy(&host->card->dev);
-		pm_runtime_enable(&host->card->dev);
-	}
-
->>>>>>> origin/sdm845_Q
 	MMC_TRACE(host, "%s: Exit err: %d\n", __func__, err);
 	return err;
 }
