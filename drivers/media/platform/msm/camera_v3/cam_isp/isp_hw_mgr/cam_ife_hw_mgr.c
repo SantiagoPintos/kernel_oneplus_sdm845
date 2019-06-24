@@ -3707,12 +3707,6 @@ static int cam_isp_packet_generic_blob_handler(void *user_data,
 	}
 		break;
 	case CAM_ISP_GENERIC_BLOB_TYPE_BW_CONFIG_V2: {
-<<<<<<< HEAD
-		struct cam_isp_bw_config_ab    *bw_config_ab =
-			(struct cam_isp_bw_config_ab *)blob_data;
-		struct cam_isp_prepare_hw_update_data   *prepare_hw_data;
-
-=======
 		struct cam_isp_bw_config_ab    *bw_config_ab;
 
 		struct cam_isp_prepare_hw_update_data   *prepare_hw_data;
@@ -3740,7 +3734,7 @@ static int cam_isp_packet_generic_blob_handler(void *user_data,
 				* sizeof(struct cam_isp_bw_vote));
 			return -EINVAL;
 		}
->>>>>>> origin/sdm845_Q
+
 		CAM_DBG(CAM_ISP, "AB L:%lld R:%lld usage_type %d",
 			bw_config_ab->left_pix_vote_ab,
 			bw_config_ab->right_pix_vote_ab,
