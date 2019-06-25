@@ -405,8 +405,7 @@
 					06 01 00 00 00 00 01 A1
 				];
 				qcom,mdss-dsi-panel-serial-num-command-state = "dsi_lp_mode";
-
-				qcom,mdss-dsi-panel-srgb-on-command = [
+				qcom,mdss-dsi-panel-display-srgb-color-mode-on-command = [
 					39 01 00 00 02 00 02 81 90
 					39 01 00 00 00 00 03 f0 5A 5A
 					39 01 00 00 00 00 02 B0 02
@@ -414,31 +413,6 @@
 					39 01 00 00 00 00 03 B1 00 00
 					39 01 00 00 00 00 03 f0 A5 A5
 				];
-				qcom,mdss-dsi-panel-srgb-off-command = [
-					39 01 00 00 00 00 03 F0 5A 5A
-					39 01 00 00 00 00 03 B1 00 01
-					39 01 00 00 00 00 03 F0 A5 A5
-				];
-				qcom,mdss-dsi-panel-srgb-on-command-state = "dsi_lp_mode";
-				qcom,mdss-dsi-panel-srgb-off-command-state = "dsi_lp_mode";
-
-				qcom,mdss-dsi-panel-dci-p3-on-command = [
-				29 01 00 00 02 00 02 81 90
-				29 01 00 00 00 00 03 f0 5A 5A
-				29 01 00 00 00 00 02 B0 02
-				29 01 00 00 00 00 16 B1 C6 00 00 21 ED 02 08 06 c1 27 FC dC E4 00 D9 e6 e7 00 fe f9 d8
-				29 01 00 00 00 00 03 B1 00 00
-				29 01 00 00 00 00 03 f0 A5 A5
-				
-				];
-				qcom,mdss-dsi-panel-dci-p3-off-command = [
-				39 01 00 00 00 00 03 F0 5A 5A
-				39 01 00 00 00 00 03 B1 00 01
-				39 01 00 00 00 00 03 F0 A5 A5
-				];
-				qcom,mdss-dsi-panel-dci-p3-on-command-state = "dsi_lp_mode";
-				qcom,mdss-dsi-panel-dci-p3-off-command-state = "dsi_lp_mode";
-
 				qcom,mdss-dsi-panel-night-mode-on-command = [
 					39 01 00 00 02 00 02 81 90
 				  	39 01 00 00 00 00 03 f0 5A 5A
@@ -447,43 +421,55 @@
 					39 01 00 00 00 00 03 B1 00 00
 					39 01 00 00 00 00 03 f0 A5 A5
 				];
-				qcom,mdss-dsi-panel-night-mode-off-command = [
-				39 01 00 00 00 00 03 F0 5A 5A
-				39 01 00 00 00 00 03 B1 00 01
-				39 01 00 00 00 00 03 F0 A5 A5
-				];
-				qcom,mdss-dsi-panel-night-mode-on-command-state = "dsi_lp_mode";
-				qcom,mdss-dsi-panel-night-mode-off-command-state = "dsi_lp_mode";
-
-				qcom,mdss-dsi-panel-oneplus-mode-on-command = [
+				qcom,mdss-dsi-panel-display-p3-mode-on-command = [
 					39 01 00 00 02 00 02 81 90
-				    39 01 00 00 00 00 03 f0 5A 5A
-				    39 01 00 00 00 00 02 B0 02
-					39 01 00 00 00 00 16 B1 b4 02 04 05 ff 02 00 00 ff 00 ff ff f0 00 f0 e0 e1 18 ff fe fB
+					39 01 00 00 00 00 03 f0 5A 5A
+					39 01 00 00 00 00 02 B0 02
+					39 01 00 00 00 00 16 B1 C6 00 00 21 ED 02 08 06 c1 27 FC dC E4 00 D9 e6 e7 00 FC FF EA
 					39 01 00 00 00 00 03 B1 00 00
 					39 01 00 00 00 00 03 f0 A5 A5
 				];
-				qcom,mdss-dsi-panel-oneplus-mode-off-command = [
-				39 01 00 00 00 00 03 F0 5A 5A
-				39 01 00 00 00 00 03 B1 00 01
-				39 01 00 00 00 00 03 F0 A5 A5
+				qcom,mdss-dsi-panel-display-wide-color-mode-on-command = [
+					39 01 00 00 02 00 02 81 90
+					39 01 00 00 00 00 03 f0 5A 5A
+					39 01 00 00 00 00 02 B0 02
+					39 01 00 00 00 00 16 B1 FF 00 00 00 FF 00 00 00 FF 00 FF FF FF 00 FF FF FF 00 FF FF FF
+					39 01 00 00 00 00 03 B1 00 00
+					39 01 00 00 00 00 03 f0 A5 A5
 				];
-				qcom,mdss-dsi-panel-oneplus-mode-on-command-state = "dsi_lp_mode";
-				qcom,mdss-dsi-panel-oneplus-mode-off-comman-state = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-dci-p3-off-command = [
+					39 01 00 00 00 00 03 F0 5A 5A
+					39 01 00 00 00 00 03 B1 00 01
+					39 01 00 00 00 00 03 F0 A5 A5
+				];			
+				qcom,mdss-dsi-customer-srgb-enable-command = [
+					39 01 00 00 02 00 02 81 90
+					39 01 00 00 00 00 03 f0 5A 5A
+					39 01 00 00 00 00 02 B0 02
+					39 01 00 00 00 00 16 B1 a6 04 04 47 DF 10 05 05 C3 4C EF D4 Bb 0B BF f1 EB 18 FF FF FF
+					39 01 00 00 00 00 03 B1 00 00
+					39 01 00 00 00 00 03 f0 A5 A5
 
-				qcom,mdss-dsi-panel-adaption-mode-on-command = [
-				  39 01 00 00 02 00 02 81 90
-				  39 01 00 00 00 00 03 f0 5A 5A
-				  39 01 00 00 00 00 02 B0 02
-			      39 01 00 00 00 00 16 B1 C6 00 00 12 f8 02 04 00 c1 13 e9 de d5 00 e0 e4 e7 00 fb ff ff
-				  39 01 00 00 00 00 03 B1 00 00
-				  39 01 00 00 00 00 03 f0 A5 A5
 				];
-				qcom,mdss-dsi-panel-adaption-mode-off-command = [
-				39 01 00 00 00 00 03 F0 5A 5A
-				39 01 00 00 00 00 03 B1 00 01
-				39 01 00 00 00 00 03 F0 A5 A5
+				qcom,mdss-dsi-customer-p3-enable-command = [
+					39 01 00 00 02 00 02 81 90
+					39 01 00 00 00 00 03 f0 5A 5A
+					39 01 00 00 00 00 02 B0 02
+					39 01 00 00 00 00 16 B1 C6 00 00 21 ED 02 08 06 c1 27 FC dC E4 00 D9 e6 e7 00 FF FF FF
+					39 01 00 00 00 00 03 B1 00 00
+					39 01 00 00 00 00 03 f0 A5 A5
+
 				];
+				qcom,mdss-dsi-customer-p3-enable-command-state  = "dsi_lp_mode";
+				qcom,mdss-dsi-customer-srgb-enable-command-state  = "dsi_lp_mode";
+				qcom,mdss-dsi-laoding-effect-enable-command-state  = "dsi_lp_mode";
+				qcom,mdss-dsi-laoding-effect-disable-command-state  = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-display-srgb-color-mode-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-display-p3-mode-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-display-wide-color-mode-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-night-mode-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-dci-p3-off-command-state = "dsi_lp_mode";
+
 				qcom,mdss-dsi-panel-adaption-mode-on-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-panel-adaption-mode-off-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-panel-status-command = [06 01 00 01 05 00 02 0E 08];

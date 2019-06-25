@@ -211,11 +211,12 @@ struct dsi_panel {
 	int aod_status;
 	int aod_curr_mode;
 	int aod_disable;
-	int srgb_mode;
-	int dci_p3_mode;
-	int night_mode;
-	int oneplus_mode;
-	int adaption_mode;
+	int naive_display_p3_mode;
+	int naive_display_wide_color_mode;
+	int naive_display_srgb_color_mode;
+	int naive_display_loading_effect_mode;
+	int naive_display_customer_srgb_mode;
+	int naive_display_customer_p3_mode;
 	int status_value;
 	int panel_mismatch_check;
 	int panel_mismatch;
@@ -331,20 +332,18 @@ void dsi_dsc_pclk_param_calc(struct msm_display_dsc_info *dsc, int intf_width);
 struct dsi_panel *dsi_panel_ext_bridge_get(struct device *parent,
 				struct device_node *of_node,
 				int topology_override);
-
 int dsi_panel_parse_esd_reg_read_configs(struct dsi_panel *panel,
 				struct device_node *of_node);
-
 void dsi_panel_ext_bridge_put(struct dsi_panel *panel);
 int dsi_panel_set_acl_mode(struct dsi_panel *panel, int level);
 int dsi_panel_set_hbm_mode(struct dsi_panel *panel, int level);
 int dsi_panel_op_set_hbm_mode(struct dsi_panel *panel, int level);
-
 int dsi_panel_set_aod_mode(struct dsi_panel *panel, int level);
-int dsi_panel_set_srgb_mode(struct dsi_panel *panel, int level);
-int dsi_panel_set_dci_p3_mode(struct dsi_panel *panel, int level);
-int dsi_panel_set_night_mode(struct dsi_panel *panel, int level);
-int dsi_panel_set_oneplus_mode(struct dsi_panel *panel, int level);
-int dsi_panel_set_adaption_mode(struct dsi_panel *panel, int level);
+int dsi_panel_set_native_display_p3_mode(struct dsi_panel *panel, int level);
+int dsi_panel_set_native_display_wide_color_mode(struct dsi_panel *panel, int level);
+int dsi_panel_set_native_display_srgb_color_mode(struct dsi_panel *panel, int level);
+int dsi_panel_set_customer_srgb_mode(struct dsi_panel *panel, int level);
+int dsi_panel_set_customer_p3_mode(struct dsi_panel *panel, int level);
+
 
 #endif /* _DSI_PANEL_H_ */
