@@ -384,7 +384,7 @@ static int nfc_probe(struct i2c_client *client,
                     __func__, platform_data.ese_pwr_gpio);
             goto err_firm_gpio;
         }
-        ret = gpio_direction_output(platform_data.ese_pwr_gpio, 0);
+        ret = gpio_direction_output(platform_data.ese_pwr_gpio, 1);
         if (ret) {
             pr_err("%s: cannot set direction for nfc ese gpio [%d]\n",
                     __func__, platform_data.ese_pwr_gpio);
