@@ -31,7 +31,7 @@
 #include <linux/module.h>
 #include "../kernel/sched/sched.h"
 #include "opchain_define.h"
-#include "opchain_proxy.h"
+#include "../coretech/uxcore/core/opchain_proxy.h"
 
 #define t_rq(t)		task_rq(t)
 #define c_rq(cpu) 	cpu_rq(cpu)
