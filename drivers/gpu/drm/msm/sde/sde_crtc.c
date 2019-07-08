@@ -5054,13 +5054,13 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 		}
 
 		if (fp_index >= 0) {
-			if (dim_mode == 0) {
+			if (dim_mode != 0 || display->panel->aod_status == 1) {
 				pstates[fp_index].sde_pstate->
-				property_values[PLANE_PROP_ALPHA].value = 0;
+				property_values[PLANE_PROP_ALPHA].value = 0xff;
 				fp_index = -1;
 			} else {
 				pstates[fp_index].sde_pstate->
-				property_values[PLANE_PROP_ALPHA].value = 0xff;
+				property_values[PLANE_PROP_ALPHA].value = 0;
 			}
 		}
 
@@ -5072,7 +5072,9 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 				aod_index = -1;
 				SDE_ATRACE_END("aod_layer_hid");
 			}
+		}
 
+		if (aod_index >= 0) {
 			if (zpos > pstates[aod_index].stage)
 				zpos = pstates[aod_index].stage;
 
