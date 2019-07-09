@@ -38,9 +38,18 @@ typedef struct{
 static DEFINE_MUTEX(param_lock);
 static bool param_init_done = 0;
 static param_ram_zone_t param_ram_zone;
+int restart_08_count;
+int restart_other_count;
+
+void init_param_mem_base_size(phys_addr_t base, unsigned long size)
+{
+	param_ram_zone.paddr = base;
+	param_ram_zone.size = size;
+}
+EXPORT_SYMBOL(init_param_mem_base_size);
 
 static int write_param_partition(const char *buf, unsigned long count,
-            loff_t offset)
+		loff_t offset)
 {
 	struct file *filp;
 	mm_segment_t fs;
@@ -129,6 +138,29 @@ out:
 	return ret;
 }
 EXPORT_SYMBOL(set_param_by_index_and_offset);
+
+static int param_get_restart_08_count(char *val, const struct kernel_param *kp)
+{
+	int cnt;
+
+	cnt = snprintf(val, 4, "%d", restart_08_count);
+
+	return cnt;
+}
+module_param_call(restart_08_count, NULL,
+	param_get_restart_08_count, &restart_08_count, 0664);
+
+static int param_get_restart_other_count(char *val,
+	const struct kernel_param *kp)
+{
+	int cnt;
+
+	cnt = snprintf(val, 4, "%d", restart_other_count);
+
+	return cnt;
+}
+module_param_call(restart_other_count, NULL,
+	param_get_restart_other_count, &restart_other_count, 0664);
 
 static void *persistent_ram_vmap(phys_addr_t start, size_t size)
 {
@@ -289,9 +321,10 @@ struct miscdevice param_misc = {
 	.fops = &param_fops,
 };
 
-static int __init param_core_init(void)
+static int __init param_init(void)
 {
 	int i;
+	int ret = 0;
 
 	if(param_ram_buffer_map((phys_addr_t)param_ram_zone.paddr,
 	        param_ram_zone.size, (param_ram_zone_t *)&param_ram_zone)){
@@ -307,106 +340,9 @@ static int __init param_core_init(void)
 	}
 
 	param_init_done= 1;
-	return 0;
-}
-pure_initcall(param_core_init);
 
-static int __init param_device_init(void)
-{
-    int ret;
-    ret = misc_register(&param_misc);
-    if(ret){
-        pr_err("misc_register failure %d\n",ret);
-        return -1;
-    }
-    return ret;
-}
-device_initcall(param_device_init);
-
-void init_param_mem_base_size(phys_addr_t base, unsigned long size)
-{
-	param_ram_zone.paddr = base;
-	param_ram_zone.size = size;
-}
-EXPORT_SYMBOL(init_param_mem_base_size);
-
-/*
-*Add more function here
-*
-*/
-
-int restart_08_count;
-int add_restart_08_count(void)
-{
-	int ret;
-
-	ret = get_param_by_index_and_offset(9, 0x15c,
-		&restart_08_count, sizeof(restart_08_count));
-
-	restart_08_count = restart_08_count + 1;
-
-	ret = set_param_by_index_and_offset(9, 0x15c,
-		&restart_08_count, sizeof(restart_08_count));
-
-	if (ret < 0)
-		pr_info("%s[%d]  failed!\n", __func__, __LINE__);
-
+	if (misc_register(&param_misc))
+		pr_err("misc_register failure %d\n", ret);
 	return ret;
 }
-EXPORT_SYMBOL(add_restart_08_count);
-
-static int param_get_restart_08_count(char *val, const struct kernel_param *kp)
-{
-
-	int cnt = 0;
-	int ret;
-
-	ret = get_param_by_index_and_offset(9, 0x15c,
-		&restart_08_count, sizeof(restart_08_count));
-
-	if (ret < 0)
-		pr_info("%s[%d]  failed!\n", __func__, __LINE__);
-
-	cnt = snprintf(val, 4, "%d", restart_08_count);
-
-	return cnt;
-}
-module_param_call(restart_08_count, NULL, param_get_restart_08_count, &restart_08_count, 0644);
-
-int restart_other_count=0;
-int add_restart_other_count(void)
-{
-	int ret;
-
-	ret = get_param_by_index_and_offset(9, 0x160,
-		&restart_other_count, sizeof(restart_other_count));
-
-	restart_other_count = restart_other_count + 1;
-
-	ret = set_param_by_index_and_offset(9, 0x160,
-		&restart_other_count, sizeof(restart_other_count));
-
-	if (ret < 0)
-		pr_info("%s[%d]  failed!\n", __func__, __LINE__);
-
-	return ret;
-}
-EXPORT_SYMBOL(add_restart_other_count);
-static int param_get_restart_other_count(char *val, const struct kernel_param *kp)
-{
-
-	int cnt = 0;
-	int ret;
-
-	ret = get_param_by_index_and_offset(9, 0x160,
-		&restart_other_count, sizeof(restart_other_count));
-
-	if (ret < 0)
-		pr_info("%s[%d]  failed!\n", __func__, __LINE__);
-
-	cnt = snprintf(val, 4, "%d", restart_other_count);
-
-	return cnt;
-}
-module_param_call(restart_other_count, NULL, param_get_restart_other_count, &restart_other_count, 0644);
-//end
+pure_initcall(param_init);

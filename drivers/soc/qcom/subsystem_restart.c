@@ -1387,11 +1387,6 @@ void check_crash_restart(struct work_struct *work)
 			strlcat(param_value, crash_index[i].crash_index,
 				sizeof(param_value));
 
-			if (!strcmp("08", crash_index[i].crash_index))
-				add_restart_08_count();
-			else
-				add_restart_other_count();
-
 			__getnstimeofday64(&tspec);
 			if (sys_tz.tz_minuteswest < 0 ||
 				(tspec.tv_sec - sys_tz.tz_minuteswest*60) >= 0)
