@@ -727,9 +727,9 @@ static void time_measure_marker(enum measure_marker m, struct task_struct *tsk, 
 			}
 		}
 
-		/* record searching time longer than 1.6 ms or 12.8 ms depends on quick select enable or not */
-		//if (t >= lmk_t_delim[LMK_STAT_TIME_LV - (quick_select? 5: 2)])
-		lmk_stat_analysis(begin, end, t, g, tsk, bkws);
+		/* record searching time longer than 12.8 ms*/
+		if (t >= lmk_t_delim[LMK_STAT_TIME_LV - 2])
+			lmk_stat_analysis(begin, end, t, g, tsk, bkws);
 
 		lmk_stat_update(t, g, bkws);
 		lmk_stat_update(t, LMK_TOTAL, bkws);
