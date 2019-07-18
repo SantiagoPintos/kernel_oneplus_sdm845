@@ -206,7 +206,6 @@
 	gpios = <&tlmm 35 0x1>;
 };
 
-<<<<<<< HEAD
 &dsi_hx8399c_hd_vid {
 		qcom,mdss-dsi-on-command = [
 			39 01 00 00 00 00 04
@@ -283,7 +282,7 @@
 			05 01 00 00 05 00 02 29 00];
 		qcom,mdss-dsi-reset-sequence = <1 2>, <0 5>, <1 10>;
 	};
-=======
+
 &gpio_keys {
 	function_1: function_1 {
 		label = "function_1";
@@ -305,7 +304,6 @@
 		gpio-key,wakeup;
 	};
 };
->>>>>>> origin/sdm845_Q
 
 &soc {
 	/delete-node/ qcom,spm@b1d2000;

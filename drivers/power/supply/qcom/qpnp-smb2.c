@@ -2024,7 +2024,8 @@ static int smb2_init_hw(struct smb2 *chip)
 			true, 0);
 	vote(chg->pd_disallowed_votable_indirect, HVDCP_TIMEOUT_VOTER,
 			true, 0);
-<<<<<<< HEAD
+	vote(chg->pd_disallowed_votable_indirect, PD_NOT_SUPPORTED_VOTER,
+			chip->dt.no_pd, 0);
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	/* disable HVDCP */
 	rc = smblib_masked_write(chg, USBIN_OPTIONS_1_CFG_REG,
@@ -2044,10 +2045,6 @@ static int smb2_init_hw(struct smb2 *chip)
 	if (rc < 0)
 		dev_err(chg->dev, "Couldn't set aicl rerunTimerc=%d\n", rc);
 
-=======
-	vote(chg->pd_disallowed_votable_indirect, PD_NOT_SUPPORTED_VOTER,
-			chip->dt.no_pd, 0);
->>>>>>> origin/sdm845_Q
 	/*
 	 * AICL configuration:
 	 * start from min and AICL ADC disable

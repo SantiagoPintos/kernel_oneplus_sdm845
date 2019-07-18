@@ -3745,7 +3745,6 @@ extern void f2fs_build_fault_attr(struct f2fs_sb_info *sbi, unsigned int rate,
 #define f2fs_build_fault_attr(sbi, rate, type)		do { } while (0)
 #endif
 
-<<<<<<< HEAD
 //f2fs debug use
 static inline void f2fs_find_node_path(struct inode *tmp_inode)
 {
@@ -3787,10 +3786,6 @@ static inline void f2fs_find_node_path(struct inode *tmp_inode)
 		kfree(temp);
 }
 
-#endif
-
-=======
->>>>>>> origin/sdm845_Q
 static inline bool is_journalled_quota(struct f2fs_sb_info *sbi)
 {
 #ifdef CONFIG_QUOTA
