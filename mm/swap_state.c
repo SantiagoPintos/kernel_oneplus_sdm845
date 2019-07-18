@@ -379,12 +379,17 @@ struct page *__read_swap_cache_async(swp_entry_t entry, gfp_t gfp_mask,
 			/*
 			 * Initiate read into locked page and return.
 			 */
+<<<<<<< HEAD
 			/* CONFIG_MEMPLUS add start by bin.zhong@oneplus.com */
 			if (memplus_enabled())
 				__lru_cache_add_active_or_unevictable(new_page, 0);
 			else /* add end */
 				lru_cache_add_anon(new_page);
 
+=======
+			SetPageWorkingset(new_page);
+			lru_cache_add_anon(new_page);
+>>>>>>> origin/sdm845_Q
 			*new_page_allocated = true;
 			return new_page;
 		}

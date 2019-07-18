@@ -180,6 +180,7 @@ struct smb_dt_props {
 	bool	hvdcp_disable;
 	bool	auto_recharge_soc;
 	int	wd_bark_time;
+	bool	no_pd;
 };
 
 struct smb2 {
@@ -443,6 +444,9 @@ static int smb2_parse_dt(struct smb2 *chip)
 
 	chip->dt.no_battery = of_property_read_bool(node,
 						"qcom,batteryless-platform");
+
+	chip->dt.no_pd = of_property_read_bool(node,
+						"qcom,pd-not-supported");
 
 	rc = of_property_read_u32(node,
 				"qcom,fcc-max-ua", &chg->batt_profile_fcc_ua);
@@ -2020,6 +2024,7 @@ static int smb2_init_hw(struct smb2 *chip)
 			true, 0);
 	vote(chg->pd_disallowed_votable_indirect, HVDCP_TIMEOUT_VOTER,
 			true, 0);
+<<<<<<< HEAD
 /* david.liu@bsp, 20171023 Battery & Charging porting */
 	/* disable HVDCP */
 	rc = smblib_masked_write(chg, USBIN_OPTIONS_1_CFG_REG,
@@ -2039,6 +2044,10 @@ static int smb2_init_hw(struct smb2 *chip)
 	if (rc < 0)
 		dev_err(chg->dev, "Couldn't set aicl rerunTimerc=%d\n", rc);
 
+=======
+	vote(chg->pd_disallowed_votable_indirect, PD_NOT_SUPPORTED_VOTER,
+			chip->dt.no_pd, 0);
+>>>>>>> origin/sdm845_Q
 	/*
 	 * AICL configuration:
 	 * start from min and AICL ADC disable
