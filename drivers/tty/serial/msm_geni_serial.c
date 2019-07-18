@@ -2382,7 +2382,6 @@ static const struct of_device_id msm_geni_device_tbl[] = {
 	{},
 };
 
-<<<<<<< HEAD
 struct oemconsole {
 	bool default_console;
 	bool console_initialized;
@@ -2403,7 +2402,6 @@ early_param("console", parse_console_config);
 static int  msm_serial_oem_pinctrl_init(void);
 static int  oem_msm_geni_serial_init(void);
 
-=======
 static int msm_geni_serial_get_ver_info(struct uart_port *uport)
 {
 	int hw_ver, ret = 0;
@@ -2440,7 +2438,6 @@ exit_ver_info:
 	se_geni_clks_off(&msm_port->serial_rsc);
 	return ret;
 }
->>>>>>> origin/sdm845_Q
 
 static int msm_geni_serial_probe(struct platform_device *pdev)
 {
