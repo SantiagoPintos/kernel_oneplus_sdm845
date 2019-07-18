@@ -49,13 +49,10 @@
 #include <soc/qcom/service-notifier.h>
 #include <soc/qcom/socinfo.h>
 #include <soc/qcom/ramdump.h>
-<<<<<<< HEAD
 #include <linux/project_info.h>
 static u32 fw_version;
 static u32 fw_version_ext;
-=======
 #include <linux/thermal.h>
->>>>>>> origin/sdm845_Q
 
 #include "wlan_firmware_service_v01.h"
 
