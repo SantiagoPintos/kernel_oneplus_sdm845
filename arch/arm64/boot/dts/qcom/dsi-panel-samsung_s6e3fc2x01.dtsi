@@ -427,28 +427,22 @@
 				];
 				qcom,mdss-dsi-panel-serial-num-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-panel-display-srgb-color-mode-on-command = [
-					39 01 00 00 02 00 02 81 90
-					39 01 00 00 00 00 03 f0 5A 5A
-					39 01 00 00 00 00 02 B0 02
-					39 01 00 00 00 00 16 B1 a6 04 04 47 DF 10 05 05 C3 4C EF D4 Bb 0B BF f1 EB 18 fe f9 d8
-					39 01 00 00 00 00 03 B1 00 00
-					39 01 00 00 00 00 03 f0 A5 A5
-				];
-				qcom,mdss-dsi-panel-night-mode-on-command = [
-					39 01 00 00 02 00 02 81 90
-				  	39 01 00 00 00 00 03 f0 5A 5A
-				  	39 01 00 00 00 00 02 B0 02
-					39 01 00 00 00 00 16 B1 a6 04 04 47 DF 10 05 05 C3 4C EF D4 Bb 0B BF f1 EB 18 FF FE FA
-					39 01 00 00 00 00 03 B1 00 00
-					39 01 00 00 00 00 03 f0 A5 A5
+				
+				39 01 00 00 00 00 02 81 90
+				39 01 00 00 00 00 03 f0 5A 5A
+				39 01 00 00 00 00 02 B0 02
+				39 01 00 00 00 00 16 B1 CE 01 02 1D E3 00 07 0D E9 28 FD F0 D3 0A E2 EA EA 01 FF FF F2
+				39 01 00 00 00 00 03 B1 00 00
+				39 01 00 00 00 00 03 f0 A5 A5
+
 				];
 				qcom,mdss-dsi-panel-display-p3-mode-on-command = [
-					39 01 00 00 02 00 02 81 90
-					39 01 00 00 00 00 03 f0 5A 5A
-					39 01 00 00 00 00 02 B0 02
-					39 01 00 00 00 00 16 B1 C6 00 00 21 ED 02 08 06 c1 27 FC dC E4 00 D9 e6 e7 00 FC FF EA
-					39 01 00 00 00 00 03 B1 00 00
-					39 01 00 00 00 00 03 f0 A5 A5
+				39 01 00 00 00 00 02 81 90
+				39 01 00 00 00 00 03 f0 5A 5A
+				39 01 00 00 00 00 02 B0 02
+				39 01 00 00 00 00 16 B1 CE 01 02 1D E3 00 07 0D E9 28 FD F0 D3 0A E2 EA EA 01 FF FF F2
+				39 01 00 00 00 00 03 B1 00 00
+				39 01 00 00 00 00 03 f0 A5 A5
 				];
 				qcom,mdss-dsi-panel-display-wide-color-mode-on-command = [
 					39 01 00 00 02 00 02 81 90
@@ -464,22 +458,20 @@
 					39 01 00 00 00 00 03 F0 A5 A5
 				];			
 				qcom,mdss-dsi-customer-srgb-enable-command = [
-					39 01 00 00 02 00 02 81 90
-					39 01 00 00 00 00 03 f0 5A 5A
-					39 01 00 00 00 00 02 B0 02
-					39 01 00 00 00 00 16 B1 a6 04 04 47 DF 10 05 05 C3 4C EF D4 Bb 0B BF f1 EB 18 FF FF FF
-					39 01 00 00 00 00 03 B1 00 00
-					39 01 00 00 00 00 03 f0 A5 A5
-
+				39 01 00 00 00 00 02 81 90
+				39 01 00 00 00 00 03 f0 5A 5A
+				39 01 00 00 00 00 02 B0 02
+				39 01 00 00 00 00 16 B1 CE 01 02 1D E3 00 07 0D E9 28 FD F0 D3 0A E2 EA EA 01 FF FF F2
+				39 01 00 00 00 00 03 B1 00 00
+				39 01 00 00 00 00 03 f0 A5 A5
 				];
 				qcom,mdss-dsi-customer-p3-enable-command = [
-					39 01 00 00 02 00 02 81 90
-					39 01 00 00 00 00 03 f0 5A 5A
-					39 01 00 00 00 00 02 B0 02
-					39 01 00 00 00 00 16 B1 C6 00 00 21 ED 02 08 06 c1 27 FC dC E4 00 D9 e6 e7 00 FF FF FF
-					39 01 00 00 00 00 03 B1 00 00
-					39 01 00 00 00 00 03 f0 A5 A5
-
+				39 01 00 00 00 00 02 81 90
+				39 01 00 00 00 00 03 f0 5A 5A
+				39 01 00 00 00 00 02 B0 02
+				39 01 00 00 00 00 16 B1 FF 00 00 00 FF 00 00 00 FF 00 FF FF FF 00 FF FF FF 00 FF FF F2
+				39 01 00 00 00 00 03 B1 00 00
+				39 01 00 00 00 00 03 f0 A5 A5
 				];
 				qcom,mdss-dsi-customer-p3-enable-command-state  = "dsi_lp_mode";
 				qcom,mdss-dsi-customer-srgb-enable-command-state  = "dsi_lp_mode";
