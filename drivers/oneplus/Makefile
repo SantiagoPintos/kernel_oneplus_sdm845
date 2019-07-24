@@ -8,3 +8,4 @@ obj-y += boot_mode.o
 endif
 
 obj-y += coretech/
+obj-$(CONFIG_DEBUG_DRIVER) += debugdriver.o
