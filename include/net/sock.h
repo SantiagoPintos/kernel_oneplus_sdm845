@@ -183,6 +183,11 @@ struct sock_common {
 	struct proto		*skc_prot;
 	possible_net_t		skc_net;
 
+	/* WIFI MODIFICATION */
+	u32 skc_op_mark;
+	/* WIFI MODIFICATION */
+
+
 #if IS_ENABLED(CONFIG_IPV6)
 	struct in6_addr		skc_v6_daddr;
 	struct in6_addr		skc_v6_rcv_saddr;
@@ -342,6 +347,10 @@ struct sock {
 #define sk_incoming_cpu		__sk_common.skc_incoming_cpu
 #define sk_flags		__sk_common.skc_flags
 #define sk_rxhash		__sk_common.skc_rxhash
+/* WIFI MODIFICATION */
+#define op_sla_mark		__sk_common.skc_op_mark
+/* WIFI MODIFICATION */
+
 
 	socket_lock_t		sk_lock;
 	struct sk_buff_head	sk_receive_queue;

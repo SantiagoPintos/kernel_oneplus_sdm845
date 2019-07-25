@@ -203,6 +203,12 @@ config BRIDGE_NETFILTER
 
 	  If unsure, say N.
 
+config SLA
+	default n
+	bool "to monitor netlink traffic"
+	help
+	  Realtime netlink traffic monitor.
+
 source "net/netfilter/Kconfig"
 source "net/ipv4/netfilter/Kconfig"
 source "net/ipv6/netfilter/Kconfig"
