@@ -93,6 +93,8 @@
 #define CELL_SCORE_BAD     -100
 #define ENABLE_TO_USER_TIMEOUT 5 //second
 #define MAX_RTT_RECORD_NUM 4
+#define GAME_LINK_SWITCH_TIME (10 * 60 * 100) //10minutes
+#define PINGPONG_AVOID_TIME (60 * 60 * 1000) //60minutes
 
 // dev info struct
 // if we need to consider wifi RSSI? If we need consider screen state?
@@ -153,6 +155,8 @@ struct op_game_app_info {
 	u32 special_rx_count[GAME_NUM];
 	u32 mark[GAME_NUM];
 	u32 switch_time[GAME_NUM];
+	u32 switch_count[GAME_NUM];
+	u32 repeat_switch_time[GAME_NUM];
 	u32 rtt_150_num[GAME_NUM];
 	u32 rtt_200_num[GAME_NUM];
 	u32 rtt_250_num[GAME_NUM];
@@ -1069,7 +1073,7 @@ static void game_rtt_estimator(int game_type, int rtt, struct nf_conn *ct)
 				}
 			}
 		} else if (game_type == GAME_CJZC) {
-			if (ct->op_game_lost_count >= 2 &&
+			if (ct->op_game_lost_count >= 3 &&
 			    rtt == MAX_GAME_RTT) {
 				averagertt = MAX_GAME_RTT;
 				if (op_sla_debug) {
@@ -1101,6 +1105,8 @@ static void game_app_switch_network(struct nf_conn *ct, struct sk_buff *skb)
 	int game_bp_info[4];
 	bool wlan_bad = false;
 	bool cell_quality_good = get_ct_cell_quality(skb, game_type);
+	u32 game_switch_interval = time_now -
+		op_sla_game_app_list.switch_time[game_type];
 
 	if (!op_sla_enable)
 		return;
@@ -1141,13 +1147,24 @@ static void game_app_switch_network(struct nf_conn *ct, struct sk_buff *skb)
 			op_sla_info[WLAN_INDEX].netlink_valid,
 			op_sla_info[CELLULAR_INDEX].netlink_valid);
 	}
+
+	if (op_sla_game_app_list.switch_count[game_type] > 1 &&
+	    op_sla_game_app_list.repeat_switch_time[game_type] != 0 &&
+	    (time_now - op_sla_game_app_list.repeat_switch_time[game_type]) <
+	     PINGPONG_AVOID_TIME) {
+		if (op_sla_debug) {
+			pr_info("[op_sla] %s: avoid ping-pong switch\n",
+				__func__);
+		}
+		return;
+	}
+
 	if (((cell_quality_good && op_sla_info[CELLULAR_INDEX].netlink_valid &&
-	      (wlan_bad || (game_rtt != 0 && game_rtt >= max_rtt) ||
-	       op_sla_game_app_list.special_rx_error_count[game_type]
-	       >= 2) && op_sla_game_app_list.mark[game_type] == WLAN_MARK) &&
+	      ((game_rtt != 0 && game_rtt >= max_rtt) ||
+	       op_sla_game_app_list.special_rx_error_count[game_type] >= 2) &&
+	       op_sla_game_app_list.mark[game_type] == WLAN_MARK) &&
 	       (!op_sla_game_app_list.switch_time[game_type] ||
-	       (time_now - op_sla_game_app_list.switch_time[game_type]) >
-	       30000)) || fw_set_game_mark == 1) {
+	       game_switch_interval > 30000)) || fw_set_game_mark == 1) {
 		fw_set_game_mark = -1;
 		if (op_sla_debug) {
 			pr_info("[op_sla] %s: game switch to cellular...\n",
@@ -1155,6 +1172,12 @@ static void game_app_switch_network(struct nf_conn *ct, struct sk_buff *skb)
 		}
 		reset_sla_game_app_rx_error(game_type);
 		reset_sla_game_app_rtt(game_type);
+		op_sla_game_app_list.switch_count[game_type]++;
+		if (op_sla_game_app_list.switch_count[game_type] > 1 &&
+		    game_switch_interval < GAME_LINK_SWITCH_TIME) {
+			op_sla_game_app_list.repeat_switch_time[game_type] =
+				time_now;
+		}
 		op_sla_game_app_list.switch_time[game_type] = time_now;
 		op_sla_game_app_list.mark[game_type] = CELLULAR_MARK;
 
@@ -1170,14 +1193,11 @@ static void game_app_switch_network(struct nf_conn *ct, struct sk_buff *skb)
 	}
 
 	if (((!wlan_bad && op_sla_info[WLAN_INDEX].netlink_valid &&
-	      (!cell_quality_good || (game_rtt != 0 && game_rtt >= max_rtt) ||
-	       op_sla_game_app_list.special_rx_error_count[game_type]
-	       >= 2) && op_sla_game_app_list.mark[game_type] ==
-	       CELLULAR_MARK) &&
+	      ((game_rtt != 0 && game_rtt >= max_rtt) ||
+	       op_sla_game_app_list.special_rx_error_count[game_type] >= 2) &&
+	       op_sla_game_app_list.mark[game_type] == CELLULAR_MARK) &&
 	       (!op_sla_game_app_list.switch_time[game_type] ||
-	       (time_now -
-	       op_sla_game_app_list.switch_time[game_type]) > 30000)) ||
-	       fw_set_game_mark == 0) {
+	       game_switch_interval > 30000)) || fw_set_game_mark == 0) {
 		fw_set_game_mark = -1;
 		if (op_sla_debug) {
 			pr_info("[op_sla] %s: game switch to wlan...\n",
@@ -1185,6 +1205,11 @@ static void game_app_switch_network(struct nf_conn *ct, struct sk_buff *skb)
 		}
 		reset_sla_game_app_rx_error(game_type);
 		reset_sla_game_app_rtt(game_type);
+		op_sla_game_app_list.switch_count[game_type]++;
+		if (game_switch_interval < GAME_LINK_SWITCH_TIME) {
+			op_sla_game_app_list.repeat_switch_time[game_type] =
+				time_now;
+		}
 		op_sla_game_app_list.switch_time[game_type] = time_now;
 		op_sla_game_app_list.mark[game_type] = WLAN_MARK;
 
@@ -1215,7 +1240,7 @@ static void set_game_rtt_stream_up_info(struct nf_conn *ct, s64 now,
 		game_type == GAME_AOV || game_type == GAME_QQ_CAR_TW) {
 		game_lost_count_threshold = 1;
 	} else {
-		game_lost_count_threshold = 2;
+		game_lost_count_threshold = 3;
 	}
 
 	if (!ct->op_game_timestamp && !game_rtt_wan_detect_flag) {
@@ -1287,40 +1312,32 @@ static void detect_game_tx_stream(struct nf_conn *ct, struct sk_buff *skb,
 		pr_info("[op_sla] %s: op_game_rx_normal_time_record:%llu\n",
 			__func__, ct->op_game_rx_normal_time_record);
 	}
-	if (game_type == GAME_WZRY || game_type == GAME_QQ_CAR) {
-		if (game_type == GAME_WZRY) {
-			ct->op_game_special_rx_pkt_interval = 2000;
-			specialrxthreshold =
-				ct->op_game_special_rx_pkt_interval * 1.5;
-			datastallthreshold =
-				ct->op_game_special_rx_pkt_interval;
-		} else if (game_type == GAME_QQ_CAR) {
-			ct->op_game_special_rx_pkt_interval = 10000;
-			specialrxthreshold =
-				ct->op_game_special_rx_pkt_interval * 1.2;
-			datastallthreshold =
-				ct->op_game_special_rx_pkt_interval / 2;
-		}
-		if (ct->op_game_special_rx_pkt_last_timestamp) {
-			datastalltimer = (int)(time_now -
-				ct->op_game_rx_normal_time_record);
-			lastspecialrxtiming = (int)(time_now -
-				ct->op_game_special_rx_pkt_last_timestamp);
-			if (op_sla_enable &&
-			    lastspecialrxtiming >= specialrxthreshold &&
-			    datastalltimer >= datastallthreshold) {
-				if (op_sla_debug) {
-					pr_info("[op_sla] %s: lastspecialrxtiming:%d\n",
-						__func__, lastspecialrxtiming);
-					pr_info("[op_sla] %s: datastalltimer:%d\n",
-						__func__, datastalltimer);
-				}
-				sla_game_rx_error_write_lock();
-				rx_interval_error_estimator(game_type,
-							    datastalltimer,
-							    ct);
-				sla_game_rx_error_write_unlock();
+
+	if (game_type == GAME_QQ_CAR &&
+	    ct->op_game_special_rx_pkt_last_timestamp) {
+		ct->op_game_special_rx_pkt_interval = 10000;
+		specialrxthreshold =
+			ct->op_game_special_rx_pkt_interval * 1.2;
+		datastallthreshold =
+			ct->op_game_special_rx_pkt_interval / 2;
+		datastalltimer = (int)(time_now -
+			ct->op_game_rx_normal_time_record);
+		lastspecialrxtiming = (int)(time_now -
+			ct->op_game_special_rx_pkt_last_timestamp);
+		if (op_sla_enable &&
+		    lastspecialrxtiming >= specialrxthreshold &&
+		    datastalltimer >= datastallthreshold) {
+			if (op_sla_debug) {
+				pr_info("[op_sla] %s: lastspecialrxtiming:%d\n",
+					__func__, lastspecialrxtiming);
+				pr_info("[op_sla] %s: datastalltimer:%d\n",
+					__func__, datastalltimer);
 			}
+			sla_game_rx_error_write_lock();
+			rx_interval_error_estimator(game_type,
+						    datastalltimer,
+						    ct);
+			sla_game_rx_error_write_unlock();
 		}
 	}
 }
@@ -1722,12 +1739,9 @@ static void rx_interval_error_check(struct nf_conn *ct, struct sk_buff *skb)
 	if (app_type == GAME_TYPE)
 		ct->op_game_rx_normal_time_record = time_now;
 
-	if (((game_type == GAME_WZRY && skb->len == 100) ||
-	     (game_type == GAME_QQ_CAR && skb->len == 83)) &&
-	     (iph && iph->protocol == IPPROTO_UDP)) {
-		if (game_type == GAME_WZRY)
-			ct->op_game_special_rx_pkt_interval = 2000;
-		else if (game_type == GAME_QQ_CAR)
+	if (game_type == GAME_QQ_CAR && skb->len == 83 &&
+	    (iph && iph->protocol == IPPROTO_UDP)) {
+		if (game_type == GAME_QQ_CAR)
 			ct->op_game_special_rx_pkt_interval = 10000;
 		ct->op_game_special_rx_pkt_timestamp = time_now;
 		if (ct->op_game_special_rx_pkt_last_timestamp) {
@@ -1744,6 +1758,43 @@ static void rx_interval_error_check(struct nf_conn *ct, struct sk_buff *skb)
 						    special_rx_interval_error,
 						    ct);
 			sla_game_rx_error_write_unlock();
+		} else {
+			reset_sla_game_app_rx_error(game_type);
+			ct->op_game_special_rx_pkt_last_timestamp =
+				ct->op_game_special_rx_pkt_timestamp;
+		}
+		if (op_sla_debug) {
+			pr_info("[op_sla] %s: rx_interval:%dms\n",
+				__func__, rx_interval);
+			pr_info("[op_sla] %s: special_rx_interval_error:%dms\n",
+				__func__, special_rx_interval_error);
+		}
+		if (!enable_to_user && !op_sla_enable &&
+		    sla_switch_enable && cell_quality_good) {
+			if (op_sla_debug) {
+				pr_info("[op_sla] %s: send SLA_ENABLE\n",
+					__func__);
+			}
+			prepare_enable_sla();
+		}
+	}
+
+	// This method is not stable for diff area.
+	// Add log for debugging this problem.
+	if (game_type == GAME_WZRY && skb->len == 100 &&
+	    (iph && iph->protocol == IPPROTO_UDP)) {
+		if (game_type == GAME_WZRY)
+			ct->op_game_special_rx_pkt_interval = 2000;
+		ct->op_game_special_rx_pkt_timestamp = time_now;
+		if (ct->op_game_special_rx_pkt_last_timestamp) {
+			rx_interval =
+				(int)(ct->op_game_special_rx_pkt_timestamp
+				- ct->op_game_special_rx_pkt_last_timestamp);
+			special_rx_interval_error =
+				abs(rx_interval -
+				ct->op_game_special_rx_pkt_interval);
+			ct->op_game_special_rx_pkt_last_timestamp =
+				ct->op_game_special_rx_pkt_timestamp;
 		} else {
 			reset_sla_game_app_rx_error(game_type);
 			ct->op_game_special_rx_pkt_last_timestamp =
@@ -2820,6 +2871,8 @@ static void init_game_online_info(void)
 	for (i = 0 + GAME_BASE; i < total; i++) {
 		op_sla_game_app_list.mark[i] = WLAN_MARK;
 		op_sla_game_app_list.switch_time[i] = time_now;
+		op_sla_game_app_list.switch_count[i] = 0;
+		op_sla_game_app_list.repeat_switch_time[i] = 0;
 	}
 	sla_game_write_unlock();
 	memset(&game_online_info, 0x0, sizeof(struct op_game_online));
@@ -3171,6 +3224,8 @@ static int op_sla_set_game_app_uid(struct nlmsghdr *nlh)
 		for (i = 0 + GAME_BASE; i < total; i++) {
 			op_sla_game_app_list.uid[i] = info[i];
 			op_sla_game_app_list.switch_time[i] = 0;
+			op_sla_game_app_list.switch_count[i] = 0;
+			op_sla_game_app_list.repeat_switch_time[i] = 0;
 			op_sla_game_app_list.game_type[i] = i;
 			op_sla_game_app_list.mark[i] = WLAN_MARK;
 			if (op_sla_debug)
