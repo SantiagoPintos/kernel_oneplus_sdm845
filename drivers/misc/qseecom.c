@@ -1965,7 +1965,7 @@ static int __qseecom_process_reentrancy_blocked_on_listener(
 				struct qseecom_registered_app_list *ptr_app,
 				struct qseecom_dev_handle *data)
 {
-	struct qseecom_registered_listener_list *list_ptr;
+	struct qseecom_registered_listener_list *list_ptr = NULL;
 	int ret = 0;
 	struct qseecom_continue_blocked_request_ireq ireq;
 	struct qseecom_command_scm_resp continue_resp;
@@ -1975,6 +1975,8 @@ static int __qseecom_process_reentrancy_blocked_on_listener(
 	unsigned long flags;
 	bool found_app = false;
 	struct qseecom_registered_app_list dummy_app_entry = { {NULL} };
+
+	pr_err("ptr_app = 0x%p, list_ptr = 0x%p\n", ptr_app, list_ptr);
 
 	if (!resp || !data) {
 		pr_err("invalid resp or data pointer\n");
@@ -1997,6 +1999,7 @@ static int __qseecom_process_reentrancy_blocked_on_listener(
 					(!strcmp(ptr_app->app_name,
 						data->client.app_name))) {
 					found_app = true;
+					pr_err("found app(%d)%s\n", ptr_app->app_id, ptr_app->app_name);
 					break;
 				}
 			}
@@ -2022,6 +2025,7 @@ static int __qseecom_process_reentrancy_blocked_on_listener(
 			mutex_unlock(&listener_access_lock);
 			goto exit;
 		}
+		pr_err("list_ptr = 0x%p\n", list_ptr);
 		ptr_app->blocked_on_listener_id = resp->data;
 
 		pr_warn("Lsntr %d in_use %d, block session(%d) app(%d)\n",
