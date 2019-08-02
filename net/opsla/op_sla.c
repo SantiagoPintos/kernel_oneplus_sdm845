@@ -93,7 +93,7 @@
 #define CELL_SCORE_BAD     -100
 #define ENABLE_TO_USER_TIMEOUT 5 //second
 #define MAX_RTT_RECORD_NUM 4
-#define GAME_LINK_SWITCH_TIME (10 * 60 * 100) //10minutes
+#define GAME_LINK_SWITCH_TIME (10 * 60 * 1000) //10minutes
 #define PINGPONG_AVOID_TIME (60 * 60 * 1000) //60minutes
 
 // dev info struct
