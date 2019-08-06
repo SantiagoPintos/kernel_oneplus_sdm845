@@ -389,9 +389,10 @@ static int kgsl_mem_entry_attach_process(struct kgsl_device *device,
 	int id, ret;
 
 	ret = kgsl_process_private_get(process);
-	if (!ret)
+	if (!ret) {
+		pr_err("QCOM : kgsl_mem_entry_attach_process : kgsl_process_private_get : -EBADF\n");
 		return -EBADF;
-
+	}
 	ret = kgsl_mem_entry_track_gpuaddr(device, process, entry);
 	if (ret) {
 		kgsl_process_private_put(process);
@@ -582,6 +583,7 @@ int kgsl_context_init(struct kgsl_device_private *dev_priv,
 	 */
 	if (!kgsl_process_private_get(dev_priv->process_priv)) {
 		ret = -EBADF;
+		pr_err("QCOM : kgsl_context_init : kgsl_process_private_get : -EBADF\n");
 		goto out;
 	}
 	context->device = dev_priv->device;
@@ -2040,6 +2042,8 @@ long kgsl_ioctl_gpuobj_free(struct kgsl_device_private *dev_priv,
 	struct kgsl_mem_entry *entry;
 	long ret;
 
+	pr_err("QCOM : kgsl_ioctl_gpuobj_free In\n");
+
 	entry = kgsl_sharedmem_find_id(private, param->id);
 	if (entry == NULL)
 		return -EINVAL;
@@ -2055,6 +2059,7 @@ long kgsl_ioctl_gpuobj_free(struct kgsl_device_private *dev_priv,
 		ret = -EINVAL;
 
 	kgsl_mem_entry_put(entry);
+	pr_err("QCOM : kgsl_ioctl_gpuobj_free Exit : %ld\n", ret);
 	return ret;
 }
 
@@ -2429,6 +2434,8 @@ long kgsl_ioctl_gpuobj_import(struct kgsl_device_private *dev_priv,
 	struct kgsl_mem_entry *entry;
 	int ret, fd = -1;
 
+	pr_err("QCOM : kgsl_ioctl_gpuobj_import In\n");
+
 	entry = kgsl_mem_entry_create();
 	if (entry == NULL)
 		return -ENOMEM;
@@ -2483,6 +2490,8 @@ long kgsl_ioctl_gpuobj_import(struct kgsl_device_private *dev_priv,
 
 	/* Put the extra ref from kgsl_mem_entry_create() */
 	kgsl_mem_entry_put(entry);
+
+	pr_err("QCOM : kgsl_ioctl_gpuobj_import Exit\n");
 
 	return 0;
 
@@ -3207,6 +3216,8 @@ long kgsl_ioctl_gpuobj_alloc(struct kgsl_device_private *dev_priv,
 	struct kgsl_gpuobj_alloc *param = data;
 	struct kgsl_mem_entry *entry;
 
+	pr_err("QCOM : kgsl_ioctl_gpuobj_alloc In\n");
+
 	if (kgsl_is_compat_task())
 		param->flags |= KGSL_MEMFLAGS_FORCE_32BIT;
 
@@ -3224,6 +3235,8 @@ long kgsl_ioctl_gpuobj_alloc(struct kgsl_device_private *dev_priv,
 
 	/* Put the extra ref from kgsl_mem_entry_create() */
 	kgsl_mem_entry_put(entry);
+
+	pr_err("QCOM : kgsl_ioctl_gpuobj_alloc Exit\n");
 
 	return 0;
 }
@@ -3353,6 +3366,7 @@ long kgsl_ioctl_sparse_phys_alloc(struct kgsl_device_private *dev_priv,
 
 	ret = kgsl_process_private_get(process);
 	if (!ret) {
+		pr_err("QCOM : kgsl_ioctl_sparse_phys_alloc : kgsl_process_private_get : -EBADF\n");
 		ret = -EBADF;
 		goto err_free_entry;
 	}
