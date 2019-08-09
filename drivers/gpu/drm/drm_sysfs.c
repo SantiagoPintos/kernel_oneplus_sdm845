@@ -344,13 +344,7 @@ static ssize_t aod_show(struct device *dev,
 
 	aod_mode = dsi_display_get_aod_mode(connector);
 
-	ret = scnprintf(buf, PAGE_SIZE, "AOD mode = %d\n"
-			"0--AOD off\n"
-			"1--AOD(10nit-alpm)\n"
-			"2--AOD(50nit-alpm)\n"
-			"3--AOD(10nit-hlpm)\n"
-			"4--AOD(50nit-hlpm)\n",
-			aod_mode);
+	ret = scnprintf(buf, PAGE_SIZE, "%d\n", aod_mode);
 	return ret;
 }
 
