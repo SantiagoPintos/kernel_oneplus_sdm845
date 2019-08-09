@@ -40,6 +40,16 @@
 /* maximum number of device clock */
 #define CAM_SOC_MAX_CLK             32
 
+<<<<<<< HEAD
+=======
+/* soc id */
+#define SDM670_SOC_ID 336
+#define SDM710_SOC_ID 360
+#define SDM712_SOC_ID 393
+
+/* Minor Version */
+#define SDM670_V1_1 0x1
+>>>>>>> origin/sdm845_Q
 /**
  * enum cam_vote_level - Enum for voting level
  *

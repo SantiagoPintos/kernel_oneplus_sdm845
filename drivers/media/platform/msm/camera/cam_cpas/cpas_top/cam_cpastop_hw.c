@@ -477,6 +477,34 @@ static int cam_cpastop_poweron(struct cam_hw_info *cpas_hw)
 		}
 	}
 
+<<<<<<< HEAD
+=======
+	if (soc_private && ((soc_private->soc_id == SDM710_SOC_ID) ||
+		(soc_private->soc_id == SDM712_SOC_ID) ||
+		((soc_private->soc_id == SDM670_SOC_ID) &&
+		(soc_private->hw_rev == SDM670_V1_1)))) {
+
+		struct cam_cpas_reg *reg_info;
+		int tcsr_index;
+		void __iomem *mem_base;
+
+		reg_info = &camnoc_info->errata_wa_list->tcsr_reg.
+			tcsr_conn_box_spare_0;
+		tcsr_index = cpas_core->regbase_index[CAM_CPAS_REG_CSR_TCSR];
+		if (tcsr_index == -1) {
+			CAM_DBG(CAM_CPAS, "index in not initialized");
+			return 0;
+		}
+		mem_base = soc_info->reg_map[tcsr_index].mem_base;
+
+		reg_info->value = TCSR_CONN_SET;
+		cam_io_w_mb(reg_info->value, mem_base + reg_info->offset);
+		CAM_DBG(CAM_CPAS, "tcsr(0x%lx) value %d",
+			(unsigned long int)mem_base + reg_info->offset,
+			cam_io_r_mb(mem_base + reg_info->offset));
+	}
+
+>>>>>>> origin/sdm845_Q
 	return 0;
 }
 
@@ -511,6 +539,33 @@ static int cam_cpastop_poweroff(struct cam_hw_info *cpas_hw)
 		}
 	}
 
+<<<<<<< HEAD
+=======
+	if (soc_private && ((soc_private->soc_id == SDM710_SOC_ID)
+		|| (soc_private->soc_id == SDM712_SOC_ID)
+		|| ((soc_private->soc_id == SDM670_SOC_ID) &&
+		(soc_private->hw_rev == SDM670_V1_1)))) {
+
+		struct cam_cpas_reg *reg_info;
+		int tcsr_index;
+		void __iomem *mem_base;
+
+		reg_info = &camnoc_info->errata_wa_list->tcsr_reg.
+			tcsr_conn_box_spare_0;
+		reg_info->value = TCSR_CONN_RESET;
+		tcsr_index = cpas_core->regbase_index[CAM_CPAS_REG_CSR_TCSR];
+		if (tcsr_index == -1) {
+			CAM_DBG(CAM_CPAS, "index in not initialized");
+			return 0;
+		}
+		mem_base = soc_info->reg_map[tcsr_index].mem_base;
+		cam_io_w_mb(reg_info->value, mem_base + reg_info->offset);
+		CAM_DBG(CAM_CPAS, "tcsr(0x%lx) value %d",
+			(unsigned long int)mem_base + reg_info->offset,
+			cam_io_r_mb(mem_base + reg_info->offset));
+	}
+
+>>>>>>> origin/sdm845_Q
 	return rc;
 }
 

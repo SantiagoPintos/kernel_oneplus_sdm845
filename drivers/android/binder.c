@@ -70,6 +70,7 @@
 #include <linux/pid_namespace.h>
 #include <linux/security.h>
 #include <linux/spinlock.h>
+<<<<<<< HEAD
 
 // neiltsai, 20161115, add for oemlogkit used
 #include <linux/proc_fs.h>
@@ -80,6 +81,8 @@
 #endif
 
 #include <uapi/linux/android/binder.h>
+=======
+>>>>>>> origin/sdm845_Q
 #include "binder_alloc.h"
 #include "binder_trace.h"
 /* curtis, 20180111, opchain*/
