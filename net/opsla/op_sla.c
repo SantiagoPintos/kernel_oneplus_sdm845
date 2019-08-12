@@ -285,6 +285,7 @@ enum {
 
 enum {
 	GAME_WZRY = 1,
+	GAME_WZRY_2,
 	GAME_CJZC,
 	GAME_PUBG,
 	GAME_PUBG_TW,
@@ -455,7 +456,7 @@ static bool get_ct_cell_quality(struct sk_buff *skb, int game_type)
 	if (op_sla_game_app_list.mark[game_type] == CELLULAR_MARK)
 		score_base = 10;
 
-	if (game_type == GAME_WZRY) {
+	if (game_type == GAME_WZRY || game_type == GAME_WZRY_2) {
 		return op_sla_info[CELLULAR_INDEX].cell_score >=
 			(CELL_SCORE_BAD - score_base);
 	} else if (game_type == GAME_CJZC || game_type == GAME_PUBG ||
@@ -976,7 +977,7 @@ static void rx_interval_error_estimator(int game_type, int time_error,
 	int dropnum = 0;
 	int gamethreshold = 0;
 
-	if (game_type == GAME_WZRY) {
+	if (game_type == GAME_WZRY || game_type == GAME_WZRY_2) {
 		dropnum = 5;
 		gamethreshold = 300;
 	} else if (game_type == GAME_QQ_CAR) {
@@ -1026,7 +1027,7 @@ static void game_rtt_estimator(int game_type, int rtt, struct nf_conn *ct)
 			pr_info("[op_sla] %s: rtt:%d averagertt:%d\n",
 				__func__, rtt, averagertt);
 		}
-		if (game_type == GAME_WZRY) {
+		if (game_type == GAME_WZRY || game_type == GAME_WZRY_2) {
 			game_rtt_detect_lag =
 				(abs(ct->op_game_time_interval - 5000) >= 50);
 			//if game rtt not regular and last game rtt
@@ -1114,7 +1115,7 @@ static void game_app_switch_network(struct nf_conn *ct, struct sk_buff *skb)
 	if (!game_start_state)
 		return;
 
-	if (game_type == GAME_WZRY) {
+	if (game_type == GAME_WZRY || game_type == GAME_WZRY_2) {
 		max_rtt = sla_params_info.wzry_rtt;
 		if (rtt_rear == 4 && ct->op_game_lost_count == 0 &&
 		    rtt_queue[0] == MAX_GAME_RTT &&
@@ -1231,7 +1232,7 @@ static void set_game_rtt_stream_up_info(struct nf_conn *ct, s64 now,
 	int game_rtt;
 	int game_lost_count_threshold;
 
-	if (game_type == GAME_WZRY) {
+	if (game_type == GAME_WZRY || game_type == GAME_WZRY_2) {
 		if (op_sla_game_app_list.mark[game_type] == CELLULAR_MARK)
 			game_lost_count_threshold = 2;
 		else
@@ -1351,7 +1352,7 @@ static void detect_game_rtt_stream(struct nf_conn *ct, struct sk_buff *skb,
 	s64 time_interval = time_now - ct->op_game_timestamp;
 	int game_type = ct->op_app_type;
 
-	if (game_type == GAME_WZRY) {
+	if (game_type == GAME_WZRY || game_type == GAME_WZRY_2) {
 		if (skb->len == 47)
 			same_count_max = 3;
 		else
@@ -1453,7 +1454,8 @@ static int mark_game_app_skb(struct nf_conn *ct, struct sk_buff *skb,
 		    iph->protocol == IPPROTO_TCP)) {
 		ct_mark	= ct->mark & MARK_MASK;
 
-		if ((game_type == GAME_CJZC || game_type == GAME_WZRY) &&
+		if ((game_type == GAME_CJZC || game_type == GAME_WZRY ||
+		     game_type == GAME_WZRY_2) &&
 		    iph->protocol == IPPROTO_TCP &&
 		    ((XT_STATE_BIT(ctinfo) &
 		      XT_STATE_BIT(IP_CT_ESTABLISHED)) ||
@@ -1686,7 +1688,7 @@ static void rtt_game_check(struct nf_conn *ct, struct sk_buff *skb)
 			}
 		}
 		ct->op_game_timestamp = 0;
-		if (game_type == GAME_WZRY) {
+		if (game_type == GAME_WZRY || game_type == GAME_WZRY_2) {
 			if (ct->op_game_time_interval < 1000 &&
 			    op_sla_game_app_list.mark[game_type] ==
 			    CELLULAR_MARK) {
@@ -1781,9 +1783,9 @@ static void rx_interval_error_check(struct nf_conn *ct, struct sk_buff *skb)
 
 	// This method is not stable for diff area.
 	// Add log for debugging this problem.
-	if (game_type == GAME_WZRY && skb->len == 100 &&
-	    (iph && iph->protocol == IPPROTO_UDP)) {
-		if (game_type == GAME_WZRY)
+	if ((game_type == GAME_WZRY || game_type == GAME_WZRY_2) &&
+	    skb->len == 100 && (iph && iph->protocol == IPPROTO_UDP)) {
+		if (game_type == GAME_WZRY || game_type == GAME_WZRY_2)
 			ct->op_game_special_rx_pkt_interval = 2000;
 		ct->op_game_special_rx_pkt_timestamp = time_now;
 		if (ct->op_game_special_rx_pkt_last_timestamp) {
