@@ -1550,6 +1550,23 @@ static struct ctl_table vm_table[] = {
 		.extra1		= &zero,
 		.extra2		= &one_hundred,
 	},
+#ifdef CONFIG_KSWAPD_LAZY_RECLAIM
+	{
+		.procname	= "breath_period",
+		.data		= &vm_breath_period,
+		.maxlen		= sizeof(vm_breath_period),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &zero,
+	},
+	{
+		.procname	= "breath_priority",
+		.data		= &vm_breath_priority,
+		.maxlen		= sizeof(vm_breath_priority),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec,
+	},
+#endif
 	{
 		.procname       = "want_old_faultaround_pte",
 		.data           = &want_old_faultaround_pte,

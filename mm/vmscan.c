@@ -156,6 +156,16 @@ struct scan_control {
  * From 0 .. 100.  Higher means more swappy.
  */
 int vm_swappiness = 60;
+#ifdef CONFIG_KSWAPD_LAZY_RECLAIM
+/*
+ * time for kswapd to breath between each scanning loop
+ */
+unsigned int vm_breath_period __read_mostly = 4000;
+/*
+ * default adj for kswapd to perform lazy-reclaim
+ */
+int vm_breath_priority __read_mostly = 500;
+#endif
 /*
  * The total number of pages which are beyond the high watermark within all
  * zones.
@@ -3446,6 +3456,19 @@ static bool kswapd_shrink_node(pg_data_t *pgdat,
 	return sc->nr_scanned >= sc->nr_to_reclaim;
 }
 
+#ifdef CONFIG_KSWAPD_LAZY_RECLAIM
+void __sched usleep_range_interruptible(unsigned long min, unsigned long max)
+{
+	ktime_t kmin;
+	u64 delta;
+
+	__set_current_state(TASK_INTERRUPTIBLE);
+
+	kmin = ktime_set(0, min * NSEC_PER_USEC);
+	delta = (u64)(max - min) * NSEC_PER_USEC;
+	schedule_hrtimeout_range(&kmin, delta, HRTIMER_MODE_REL);
+}
+#endif
 /*
  * For kswapd, balance_pgdat() will reclaim pages across a node from zones
  * that are eligible for use by the caller until at least one zone is
@@ -3561,8 +3584,19 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 		 * progress in reclaiming pages
 		 */
 		nr_reclaimed = sc.nr_reclaimed - nr_reclaimed;
+#ifndef CONFIG_KSWAPD_LAZY_RECLAIM
 		if (raise_priority || !nr_reclaimed)
 			sc.priority--;
+#else
+		if (raise_priority || !nr_reclaimed) {
+			sc.priority--;
+
+			if (vm_breath_period && nr_reclaimed && !atomic_read(&alloc_ongoing)) {
+				sc.priority++;
+				usleep_range_interruptible(vm_breath_period, vm_breath_period << 1);
+			}
+		}
+#endif
 	} while (sc.priority >= 1);
 
 	if (!sc.nr_reclaimed)
