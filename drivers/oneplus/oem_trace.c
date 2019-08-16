@@ -471,8 +471,10 @@ static ssize_t otrace_proc_write(struct file *file, const char __user *buffer,
 	}
 
 	ret = kstrtoul(lbuf, 10, &val);
-	if (ret)
+	if (ret) {
+		kfree(lbuf);
 		return ret;
+	}
 
 	if (val == 7978)
 		otrace_on = 1;
