@@ -386,6 +386,12 @@ retry:
 	if (!mm)
 		goto out;
 
+	/* system pid may reach its max value and this pid was reused by other process */
+	if (unlikely(task->signal->swapin_should_readahead_m != SWAPIN_QUEUE)) {
+		mmput(mm);
+		return 0;
+	}
+
 	task_anon = get_mm_counter(mm, MM_ANONPAGES);
 	task_swap = get_mm_counter(mm, MM_SWAPENTS);
 
@@ -441,7 +447,6 @@ out:
 	//trace_printk("%s (pid %d)(size %d-%d) (adj %d -> %d) consumed %llu ms %llu us\n", task->comm, task->pid, task_anon, task_swap, prev_adj, task->signal->oom_score_adj, (time_ns/1000000), (time_ns/1000)%1000);
 
 	spin_lock(&task->signal->reclaim_state_lock);
-	BUG_ON(task->signal->swapin_should_readahead_m != SWAPIN_QUEUE);
 	task->signal->swapin_should_readahead_m = RECLAIM_STANDBY;
 	spin_unlock(&task->signal->reclaim_state_lock);
 
