@@ -2126,7 +2126,7 @@ static void get_content_length(struct nf_conn *ct, struct sk_buff *skb,
 			if (end) {
 				if ((end - start) < 11) {
 					memcpy(data_len, start, end - start);
-					ret = kstrtou32(data_len, 0, &index);
+					ret = kstrtou32(data_len, 0, &content_len);
 					//pr_info("[op_sla] get_content_length:"
 					//" content = %u\n", content_len);
 				} else {
