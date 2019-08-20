@@ -70,6 +70,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 	show_val_kb(m, "MemAvailable:   ", available);
 	show_val_kb(m, "Buffers:        ", i.bufferram);
 	show_val_kb(m, "Cached:         ", cached);
+	show_val_kb(m, "SwapCached:     ", total_swapcache_pages());
 #ifdef CONFIG_MEMPLUS
 	show_val_kb(m, "Active:         ", pages[LRU_ACTIVE_ANON] +
 			pages[LRU_ACTIVE_FILE] +
@@ -82,7 +83,6 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 	show_val_kb(m, "Inactive(anon): ", pages[LRU_INACTIVE_ANON] +
 			pages[LRU_INACTIVE_ANON_SWPCACHE]);
 #else
-	show_val_kb(m, "SwapCached:     ", total_swapcache_pages());
 	show_val_kb(m, "Active:         ", pages[LRU_ACTIVE_ANON] +
 					   pages[LRU_ACTIVE_FILE]);
 	show_val_kb(m, "Inactive:       ", pages[LRU_INACTIVE_ANON] +
