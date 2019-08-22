@@ -345,4 +345,4 @@ static int __init param_init(void)
 		pr_err("misc_register failure %d\n", ret);
 	return ret;
 }
-pure_initcall(param_init);
+device_initcall(param_init);
