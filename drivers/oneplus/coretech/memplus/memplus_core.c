@@ -851,9 +851,10 @@ static int memory_plus_test_worstcase_store(const char *buf, const struct kernel
 	if (sscanf(buf, "%u\n", &val) <= 0)
 		return -EINVAL;
 
-	if(val == 1)
+	if (val == 1) {
 		freed = memplus_scan();
-	printk("memory_plus_test_worstcase_store: freed = %ld\n", freed);
+		pr_info("memory_plus_test_worstcase_store: freed = %ld\n", freed);
+	}
 
 	return 0;
 }
