@@ -1036,14 +1036,6 @@ static bool is_zygote_process(struct task_struct *t)
        return false;
 }
 
-static void debug_for_audioserver(int sig, struct task_struct *t)
-{
-	struct task_struct *tg = t->group_leader;
-
-	if (sig == SIGABRT && tg && !strcmp(tg->comm, "audioserver"))
-		panic("panic for debugging adsp\n");
-}
-
 static int __send_signal(int sig, struct siginfo *info, struct task_struct *t,
 			int group, int from_ancestor_ns)
 {
@@ -1055,10 +1047,6 @@ static int __send_signal(int sig, struct siginfo *info, struct task_struct *t,
 	assert_spin_locked(&t->sighand->siglock);
 
 	result = TRACE_SIGNAL_IGNORED;
-
-	if (t) {
-		debug_for_audioserver(sig, t);
-	}
 
 	if(print_key_process_murder) {
 		if(!strcmp(t->comm, "system_server") ||
