@@ -787,4 +787,3 @@ CONFIG_ONEPLUS_FG_OPT=y
 # dylanchang, 2019/4/30, enable noop io scheduler
 CONFIG_DEFAULT_NOOP=y
 CONFIG_DEFAULT_IOSCHED="noop"
-CONFIG_SLA=y

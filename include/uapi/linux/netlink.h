@@ -30,9 +30,6 @@
 #define NETLINK_SOCKEV          22      /* Socket Administrative Events */
 #define NETLINK_INET_DIAG	NETLINK_SOCK_DIAG
 #define NETLINK_ADB         23
-/* WIFI MODIFICATION */
-#define NETLINK_OP_SLA		29	/* SLA NETLINK SOCK */
-/* WIFI MODIFICATION */
 
 #define MAX_LINKS 32		
 
