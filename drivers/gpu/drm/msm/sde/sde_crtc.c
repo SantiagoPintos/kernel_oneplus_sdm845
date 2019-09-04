@@ -2889,8 +2889,10 @@ ssize_t oneplus_display_notify_fp_press(struct device *dev,
 
 	if (need_commit) {
 		err = drm_atomic_commit(state);
-		if (err < 0)
+		if (err < 0) {
+			pr_info("drm_atomic_commit err %d\n", err);
 			drm_atomic_state_free(state);
+		}
 	}
 
 	drm_modeset_unlock_all(drm_dev);
@@ -2899,6 +2901,7 @@ ssize_t oneplus_display_notify_fp_press(struct device *dev,
 	return count;
 }
 
+extern int aod_layer_hide;
 int oneplus_dim_status;
 int oneplus_aod_fod = 0;
 int oneplus_aod_dc = 0;
@@ -2943,6 +2946,9 @@ ssize_t oneplus_display_notify_dim(struct device *dev,
 		oneplus_aod_dc = 1;
 	}
 
+	if (dim_status == 0)
+		oneplus_onscreenfp_status = 0;
+
 	if (dim_status == oneplus_dim_status)
 		return count;
 
@@ -2955,8 +2961,11 @@ ssize_t oneplus_display_notify_dim(struct device *dev,
 	crtc_state = drm_atomic_get_crtc_state(state, crtc);
 
 	if ((oneplus_dim_status != 0) &&
-		!(oneplus_dim_status == 5 && display->panel->aod_status == 0)) {
+		oneplus_dim_status != 5) {
 		err = drm_atomic_commit(state);
+		pr_info("oneplus_dim_status = %d, oneplus_dim_status = %d,"
+			"err = %d, dim_status = %d", oneplus_dim_status,
+			oneplus_dim_status, err, dim_status);
 		if (err < 0)
 			drm_atomic_state_free(state);
 	}
@@ -5068,7 +5077,7 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 	if (display->panel->aod_status == 1) {
 		if (oneplus_dim_status == 2 && oneplus_onscreenfp_status == 1) {
 			fp_mode = 1;
-			dim_mode = 0;
+			// dim_mode = 0;
 		} else if (oneplus_dim_status == 2 &&
 				oneplus_onscreenfp_status == 0) {
 			fp_mode = 1;
@@ -5076,10 +5085,15 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 		}
 	}
 
-	if (oneplus_onscreenaod_hid && oneplus_dim_status == 5)
+	if (oneplus_dim_status == 5 || aod_layer_hide == 1) {
 		oneplus_aod_hid = 1;
+		dim_mode = 0;
+	}
 
 	aod_mode = oneplus_aod_hid;
+
+	if (oneplus_dim_status == 5 && display->panel->aod_status == 0)
+		dim_mode = 0;
 
 	for (i = 0; i < cnt; i++) {
 		mode = sde_plane_check_fingerprint_layer(pstates[i].drm_pstate);
@@ -5098,12 +5112,16 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 	else
 		display->panel->dim_status = false;
 
-	if (aod_index < 0)
+	if (aod_index < 0) {
 		oneplus_aod_hid = 0;
+		aod_layer_hide = 0;
+	}
+
 	if (fppressed_index_rt < 0) {
 		oneplus_aod_fod = 0;
 		oneplus_aod_dc = 0;
 	}
+
 	if ((fp_index >= 0 && dim_mode != 0) ||
 		(display->panel->aod_status == 1 && oneplus_aod_dc == 0)) {
 	op_dimlayer_bl = 0;

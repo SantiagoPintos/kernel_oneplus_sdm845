@@ -625,6 +625,7 @@ error:
 	return rc;
 }
 
+int aod_layer_hide;
 extern bool HBM_flag;
 extern int oneplus_dim_status;
 extern bool aod_real_flag;
@@ -733,6 +734,7 @@ static int _sde_connector_update_hbm(struct sde_connector *c_conn)
 							DSI_CMD_SET_HBM_OFF);
 					aod_real_flag = true;
 					oneplus_dim_status = 0;
+					aod_layer_hide = 1;
 				} else {
 					pr_info("DSI_CMD_HBM_OFF_AOD_ON_SETTING\n");
 					rc = dsi_panel_tx_cmd_set_op(
