@@ -34,6 +34,8 @@
 #include "opchain_struct_offset_helper.h"
 #include <linux/atomic.h>
 
+
+
 /* +1 for group leader*/
 /* 6 fore * 3 histories*/
 /* ********************************
@@ -129,12 +131,12 @@ int opchain_status_show_core(char *buf, const struct kernel_param *kp)
 	return size;
 }
 #endif
-#if 0
+
 static inline bool ctech_is_major_utask(int pid, u32 tag)
 {
 	return (CHAIN_REP((tag % UX_TOTAL_ENTRIES), 0) == pid);
 }
-#endif
+
 static unsigned int ctech_is_opc_task(void *rq, void *t, int type)
 {
 	unsigned long long tag = UXTAG(t);
@@ -149,7 +151,8 @@ static unsigned int ctech_is_opc_task(void *rq, void *t, int type)
 		return false;
 
 	if ((type & UT_ETASK) &&
-			!(CHAIN_TYPE(tag % UX_TOTAL_ENTRIES) & UT_ETASK))
+			!(ctech_is_major_utask(TASK_PID_R(t), tag) &&
+			(CHAIN_TYPE(tag % UX_TOTAL_ENTRIES) & UT_ETASK)))
 		return false;
 
 	if (type & UT_LATEST_ONE)
