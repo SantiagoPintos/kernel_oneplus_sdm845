@@ -18,7 +18,7 @@
 #include <linux/sched/sysctl.h>
 #include "sched.h"
 #include "tune.h"
-#include <../coretech/uxcore/opchain_helper.h>
+#include <../drivers/oneplus/coretech/uxcore/opchain_helper.h>
 
 #define SUGOV_KTHREAD_PRIORITY	50
 

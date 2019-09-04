@@ -1,8 +1,0 @@
-uxcore/*
-!uxcore/opchain_helper.c
-!uxcore/opchain_helper.h
-!uxcore/opchain_define.h
-smartboost/*
-!smartboost/smartboost_helper.c
-!smartboost/smartboost_helper.h
-!smartboost/Makefile

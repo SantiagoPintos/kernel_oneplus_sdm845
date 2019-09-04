@@ -38,7 +38,7 @@
 #include <trace/events/sched.h>
 
 /* Curtis, 20180111, ux realm*/
-#include <../coretech/uxcore/opchain_helper.h>
+#include <../drivers/oneplus/coretech/uxcore/opchain_helper.h>
 
 #define opc_claim_bit_test(claim, cpu) (claim & ((1 << cpu) | (1 << (cpu + num_present_cpus()))))
 

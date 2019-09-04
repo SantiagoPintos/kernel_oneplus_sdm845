@@ -12,7 +12,7 @@
 #include <trace/events/sched.h>
 
 /* Curtis, 20180109, ux realm */
-#include <../coretech/uxcore/opchain_helper.h>
+#include <../drivers/oneplus/coretech/uxcore/opchain_helper.h>
 
 int sched_rr_timeslice = RR_TIMESLICE;
 

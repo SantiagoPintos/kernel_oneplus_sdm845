@@ -1,8 +1,0 @@
-config OPCHAIN
-	default n
-	bool "Oneplus CoreTech helper, used for opchain module"
-config SMART_BOOST
-        bool "support smart boost feature"
-        default n
-        help
-         Smart Boost feature
