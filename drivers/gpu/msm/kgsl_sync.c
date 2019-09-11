@@ -735,7 +735,6 @@ long kgsl_ioctl_syncsource_create_fence(struct kgsl_device_private *dev_priv,
 	fd = get_unused_fd_flags(0);
 	if (fd < 0) {
 		ret = -EBADF;
-		pr_err("QCOM : kgsl_ioctl_syncsource_create_fence : get_unused_fd_flags: -EBADF\n");
 		goto out;
 	}
 	ret = 0;
@@ -807,7 +806,6 @@ long kgsl_ioctl_syncsource_signal_fence(struct kgsl_device_private *dev_priv,
 
 	fence = sync_file_get_fence(param->fence_fd);
 	if (fence == NULL) {
-		pr_err("QCOM : kgsl_ioctl_syncsource_signal_fence : sync_file_get_fence: -EBADF\n");
 		ret = -EBADF;
 		goto out;
 	}
