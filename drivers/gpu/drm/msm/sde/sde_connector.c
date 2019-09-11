@@ -747,6 +747,7 @@ static int _sde_connector_update_hbm(struct sde_connector *c_conn)
 				pr_info("DSI_CMD_SET_HBM_OFF\n");
 				rc = dsi_panel_tx_cmd_set_op(dsi_display->panel,
 						DSI_CMD_SET_HBM_OFF);
+				oneplus_dim_status = 0;
 			}
 			SDE_ATRACE_END("set_hbm_off");
 			mutex_unlock(&dsi_display->panel->panel_lock);
