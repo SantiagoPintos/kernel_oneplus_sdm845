@@ -684,8 +684,9 @@ static int _sde_connector_update_hbm(struct sde_connector *c_conn)
 
 		if (oneplus_dim_status == 5)
 			fingerprint_mode = false;
-		else
-			fingerprint_mode = !!oneplus_dim_status;
+
+		if (oneplus_dim_status == 2)
+			fingerprint_mode = oneplus_dim_status;
 	} else {
 		if (!(sde_crtc_get_fingerprint_mode(
 						c_conn->encoder->crtc->state)))

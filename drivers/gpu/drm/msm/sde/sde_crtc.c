@@ -2962,14 +2962,17 @@ ssize_t oneplus_display_notify_dim(struct device *dev,
 
 	if ((oneplus_dim_status != 0) &&
 		oneplus_dim_status != 5) {
+		oneplus_dim_status = 0;
 		err = drm_atomic_commit(state);
-		pr_info("oneplus_dim_status = %d, oneplus_dim_status = %d,"
-			"err = %d, dim_status = %d", oneplus_dim_status,
+		pr_info("oneplus_dim_status = %d, err = %d, dim_status = %d",
 			oneplus_dim_status, err, dim_status);
+		pr_info("oneplus_onscreenfp_status %d hide %d",
+			oneplus_onscreenfp_status, aod_layer_hide);
 		if (err < 0)
 			drm_atomic_state_free(state);
 	}
 	drm_modeset_unlock_all(drm_dev);
+	oneplus_dim_status = dim_status;
 	SDE_ATRACE_END("oneplus_display_notify_dim");
 
 	return count;
@@ -5122,6 +5125,15 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 		oneplus_aod_dc = 0;
 	}
 
+	if (aod_index >= 0) {
+		if (aod_mode == 1) {
+			SDE_ATRACE_BEGIN("aod_layer_qbt_hid");
+			pstates[aod_index].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0;
+			aod_index = -1;
+			SDE_ATRACE_END("aod_layer_qbt_hid");
+		}
+	}
+
 	if ((fp_index >= 0 && dim_mode != 0) ||
 		(display->panel->aod_status == 1 && oneplus_aod_dc == 0)) {
 	op_dimlayer_bl = 0;
@@ -5151,6 +5163,44 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 		}
 
 		if (fppressed_index >= 0) {
+			if (zpos > pstates[fppressed_index].stage)
+				zpos = pstates[fppressed_index].stage;
+			pstates[fppressed_index].stage++;
+		}
+
+		if (fp_index >= 0) {
+			if (zpos > pstates[fp_index].stage)
+				zpos = pstates[fp_index].stage;
+			pstates[fp_index].stage++;
+		}
+
+		for (i = 0; i < cnt; i++) {
+			if (i == fp_index || i == fppressed_index)
+				continue;
+
+			if (pstates[i].stage >= zpos) {
+				//	SDE_ERROR("Warn!!: the fp layer not on top");
+				pstates[i].stage++;
+			}
+		}
+		if (zpos == INT_MAX) {
+			zpos = 0;
+			for (i = 0; i < cnt; i++) {
+				if (pstates[i].stage > zpos)
+					zpos = pstates[i].stage;
+			}
+			zpos++;
+		}
+
+		if (fp_index >= 0) {
+			if (dim_mode == 0) {
+				//pstates[fp_index].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0xff;
+				fp_index = -1;
+			}
+		}
+
+
+		if (fppressed_index >= 0) {
 			if (fp_mode == 0) {
 				pstates[fppressed_index].sde_pstate->
 				property_values[PLANE_PROP_ALPHA].value = 0;
@@ -5168,13 +5218,6 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 			}
 		}
 
-		if (fp_index >= 0) {
-			if (dim_mode == 0) {
-				//pstates[fp_index].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0xff;
-				fp_index = -1;
-			}
-		}
-
 		if (aod_index >= 0) {
 			if (aod_mode == 1) {
 				SDE_ATRACE_BEGIN("aod_layer_hid");
@@ -5183,43 +5226,6 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 				aod_index = -1;
 				SDE_ATRACE_END("aod_layer_hid");
 			}
-		}
-
-		if (aod_index >= 0) {
-			if (zpos > pstates[aod_index].stage)
-				zpos = pstates[aod_index].stage;
-
-			pstates[aod_index].stage++;
-		}
-
-		if (fppressed_index >= 0) {
-			if (zpos > pstates[fppressed_index].stage)
-				zpos = pstates[fppressed_index].stage;
-			pstates[fppressed_index].stage++;
-		}
-
-		if (fp_index >= 0) {
-			if (zpos > pstates[fp_index].stage)
-				zpos = pstates[fp_index].stage;
-			pstates[fp_index].stage++;
-		}
-		for (i = 0; i < cnt; i++) {
-			if (i == fp_index || i == fppressed_index ||
-						i == aod_index)
-				continue;
-
-			if (pstates[i].stage >= zpos) {
-				//SDE_ERROR("Warn!!: the fp layer not on top");
-				pstates[i].stage++;
-			}
-		}
-		if (zpos == INT_MAX) {
-			zpos = 0;
-			for (i = 0; i < cnt; i++) {
-				if (pstates[i].stage > zpos)
-					zpos = pstates[i].stage;
-			}
-			zpos++;
 		}
 
 		if (fp_index >= 0)
