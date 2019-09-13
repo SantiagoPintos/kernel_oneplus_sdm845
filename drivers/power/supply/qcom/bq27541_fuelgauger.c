@@ -32,6 +32,7 @@
 #include <linux/regulator/machine.h>
 #include <linux/err.h>
 #include <linux/rtc.h>
+#include <linux/oneplus/boot_mode.h>
 
 #ifdef CONFIG_OF
 #include <linux/gpio.h>
@@ -97,7 +98,7 @@
 
 #define CONTROL_CMD                 0x00
 #define CONTROL_STATUS              0x00
-#define SEAL_POLLING_RETRY_LIMIT    100
+#define SEAL_POLLING_RETRY_LIMIT    SEAL_POLLING_RETRY_LIMIT_2
 #define BQ27541_UNSEAL_KEY          0x11151986
 #define BQ27411_UNSEAL_KEY          0x80008000
 
@@ -275,6 +276,8 @@ static int __debug_temp_mask;
 module_param_named(
 	debug_temp_mask, __debug_temp_mask, int, 0600
 );
+
+int SEAL_POLLING_RETRY_LIMIT_2;
 
 static void bq27411_modify_soc_smooth_parameter(
 	struct bq27541_device_info *di, bool is_powerup);
@@ -1581,6 +1584,11 @@ re_unseal:
 	usleep_range(10000, 10001);
 	bq27541_cntl_cmd(bq27541_di, 0xffff);
 	usleep_range(10000, 10001);
+
+	if (get_boot_mode() == MSM_BOOT_MODE__RECOVERY)
+		SEAL_POLLING_RETRY_LIMIT_2 = 10;
+	else
+		SEAL_POLLING_RETRY_LIMIT_2 = 100;
 
 	while (i < SEAL_POLLING_RETRY_LIMIT) {
 		i++;
