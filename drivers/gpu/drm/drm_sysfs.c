@@ -222,6 +222,52 @@ static ssize_t modes_show(struct device *device,
 
 	return written;
 }
+static ssize_t dsi_panel_command_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct drm_connector *connector = to_drm_connector(dev);
+	int ret = 0;
+
+	ret = dsi_display_get_dsi_panel_command(connector, buf);
+
+	return ret;
+}
+
+static ssize_t dsi_panel_command_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct drm_connector *connector = to_drm_connector(dev);
+	int ret = 0;
+
+	ret = dsi_display_update_dsi_panel_command(connector, buf, count);
+	if (ret)
+		pr_err("Failed to update dsi panel command, ret=%d\n", ret);
+
+	return count;
+}
+static ssize_t dsi_seed_command_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct drm_connector *connector = to_drm_connector(dev);
+	int ret = 0;
+
+	ret = dsi_display_get_dsi_seed_command(connector, buf);
+
+	return ret;
+}
+
+static ssize_t dsi_seed_command_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct drm_connector *connector = to_drm_connector(dev);
+	int ret = 0;
+
+	ret = dsi_display_update_dsi_seed_command(connector, buf, count);
+	if (ret)
+		pr_err("Failed to update dsi seed command, ret=%d\n", ret);
+
+	return count;
+}
 static ssize_t acl_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -846,6 +892,8 @@ static DEVICE_ATTR_RW(native_display_wide_color_mode);
 static DEVICE_ATTR_RW(native_display_srgb_color_mode);
 static DEVICE_ATTR_RW(native_display_customer_p3_mode);
 static DEVICE_ATTR_RW(native_display_customer_srgb_mode);
+static DEVICE_ATTR_RW(dsi_panel_command);
+static DEVICE_ATTR_RW(dsi_seed_command);
 
 static DEVICE_ATTR_RO(panel_serial_number);
 static DEVICE_ATTR_RW(dynamic_dsitiming);
@@ -884,6 +932,8 @@ static struct attribute *connector_dev_attrs[] = {
 	&dev_attr_native_display_srgb_color_mode.attr,
 	&dev_attr_native_display_customer_p3_mode.attr,
 	&dev_attr_native_display_customer_srgb_mode.attr,
+	&dev_attr_dsi_panel_command.attr,
+	&dev_attr_dsi_seed_command.attr,
 	&dev_attr_panel_serial_number.attr,
 	&dev_attr_dynamic_dsitiming.attr,
 	&dev_attr_panel_mismatch.attr,

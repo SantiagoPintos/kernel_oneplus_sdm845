@@ -101,6 +101,24 @@
 					05 01 00 00 28 00 02 28 00
 					05 01 00 00 A0 00 02 10 00
 					];
+				qcom,mdss-dsi-seed-command = [
+					29 01 00 00 00 00 03 F0 5A 5A
+					29 01 00 00 00 00 03 E2 00 41
+					29 01 00 00 00 00 02 B0 2C
+					29 01 00 00 00 00 14 E2 B4 02 04 05 FF 02 00 00 FF 00 FF FF F0 E0 E1 18 FF F3 F8
+					29 01 00 00 00 00 03 F0 A5 A5
+					];
+
+				qcom,mdss-dsi-panel-command = [
+					29 01 00 00 00 00 03 F0 5A 5A
+					29 01 00 00 00 00 03 E2 00 41
+					29 01 00 00 00 00 02 B0 2C
+					29 01 00 00 00 00 14 E2 B4 02 04 05 FF 02 00 00 FF 00 FF FF F0 E0 E1 18 FF F3 F8
+					29 01 00 00 00 00 03 F0 A5 A5
+					];
+
+				qcom,mdss-dsi-panel-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-seed-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-h-sync-pulse = <0>;

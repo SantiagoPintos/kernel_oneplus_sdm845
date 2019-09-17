@@ -66,6 +66,9 @@ static struct pm_qos_request lcdspeedup_big_cpu_qos;
 #define MAX_NAME_SIZE	64
 
 #define DSI_CLOCK_BITRATE_RADIX 10
+#define UG_SEED_REGISTER 0xB1
+#define WU_SEED_REGISTER 0xE2
+
 
 static DEFINE_MUTEX(dsi_display_list_lock);
 static LIST_HEAD(dsi_display_list);
@@ -86,6 +89,46 @@ static const struct of_device_id dsi_display_dt_match[] = {
 static struct dsi_display *primary_display;
 static struct dsi_display *secondary_display;
 
+char dsi_display_ascii_to_int(char ascii, int *ascii_err)
+{
+	char int_value;
+
+	if ((ascii >= 48) && (ascii <= 57)) {
+		int_value = ascii - 48;
+	} else if ((ascii >= 65) && (ascii <= 70)) {
+		int_value = ascii - 65 + 10;
+	} else if ((ascii >= 97) && (ascii <= 102)) {
+		int_value = ascii - 97 + 10;
+	} else {
+		int_value = 0;
+		*ascii_err = 1;
+		pr_err("Bad para: %d , please enter the right value!", ascii);
+	}
+
+	return int_value;
+}
+static int dsi_display_get_mipi_dsi_msg(const struct mipi_dsi_msg *msg, char *buf)
+{
+	int len = 0;
+	size_t i;
+	char *tx_buf = (char *)msg->tx_buf;
+	/* Packet Info */
+	len += snprintf(buf + len, PAGE_SIZE - len, "%02X ", msg->type);
+	/* Last bit */
+	len += snprintf(buf + len, PAGE_SIZE - len, "%02X ", (msg->flags & MIPI_DSI_MSG_LASTCOMMAND) ? 1 : 0);
+	len += snprintf(buf + len, PAGE_SIZE - len, "%02X ", msg->channel);
+	len += snprintf(buf + len, PAGE_SIZE - len, "%02X ", (unsigned int)msg->flags);
+	/* Delay */
+	len += snprintf(buf + len, PAGE_SIZE - len, "%02X ", msg->wait_ms);
+	len += snprintf(buf + len, PAGE_SIZE - len, "%02X %02X ", (unsigned int)(msg->tx_len >> 8), (unsigned int)(msg->tx_len & 0x00FF));
+
+	/* Packet Payload */
+	for (i = 0 ; i < msg->tx_len ; i++)
+		len += snprintf(buf + len, PAGE_SIZE - len, "%02X ", tx_buf[i]);
+	len += snprintf(buf + len, PAGE_SIZE - len, "\n");
+
+	return len;
+}
 static void dsi_display_mask_ctrl_error_interrupts(struct dsi_display *display,
 			u32 mask, bool enable)
 {
@@ -8014,7 +8057,224 @@ int dsi_display_get_serial_number_day(struct drm_connector *connector)
 
 	return dsi_display->panel->panel_day;
 }
+int dsi_display_update_dsi_panel_command(struct drm_connector *connector, const char *buf, size_t count)
+{
+	int i = 0;
+	int j = 0;
+	int ascii_err = 0;
+	unsigned int length;
+	char *data;
+	struct dsi_panel_cmd_set *set;
 
+	struct dsi_display *dsi_display = NULL;
+	struct dsi_panel *panel = NULL;
+	struct dsi_bridge *c_bridge;
+	int rc = 0;
+
+	if ((connector == NULL) || (connector->encoder == NULL)
+			|| (connector->encoder->bridge == NULL))
+		return -EINVAL;
+
+	c_bridge =  to_dsi_bridge(connector->encoder->bridge);
+	dsi_display = c_bridge->display;
+
+	if ((dsi_display == NULL) || (dsi_display->panel == NULL))
+		return -EINVAL;
+
+	panel = dsi_display->panel;
+
+	mutex_lock(&dsi_display->display_lock);
+
+	if (!dsi_panel_initialized(panel))
+		goto error;
+
+	length = count / 3;
+	data = kzalloc(length + 1, GFP_KERNEL);
+
+	for (i = 0; (buf[i+2] != 10) && (j < length); i = i+3) {
+		data[j] = dsi_display_ascii_to_int(buf[i], &ascii_err) << 4;
+		data[j] += dsi_display_ascii_to_int(buf[i+1], &ascii_err);
+		j++;
+	}
+	data[j] = dsi_display_ascii_to_int(buf[i], &ascii_err) << 4;
+	data[j] += dsi_display_ascii_to_int(buf[i+1], &ascii_err);
+	if (ascii_err == 1) {
+		pr_err("Bad Para, ignore this command\n");
+		kfree(data);
+		goto error;
+	}
+
+	set = &panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_PANEL_COMMAND];
+
+	rc = dsi_panel_update_cmd_sets_sub(set, DSI_CMD_SET_PANEL_COMMAND, data, length);
+	if (rc)
+		pr_err("Failed to update_cmd_sets_sub, rc=%d\n", rc);
+	kfree(data);
+
+	rc = dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+			DSI_CORE_CLK, DSI_CLK_ON);
+	if (rc) {
+		pr_err("[%s] failed to enable DSI core clocks, rc=%d\n",
+			dsi_display->name, rc);
+		goto error;
+	}
+
+	rc = dsi_panel_send_dsi_panel_command(panel);
+	if (rc)
+		pr_err("Failed to send dsi panel command\n");
+
+	rc = dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+			DSI_CORE_CLK, DSI_CLK_OFF);
+	if (rc) {
+		pr_err("[%s] failed to disable DSI core clocks, rc=%d\n",
+			dsi_display->name, rc);
+		goto error;
+	}
+
+error:
+	mutex_unlock(&dsi_display->display_lock);
+	return rc;
+}
+
+int dsi_display_get_dsi_panel_command(struct drm_connector *connector, char *buf)
+{
+	struct dsi_display *dsi_display = NULL;
+	struct dsi_bridge *c_bridge;
+	struct dsi_panel_cmd_set *cmd;
+	int i = 0;
+	int count = 0;
+
+	if ((connector == NULL) || (connector->encoder == NULL)
+			|| (connector->encoder->bridge == NULL))
+		return 0;
+
+	c_bridge =  to_dsi_bridge(connector->encoder->bridge);
+	dsi_display = c_bridge->display;
+
+	if ((dsi_display == NULL) || (dsi_display->panel == NULL))
+		return 0;
+
+	cmd = &dsi_display->panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_PANEL_COMMAND];
+
+	for (i = 0; i < cmd->count; i++)
+		count += dsi_display_get_mipi_dsi_msg(&cmd->cmds[i].msg, &buf[count]);
+
+	return count;
+}
+int dsi_display_update_dsi_seed_command(struct drm_connector *connector, const char *buf, size_t count)
+{
+	int i = 0;
+	int j = 0;
+	int ascii_err = 0;
+	unsigned int length;
+	char *data;
+	struct dsi_panel_cmd_set *set;
+
+	struct dsi_display *dsi_display = NULL;
+	struct dsi_panel *panel = NULL;
+	struct dsi_bridge *c_bridge;
+	int rc = 0;
+
+	if ((connector == NULL) || (connector->encoder == NULL)
+			|| (connector->encoder->bridge == NULL))
+		return -EINVAL;
+
+	c_bridge =  to_dsi_bridge(connector->encoder->bridge);
+	dsi_display = c_bridge->display;
+
+	if ((dsi_display == NULL) || (dsi_display->panel == NULL))
+		return -EINVAL;
+
+	panel = dsi_display->panel;
+
+
+	mutex_lock(&panel->panel_lock);
+
+	if (!dsi_panel_initialized(panel))
+		goto error;
+
+	length = count / 3;
+	if (length != 0x16) {
+		pr_err("Insufficient parameters!\n");
+		goto error;
+	}
+	data = kzalloc(length + 1, GFP_KERNEL);
+
+	for (i = 0; (buf[i+2] != 10) && (j < length); i = i+3) {
+		data[j] = dsi_display_ascii_to_int(buf[i], &ascii_err) << 4;
+		data[j] += dsi_display_ascii_to_int(buf[i+1], &ascii_err);
+		j++;
+	}
+	data[j] = dsi_display_ascii_to_int(buf[i], &ascii_err) << 4;
+	data[j] += dsi_display_ascii_to_int(buf[i+1], &ascii_err);
+	if (ascii_err == 1) {
+		pr_err("Bad Para, ignore this command\n");
+		kfree(data);
+		goto error;
+	}
+
+	set = &panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_SEED_COMMAND];
+
+		if (strcmp(panel->name, "samsung sofef00_m cmd mode dsi panel") == 0)
+		data[0] = WU_SEED_REGISTER;
+		if (strcmp(panel->name, "samsung s6e3fc2x01 cmd mode dsi panel") == 0)
+		data[0] = UG_SEED_REGISTER;
+
+	rc = dsi_panel_update_dsi_seed_command(set->cmds, DSI_CMD_SET_SEED_COMMAND, data);
+	if (rc)
+		pr_err("Failed to dsi_panel_update_dsi_seed_command, rc=%d\n", rc);
+	kfree(data);
+
+	rc = dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+			DSI_CORE_CLK, DSI_CLK_ON);
+	if (rc) {
+		pr_err("[%s] failed to enable DSI core clocks, rc=%d\n",
+			dsi_display->name, rc);
+		goto error;
+	}
+
+	rc = dsi_panel_send_dsi_seed_command(panel);
+	if (rc)
+		pr_err("Failed to send dsi seed command\n");
+
+	rc = dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+			DSI_CORE_CLK, DSI_CLK_OFF);
+	if (rc) {
+		pr_err("[%s] failed to disable DSI core clocks, rc=%d\n",
+			dsi_display->name, rc);
+		goto error;
+	}
+
+error:
+	mutex_unlock(&panel->panel_lock);
+	return rc;
+}
+
+int dsi_display_get_dsi_seed_command(struct drm_connector *connector, char *buf)
+{
+	struct dsi_display *dsi_display = NULL;
+	struct dsi_bridge *c_bridge;
+	struct dsi_panel_cmd_set *cmd;
+	int i = 0;
+	int count = 0;
+
+	if ((connector == NULL) || (connector->encoder == NULL)
+			|| (connector->encoder->bridge == NULL))
+		return 0;
+
+	c_bridge =  to_dsi_bridge(connector->encoder->bridge);
+	dsi_display = c_bridge->display;
+
+	if ((dsi_display == NULL) || (dsi_display->panel == NULL))
+		return 0;
+
+	cmd = &dsi_display->panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_SEED_COMMAND];
+
+	for (i = 0; i < cmd->count; i++)
+		count += dsi_display_get_mipi_dsi_msg(&cmd->cmds[i].msg, &buf[count]);
+
+	return count;
+}
 int dsi_display_get_serial_number_hour(struct drm_connector *connector)
 {
 	struct dsi_display *dsi_display = NULL;
