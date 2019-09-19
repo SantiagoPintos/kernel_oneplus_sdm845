@@ -1890,7 +1890,7 @@ static __latent_entropy struct task_struct *copy_process(
 			/*Ted, 20180425, non-exist dcache*/
 			if (!(p->flags & PF_KTHREAD))
 				nn =
-				kmalloc(sizeof(struct nedf_node), GFP_NOWAIT);
+				kmalloc(sizeof(struct nedf_node), __GFP_NOWARN);
 		} else {
 			current->signal->nr_threads++;
 			atomic_inc(&current->signal->live);
@@ -1919,7 +1919,7 @@ static __latent_entropy struct task_struct *copy_process(
 	if (nn) {
 		p->nn = nn;
 		nn->nf =
-		kmalloc(sizeof(struct nedf) * FILE_MAP_NUM, GFP_NOWAIT);
+		kmalloc(sizeof(struct nedf) * FILE_MAP_NUM, __GFP_NOWARN);
 		nn->nf_cnt = 0;
 		nn->nf_index = 0;
 		nn->nf_tag = 0;
