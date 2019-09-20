@@ -2959,10 +2959,7 @@ ssize_t oneplus_display_notify_dim(struct device *dev,
 	state->acquire_ctx = mode_config->acquire_ctx;
 	crtc = dsi_connector->state->crtc;
 	crtc_state = drm_atomic_get_crtc_state(state, crtc);
-
-	if ((oneplus_dim_status != 0) &&
-		oneplus_dim_status != 5) {
-		oneplus_dim_status = 0;
+	if ((oneplus_dim_status != 0) && (oneplus_dim_status != 5)) {
 		err = drm_atomic_commit(state);
 		pr_info("oneplus_dim_status = %d, err = %d, dim_status = %d",
 			oneplus_dim_status, err, dim_status);
@@ -2972,7 +2969,6 @@ ssize_t oneplus_display_notify_dim(struct device *dev,
 			drm_atomic_state_free(state);
 	}
 	drm_modeset_unlock_all(drm_dev);
-	oneplus_dim_status = dim_status;
 	SDE_ATRACE_END("oneplus_display_notify_dim");
 
 	return count;
@@ -2988,6 +2984,10 @@ static int sde_crtc_config_fingerprint_dim_layer(struct drm_crtc_state
 	struct sde_hw_dim_layer *fingerprint_dim_layer;
 	int alpha = oneplus_get_panel_brightness_to_alpha();
 	struct sde_kms *kms;
+	struct dsi_display *display = get_main_display();
+	if (display->panel->aod_status == 1 && oneplus_dim_status == 2)
+		alpha = 255;
+
 	kms = _sde_crtc_get_kms(crtc_state->crtc);
 	if (!kms || !kms->catalog) {
 		SDE_ERROR("invalid kms\n");
@@ -5055,6 +5055,7 @@ int op_dimlayer_bl_alpha = 260;
 int op_dimlayer_bl_enabled = 0;
 int op_dimlayer_bl_enable_real = 0;
 int op_dimlayer_bl = 0;
+bool finger_type = false;
 extern int op_dimlayer_bl_enable;
 extern int op_dp_enable;
 
@@ -5078,24 +5079,20 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 		return 0;
 
 	if (display->panel->aod_status == 1) {
-		if (oneplus_dim_status == 2 && oneplus_onscreenfp_status == 1) {
-			fp_mode = 1;
-			// dim_mode = 0;
-		} else if (oneplus_dim_status == 2 &&
-				oneplus_onscreenfp_status == 0) {
-			fp_mode = 1;
-			dim_mode = 0;
-		}
+	if (oneplus_dim_status == 2 && oneplus_onscreenfp_status == 1) {
+		fp_mode = 1;
+		//dim_mode = 0;
+	} else if (oneplus_dim_status == 2 && oneplus_onscreenfp_status == 0) {
+		fp_mode = 0;
+		dim_mode = 0;
 	}
-
+	}
 	if (oneplus_dim_status == 5 || aod_layer_hide == 1) {
 		oneplus_aod_hid = 1;
 		dim_mode = 0;
 	}
-
 	aod_mode = oneplus_aod_hid;
-
-	if (oneplus_dim_status == 5 && display->panel->aod_status == 0)
+	if ((oneplus_dim_status == 5) && display->panel->aod_status == 0)
 		dim_mode = 0;
 
 	for (i = 0; i < cnt; i++) {
@@ -5125,19 +5122,22 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 		oneplus_aod_dc = 0;
 	}
 
+	if (finger_type) {
 	if (aod_index >= 0) {
 		if (aod_mode == 1) {
 			SDE_ATRACE_BEGIN("aod_layer_qbt_hid");
 			pstates[aod_index].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0;
 			aod_index = -1;
 			SDE_ATRACE_END("aod_layer_qbt_hid");
+			}
 		}
+	return 0;
 	}
 
 	if ((fp_index >= 0 && dim_mode != 0) ||
 		(display->panel->aod_status == 1 && oneplus_aod_dc == 0)) {
 	op_dimlayer_bl = 0;
-	} else{
+	} else {
 	if (op_dimlayer_bl_enable && !op_dp_enable) {
 		if (display->panel->bl_config.bl_level != 0 &&
 			display->panel->bl_config.bl_level
@@ -5161,7 +5161,6 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 				return -EINVAL;
 			}
 		}
-
 		if (fppressed_index >= 0) {
 			if (zpos > pstates[fppressed_index].stage)
 				zpos = pstates[fppressed_index].stage;
@@ -5173,11 +5172,9 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 				zpos = pstates[fp_index].stage;
 			pstates[fp_index].stage++;
 		}
-
 		for (i = 0; i < cnt; i++) {
 			if (i == fp_index || i == fppressed_index)
 				continue;
-
 			if (pstates[i].stage >= zpos) {
 				//	SDE_ERROR("Warn!!: the fp layer not on top");
 				pstates[i].stage++;
@@ -5198,35 +5195,31 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 				fp_index = -1;
 			}
 		}
-
-
-		if (fppressed_index >= 0) {
-			if (fp_mode == 0) {
-				pstates[fppressed_index].sde_pstate->
-				property_values[PLANE_PROP_ALPHA].value = 0;
-				if (oneplus_aod_fod == 1 && aod_index < 0) {
-					for (i = 0; i < cnt; i++) {
-						if (i != fppressed_index && pstates[i].sde_pstate->
-						property_values[PLANE_PROP_ALPHA].value == 0)
-						pstates[i].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0xff;
+	if (fppressed_index >= 0) {
+		if (fp_mode == 0) {
+		pstates[fppressed_index].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0;
+			if (oneplus_aod_fod == 1 && aod_index < 0) {
+				for (i = 0; i < cnt; i++) {
+					if (i != fppressed_index) {
+					if (pstates[i].sde_pstate->property_values[PLANE_PROP_ALPHA].value == 0)
+							pstates[i].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0xff;
+						}
 					}
 				}
 				fppressed_index = -1;
 			} else {
-				pstates[fppressed_index].sde_pstate->
-				property_values[PLANE_PROP_ALPHA].value = 0xff;
+				pstates[fppressed_index].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0xff;
 			}
 		}
 
-		if (aod_index >= 0) {
-			if (aod_mode == 1) {
-				SDE_ATRACE_BEGIN("aod_layer_hid");
-				pstates[aod_index].sde_pstate->
-				property_values[PLANE_PROP_ALPHA].value = 0;
-				aod_index = -1;
-				SDE_ATRACE_END("aod_layer_hid");
-			}
+	if (aod_index >= 0) {
+		if (aod_mode == 1) {
+		SDE_ATRACE_BEGIN("aod_layer_hid");
+		pstates[aod_index].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0;
+		aod_index = -1;
+		SDE_ATRACE_END("aod_layer_hid");
 		}
+	}
 
 		if (fp_index >= 0)
 			cstate->fingerprint_mode = true;
