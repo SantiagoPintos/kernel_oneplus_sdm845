@@ -1994,7 +1994,9 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
-	smblib_rerun_apsd_if_required(chg);
+	/* Disable APSD rerun for CDP case */
+	if (!(stat & (CDP_CHARGER_BIT | SDP_CHARGER_BIT)))
+		smblib_rerun_apsd_if_required(chg);
 
 	/* clear the ICL override if it is set */
 	if (smblib_icl_override(chg, false) < 0) {
