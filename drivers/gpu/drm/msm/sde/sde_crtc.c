@@ -2903,6 +2903,7 @@ ssize_t oneplus_display_notify_fp_press(struct device *dev,
 
 extern int aod_layer_hide;
 int oneplus_dim_status;
+extern bool HBM_flag;
 int oneplus_aod_fod = 0;
 int oneplus_aod_dc = 0;
 ssize_t oneplus_display_notify_dim(struct device *dev,
@@ -2953,6 +2954,10 @@ ssize_t oneplus_display_notify_dim(struct device *dev,
 		return count;
 
 	oneplus_dim_status = dim_status;
+	if (oneplus_dim_status == 1 && HBM_flag) {
+		pr_err("notify dim not commit");
+		return count;
+	}
 	drm_modeset_lock_all(drm_dev);
 
 	state = drm_atomic_state_alloc(drm_dev);
