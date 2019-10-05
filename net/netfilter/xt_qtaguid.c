@@ -55,6 +55,8 @@ module_param_named(stats_perms, proc_stats_perms, uint, 0644);
 
 static struct proc_dir_entry *xt_qtaguid_ctrl_file;
 
+int allow_read = 1;
+
 /* Everybody can write. But proc_ctrl_write_limited is true by default which
  * limits what can be controlled. See the can_*() functions.
  */
@@ -2378,6 +2380,7 @@ static ssize_t qtaguid_ctrl_parse(const char *input, size_t count)
 	}
 	if (!res)
 		res = count;
+	allow_read = 1;
 err:
 	CT_DEBUG("qtaguid: ctrl(%s): res=%zd\n", input, res);
 	return res;
@@ -2787,9 +2790,18 @@ static int proc_qtaguid_ctrl_open(struct inode *inode, struct file *file)
 				sizeof(struct proc_ctrl_print_info));
 }
 
+ssize_t m_seq_read(struct file *file, char __user *buf, size_t size, loff_t *ppos)
+{
+	if (allow_read) {
+		allow_read = 0;
+		return seq_read(file, buf, size, ppos);
+	}
+	return 0;
+}
+
 static const struct file_operations proc_qtaguid_ctrl_fops = {
 	.open		= proc_qtaguid_ctrl_open,
-	.read		= seq_read,
+	.read		= m_seq_read,
 	.write		= qtaguid_ctrl_proc_write,
 	.llseek		= seq_lseek,
 	.release	= seq_release_private,
