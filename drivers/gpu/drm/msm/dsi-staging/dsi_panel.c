@@ -2242,6 +2242,17 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel,
 		panel->bl_config.bl_max_level = val;
 	}
 
+	rc = of_property_read_u32(of_node, "qcom,mdss-brightness-default-val",
+		&val);
+	if (rc) {
+		pr_debug("[%s] brightness-default-val unspecified, defaulting to val\n",
+			panel->name);
+		panel->bl_config.bl_def_val = 200;
+	} else {
+		panel->bl_config.bl_def_val = val;
+	}
+	pr_err("default backlight bl_def_val= %d\n", panel->bl_config.bl_def_val);
+
 	rc = of_property_read_u32(of_node, "qcom,mdss-brightness-max-level",
 		&val);
 	if (rc) {
